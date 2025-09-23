@@ -2,15 +2,16 @@ import requests
 
 url = "https://gamma-api.polymarket.com/markets"
 params = {
+    "limit": 100,
+    "offset": 0,
     "sortBy": "creationTime"
 }
 
 resp = requests.get(url, params=params)
 data = resp.json()
-print(data)
 
 for m in data:
-    print(m["question"], m["createdAt"])
+    print(m["question"])
 
 
 def get_history():
