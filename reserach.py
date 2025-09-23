@@ -13,3 +13,6 @@ def get_history():
 
 def get_market_data():
     ...
+
+def save_to_history():
+    ...
