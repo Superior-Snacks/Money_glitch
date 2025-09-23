@@ -1,10 +1,18 @@
 import requests
 
-url = "https://gamma-api.polymarket.com/events"
-response = requests.get(url)
-data = response.json()
-for trade in data:
-    print(trade["ticker"])
+url = "https://gamma-api.polymarket.com/markets"
+params = {
+    "limit": 20,
+    "offset": 0,
+    "sortBy": "creationTime",
+    "order": "asc"
+}
+
+resp = requests.get(url, params=params)
+data = resp.json()
+
+for m in data:
+    print(m["title"], m["creationTime"])
 
 
 def get_history():
