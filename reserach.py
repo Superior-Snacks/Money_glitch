@@ -5,7 +5,7 @@ response = requests.get(url)
 data = response.json()
 
 for trade in data:
-    print(trade["eventSlug"])
+    print(trade)
 
 
 def get_history():
