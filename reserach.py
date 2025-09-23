@@ -10,9 +10,10 @@ params = {
 
 resp = requests.get(url, params=params)
 data = resp.json()
+print(data)
 
 for m in data:
-    print(m["title"], m["creationTime"])
+    print(m)
 
 
 def get_history():
