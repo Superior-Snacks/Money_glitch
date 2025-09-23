@@ -1,6 +1,6 @@
 import requests
 
-url = "https://data-api.polymarket.com/trades?limit=5"
+url = "https://data-api.polymarket.com/trades?market=MARKET_ID&limit=5&sort=asc"
 response = requests.get(url)
 data = response.json()
 
