@@ -7,5 +7,9 @@ data = response.json()
 for trade in data:
     print(trade["eventSlug"])
 
+
+def get_history():
+    ...
+
 def get_market_data():
     ...
