@@ -21,7 +21,7 @@ def get_history():
 
 get_history()
 
-def get_market_data():
+def get_market_data(ammount, offset):
     ...
 
 def save_to_history():
