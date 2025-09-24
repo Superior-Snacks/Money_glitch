@@ -11,7 +11,8 @@ resp = requests.get(url, params=params)
 data = resp.json()
 
 for m in data:
-    print(m["question"], m["createdAt"][:5])
+    print(m["question"], m["fee"])
+    #print(m.keys())
 
 
 def get_history():
