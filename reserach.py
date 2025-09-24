@@ -21,8 +21,20 @@ def get_history():
 
 get_history()
 
-def get_market_data(ammount, offset):
-    ...
+def get_market_data(ammount=1, offset=0):
+    url = "https://gamma-api.polymarket.com/markets"
+    params = {
+        "limit": ammount,
+        "offset": offset,
+        "sortBy": "creationTime",
+        "order": "asc"
+    }
+
+    resp = requests.get(url, params=params)
+    data = resp.json()
+
+    for m in data:
+        print(m["title"], m["creationTime"])
 
 def save_to_history():
     ...
