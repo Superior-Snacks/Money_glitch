@@ -2,31 +2,21 @@ import requests
 import sys
 import time
 
-url = "https://gamma-api.polymarket.com/markets"
-params = {
-    "limit": 1,
-    "offset": 1000,
-    "sortBy": "creationTime"
-}
-
-resp = requests.get(url, params=params)
-data = resp.json()
-
-for m in data:
-    print(m["question"], m["fee"])
-    #print(m.keys())
-
-
 def get_history():
-    m = requests.get("https://clob.polymarket.com/markets", params={"next_cursor": ""}).json()
-    token_id = m["data"][0]["tokens"][0]["token_id"]  # pick the outcome you want
+    # 1) pick a market and get its outcome token IDs
+    mkts = requests.get("https://clob.polymarket.com/markets", params={"cursor": ""}).json()
+    first = mkts["data"][0]
+    tokens = first["tokens"]            # each has token_id and outcome name
+    tok_yes = next(t for t in tokens if t["outcome"].lower() in ("yes", "y", "1"))
 
-    # 2) get price history (1h bars, full range)
+    # 2) fetch price history for that token (full range, hourly bars)
     hist = requests.get(
         "https://clob.polymarket.com/prices-history",
-        params={"market": token_id, "interval": "1h"},
-    ).json()["history"]
+        params={"market": tok_yes["token_id"], "interval": "1h"}
+    ).json().get("history", [])
 
+    print(first["question"])
+    print(tok_yes["token_id"], len(hist))
     print(hist[:3])
 
 get_history()
@@ -36,3 +26,13 @@ def get_market_data():
 
 def save_to_history():
     ...
+
+def run_test_algo():
+    ...
+
+
+def main():
+    ...
+
+if __name__ == "__main__":
+    main()
