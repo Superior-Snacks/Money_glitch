@@ -24,15 +24,13 @@ def get_market_data(ammount=1, offset=0):
     params = {
         "limit": ammount,
         "offset": offset,
-        "sortBy": "creationTime",
-        "order": "asc"
+        "sortBy": "creationTime"
     }
 
     resp = requests.get(url, params=params)
     data = resp.json()
-
     for m in data:
-        print(m)
+        print(m["question"])
 
 def save_to_history():
     ...
