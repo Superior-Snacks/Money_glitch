@@ -19,8 +19,6 @@ def get_history():
     print(tok_yes["token_id"], len(hist))
     print(hist[:3])
 
-get_history()
-
 def get_market_data(ammount=1, offset=0):
     url = "https://gamma-api.polymarket.com/markets"
     params = {
@@ -44,7 +42,9 @@ def run_test_algo():
 
 
 def main():
-    ...
+    get_market_data()
+    get_history()
+
 
 if __name__ == "__main__":
     main()
