@@ -32,7 +32,7 @@ def get_market_data(ammount=1, offset=0):
     data = resp.json()
 
     for m in data:
-        print(m["title"], m["creationTime"])
+        print(m)
 
 def save_to_history():
     ...
