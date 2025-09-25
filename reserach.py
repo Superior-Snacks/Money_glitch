@@ -60,14 +60,14 @@ def get_history_for_market(market_dict, outcome="Yes", interval="1h"):
     return hist
 
 def get_trade_for_market(marked_dict,):
-    ...
+    params = {"market": marked_dict["id"]}
 
 
 
 
 
 
-    
+
 # EXAMPLE USAGE
 def main():
     # Start near your discovered first-with-history offset
