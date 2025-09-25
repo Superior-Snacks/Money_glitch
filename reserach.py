@@ -77,7 +77,7 @@ def main():
     # Start near your discovered first-with-history offset
     markets = fetch_markets(limit=1, offset=73983)
     m = markets[0]  # pass a single dict, not the list
-    get_history_for_market(m, outcome="Yes", interval="1h")
+    get_trade_for_market(m)
 
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
