@@ -35,7 +35,7 @@ def get_history(market):
     if history[:3]:
         print("Sample:", history[:3])
 
-def get_market_data(ammount=1, offset=0):
+def get_market_data(ammount=1, offset=73983): #ofset is the first market that has a history
     url = "https://gamma-api.polymarket.com/markets"
     params = {
         "limit": ammount,
