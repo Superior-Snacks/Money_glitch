@@ -13,7 +13,7 @@ def _coerce_json_field(val):
         return json.loads(val)
     return val
 
-def fetch_markets(limit=20, offset=0):
+def fetch_markets(limit=20, offset=73983):
     params = {
         "limit": limit,
         "offset": offset,
@@ -60,12 +60,16 @@ def get_history_for_market(market_dict, outcome="Yes", interval="1h"):
     return hist
 
 def get_trade_for_market(marked_dict):
-    params = {"market": marked_dict["id"]}
+    params = {"market": marked_dict["conditionId"],
+              "sort": "asc",
+              "limit": 100}
 
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload)
+    print(payload[0].keys())
+    for trader in payload:
+        print(trader["title"], trader["side"], trader["price"], trader["timestamp"])
 
 
 
@@ -75,7 +79,8 @@ def get_trade_for_market(marked_dict):
 # EXAMPLE USAGE
 def main():
     # Start near your discovered first-with-history offset
-    markets = fetch_markets(limit=1, offset=73983)
+    offset = 74669
+    markets = fetch_markets(1, offset)
     m = markets[0]  # pass a single dict, not the list
     get_trade_for_market(m)
 
