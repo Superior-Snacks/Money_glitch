@@ -58,7 +58,7 @@ def run_test_algo():
 
 
 def main():
-    get_history(get_market_data(1, 50001))
+    get_history(get_market_data(1, 73983))
 
 
 if __name__ == "__main__":
