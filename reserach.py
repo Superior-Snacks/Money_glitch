@@ -63,7 +63,9 @@ def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["id"]}
 
     r = requests.get(BASE_TRADES, params=params, timeout=30)
-
+    r.raise_for_status()
+    payload = r.json()
+    print(payload)
 
 
 
