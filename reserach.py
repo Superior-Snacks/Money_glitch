@@ -1,65 +1,76 @@
-import requests
-import sys
-import time
 import json
+import time
+import requests
+from datetime import datetime, timezone
 
-def get_history(market):
-    market = market[0]
-# 1) Parse outcomes and token ids (they're JSON strings in your object)
-    outcomes = json.loads(market["outcomes"])            # ["Yes", "No"]
-    token_ids = json.loads(market["clobTokenIds"])       # ["3905...78175", "8965...48801"]
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 
-    # Map outcomes -> token_ids
-    outcome_to_token = dict(zip(outcomes, token_ids))
+def _coerce_json_field(val):
+    """Gamma sometimes returns JSON-encoded strings; sometimes real lists."""
+    if isinstance(val, str):
+        return json.loads(val)
+    return val
 
-    print("Market:", market["question"])
-    print("Outcome -> Token mapping:", outcome_to_token)
-
-    # 2) Pick which outcome you want the history for:
-    token_id = outcome_to_token["Yes"]   # or "No"
-
-    # 3) Fetch price history
-    # Tip: start with interval="max" to see if any data exists
+def fetch_markets(limit=20, offset=0):
     params = {
-        "market": token_id,   # yes, the param is named 'market' and takes a token_id
-        "interval": "max"     # or '1h', '1d'; you can also use startTs/endTs (UNIX seconds)
-    }
-    resp = requests.get("https://clob.polymarket.com/prices-history", params=params)
-    resp.raise_for_status()
-    payload = resp.json()
-
-    # Some responses nest under 'history'; others return a bare list—handle both:
-    history = payload.get("history", payload)
-
-    print("Points:", len(history))
-    if history[:3]:
-        print("Sample:", history[:3])
-
-def get_market_data(ammount=1, offset=73983): #ofset is the first market that has a history
-    url = "https://gamma-api.polymarket.com/markets"
-    params = {
-        "limit": ammount,
+        "limit": limit,
         "offset": offset,
-        "sortBy": "creationTime"
+        "sortBy": "creationTime"    # <-- important to get oldest first
     }
+    r = requests.get(BASE_GAMMA, params=params, timeout=30)
+    r.raise_for_status()
+    return r.json()
 
-    resp = requests.get(url, params=params)
-    data = resp.json()
-    for m in data:
-        print(m)
-        print(m["question"], m["createdAt"])
-    return data
+def price_history_for_token(token_id, interval="max", start=None, end=None):
+    params = {"market": token_id}
+    if start and end:
+        params.update({"startTs": int(start), "endTs": int(end)})
+    else:
+        params["interval"] = interval
+    r = requests.get(BASE_HISTORY, params=params, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    history = payload.get("history", payload)
+    return history  # list of {t, p}
 
-def save_to_history():
-    ...
+def get_history_for_market(market_dict, outcome="Yes", interval="max"):
+    # outcomes & clobTokenIds can be JSON strings; coerce to lists
+    outcomes = _coerce_json_field(market_dict["outcomes"])
+    token_ids = _coerce_json_field(market_dict["clobTokenIds"])
+    mapping = dict(zip(outcomes, token_ids))
 
-def run_test_algo():
-    ...
+    if outcome not in mapping:
+        # handle categorical or different casing
+        print(f"[warn] Outcome '{outcome}' not in {outcomes}; using first outcome.")
+        token_id = token_ids[0]
+        outcome = outcomes[0]
+    else:
+        token_id = mapping[outcome]
 
+    hist = price_history_for_token(token_id, interval=interval)
+    print(f"Market: {market_dict.get('question') or market_dict.get('title')}")
+    print("Outcome -> Token:", mapping)
+    print("Points:", len(hist))
+    if hist[:3]:
+        print("Sample:", hist[:3])
+    return hist
 
+# EXAMPLE USAGE
 def main():
-    get_history(get_market_data(1, 73983))
+    # Start near your discovered first-with-history offset
+    markets = fetch_markets(limit=1, offset=73983)
+    m = markets[0]  # pass a single dict, not the list
+    get_history_for_market(m, outcome="Yes", interval="1h")
 
+    # If you want to loop multiple markets:
+    # batch = fetch_markets(limit=50, offset=73983)
+    # for m in batch:
+    #     try:
+    #         get_history_for_market(m, "Yes", "max")
+    #     except Exception as e:
+    #         print("[skip]", m.get("id"), e)
+    #     time.sleep(0.15)  # be polite
 
 if __name__ == "__main__":
     main()
