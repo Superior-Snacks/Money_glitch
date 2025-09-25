@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
+BASE_TRADES = "http://data-api.polymarket.com/trades"
 
 def _coerce_json_field(val):
     """Gamma sometimes returns JSON-encoded strings; sometimes real lists."""
@@ -22,19 +23,21 @@ def fetch_markets(limit=20, offset=0):
     r.raise_for_status()
     return r.json()
 
-def price_history_for_token(token_id, interval="max", start=None, end=None):
+def price_history_for_token(token_id, interval="1h", start=None, end=None):
     params = {"market": token_id}
     if start and end:
         params.update({"startTs": int(start), "endTs": int(end)})
     else:
         params["interval"] = interval
+    print(params)
     r = requests.get(BASE_HISTORY, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
+    print(payload)
     history = payload.get("history", payload)
     return history  # list of {t, p}
 
-def get_history_for_market(market_dict, outcome="Yes", interval="max"):
+def get_history_for_market(market_dict, outcome="Yes", interval="1h"):
     # outcomes & clobTokenIds can be JSON strings; coerce to lists
     outcomes = _coerce_json_field(market_dict["outcomes"])
     token_ids = _coerce_json_field(market_dict["clobTokenIds"])
