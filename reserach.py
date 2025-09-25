@@ -59,8 +59,10 @@ def get_history_for_market(market_dict, outcome="Yes", interval="1h"):
         print("Sample:", hist[:3])
     return hist
 
-def get_trade_for_market(marked_dict,):
+def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["id"]}
+
+    r = requests.get(BASE_TRADES, params=params, timeout=30)
 
 
 
