@@ -29,9 +29,9 @@ def get_trade_for_market(marked_dict):
     print(payload[6].keys())
     print("------------------------------------------")
     print(payload[6])
-    calculate_price(payload[:10])
+    #calculate_price(payload[:10])
     for trader in payload:
-        #print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
+        print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
         ...
 def run_algo(market, trades):
     outcome = market["outcome"]
@@ -39,7 +39,9 @@ def run_algo(market, trades):
         ...
 
 def calculate_price(trades):
+    time = []
     for i in trades:
+        ...
 
 
 # EXAMPLE USAGE
