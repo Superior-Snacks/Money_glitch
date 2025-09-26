@@ -62,14 +62,15 @@ def get_history_for_market(market_dict, outcome="Yes", interval="1h"):
 def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
               "sort": "asc",
-              "limit": 100}
+              "limit": 100,
+              "offset":200}
 
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
     print(payload[0].keys())
     for trader in payload:
-        print(trader["title"], trader["side"], trader["price"], trader["timestamp"])
+        print(trader["name"], trader["title"], trader["side"], trader["price"], trader["timestamp"])
 
 
 
