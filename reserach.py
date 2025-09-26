@@ -20,8 +20,7 @@ def fetch_markets(limit=20, offset=73983):
 def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
               "sort": "asc",
-              "limit": 100,
-              "offset":0}
+              "limit": "max"}
 
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
