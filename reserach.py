@@ -44,7 +44,7 @@ def calculate_price(trades):
     """
     for i in trades:
         if (trades["outcome"] == "No") and (trades["size"] > 500):
-            print("price that I could have got")
+            print(f"price that I could have got is {trades["price"]}")
             return trades["price"]
 
 
