@@ -25,16 +25,28 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[0])
+    print(payload[6])
+    print("------------------------------------------")
+    book_test(payload[6])
     for trader in payload:
-        print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
-
+        #print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
+        ...
 def run_algo(market, trades):
     outcome = market["outcome"]
     for i in trades:
         ...
 
-    
+def book_test(trade):
+    token_id = trade["asset"]  # from your trade dict
+    book = requests.get("https://clob.polymarket.com/book", params={"token_id": token_id}).json()
+
+    best_bid = max(book["bids"], key=lambda x: x["price"])["price"] if book["bids"] else None
+    best_ask = min(book["asks"], key=lambda x: x["price"])["price"] if book["asks"] else None
+
+    # Top-of-book depth (shares) at best prices:
+    bid_depth = sum(lvl["quantity"] for lvl in book["bids"] if lvl["price"] == best_bid) if best_bid else 0
+    ask_depth = sum(lvl["quantity"] for lvl in book["asks"] if lvl["price"] == best_ask) if best_ask else 0
+    print(best_bid, bid_depth, best_ask, ask_depth)
 
 
 
