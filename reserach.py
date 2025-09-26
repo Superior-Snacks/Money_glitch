@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_TRADES = "http://data-api.polymarket.com/trades"
+BASE_BOOK = "https://clob.polymarket.com/book"
 
 def fetch_markets(limit=20, offset=73983):
     params = {
@@ -38,7 +39,9 @@ def run_algo(market, trades):
 
 def book_test(trade):
     token_id = trade["asset"]  # from your trade dict
+    print(token_id)
     book = requests.get("https://clob.polymarket.com/book", params={"token_id": token_id}).json()
+    print(book.keys())
 
     best_bid = max(book["bids"], key=lambda x: x["price"])["price"] if book["bids"] else None
     best_ask = min(book["asks"], key=lambda x: x["price"])["price"] if book["asks"] else None
