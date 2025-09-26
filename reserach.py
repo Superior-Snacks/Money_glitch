@@ -39,6 +39,9 @@ def run_algo(market, trades):
         ...
 
 def calculate_price(trades):
+    """
+    more elegance needed
+    """
     for i in trades:
         if (trades["outcome"] == "No") and (trades["size"] > 500):
             print("price that I could have got")
