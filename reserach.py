@@ -25,13 +25,16 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload)
+    print(payload[0])
     for trader in payload:
         print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
 
-def run_algo(trades):
-    ...
+def run_algo(market, trades):
+    outcome = market["outcome"]
+    for i in trades:
+        ...
 
+    
 
 
 
@@ -40,7 +43,7 @@ def run_algo(trades):
 def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
-    offset_trade = 4811       #trade start
+    offset_trade = 4811 + 5000       #trade start
     markets = fetch_markets(1, offset_trade)
     m = markets[0]  # pass a single dict, not the list
     get_trade_for_market(m)
