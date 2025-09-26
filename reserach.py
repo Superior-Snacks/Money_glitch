@@ -7,17 +7,11 @@ BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_TRADES = "http://data-api.polymarket.com/trades"
 
-def _coerce_json_field(val):
-    """Gamma sometimes returns JSON-encoded strings; sometimes real lists."""
-    if isinstance(val, str):
-        return json.loads(val)
-    return val
-
 def fetch_markets(limit=20, offset=73983):
     params = {
         "limit": limit,
         "offset": offset,
-        "sortBy": "creationTime"    # <-- important to get oldest first
+        "sortBy": "creationTime"
     }
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
