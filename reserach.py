@@ -37,9 +37,9 @@ def get_trade_for_market(marked_dict):
 # EXAMPLE USAGE
 def main():
     # Start near your discovered first-with-history offset
-    offset = 74669      #history start
-    offset = 4811       #trade start
-    markets = fetch_markets(1, offset)
+    offset_history = 74669      #history start
+    offset_trade = 4811       #trade start
+    markets = fetch_markets(1, offset_trade)
     m = markets[0]  # pass a single dict, not the list
     get_trade_for_market(m)
 
