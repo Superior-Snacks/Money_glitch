@@ -23,47 +23,11 @@ def fetch_markets(limit=20, offset=73983):
     r.raise_for_status()
     return r.json()
 
-def price_history_for_token(token_id, interval="1h", start=None, end=None):
-    params = {"market": token_id}
-    if start and end:
-        params.update({"startTs": int(start), "endTs": int(end)})
-    else:
-        params["interval"] = interval
-    print(params)
-    r = requests.get(BASE_HISTORY, params=params, timeout=30)
-    r.raise_for_status()
-    payload = r.json()
-    print(payload)
-    history = payload.get("history", payload)
-    return history  # list of {t, p}
-
-def get_history_for_market(market_dict, outcome="Yes", interval="1h"):
-    # outcomes & clobTokenIds can be JSON strings; coerce to lists
-    outcomes = _coerce_json_field(market_dict["outcomes"])
-    token_ids = _coerce_json_field(market_dict["clobTokenIds"])
-    mapping = dict(zip(outcomes, token_ids))
-
-    if outcome not in mapping:
-        # handle categorical or different casing
-        print(f"[warn] Outcome '{outcome}' not in {outcomes}; using first outcome.")
-        token_id = token_ids[0]
-        outcome = outcomes[0]
-    else:
-        token_id = mapping[outcome]
-
-    hist = price_history_for_token(token_id, interval=interval)
-    print(f"Market: {market_dict.get('question') or market_dict.get('title')}")
-    print("Outcome -> Token:", mapping)
-    print("Points:", len(hist))
-    if hist[:3]:
-        print("Sample:", hist[:3])
-    return hist
-
 def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
               "sort": "asc",
               "limit": 100,
-              "offset":200}
+              "offset":0}
 
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
