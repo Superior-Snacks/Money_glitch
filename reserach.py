@@ -28,7 +28,7 @@ def get_trade_for_market(marked_dict):
     payload = r.json()
     print(payload[6])
     print("------------------------------------------")
-    book_test(payload[6])
+    calculate_price(payload[:10])
     for trader in payload:
         #print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
         ...
