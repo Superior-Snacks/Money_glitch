@@ -26,8 +26,9 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[6])
+    print(payload[6].keys())
     print("------------------------------------------")
+    print(payload[6])
     calculate_price(payload[:10])
     for trader in payload:
         #print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
@@ -38,6 +39,7 @@ def run_algo(market, trades):
         ...
 
 def calculate_price(trades):
+    for i in trades:
 
 
 # EXAMPLE USAGE
