@@ -52,10 +52,11 @@ def calculate_price(trades):
 def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
-    offset_trade = 4811 + 9000       #trade start
+    offset_trade = 4811 + 10000       #trade start
     markets = fetch_markets(1, offset_trade)
     m = markets[0]  # pass a single dict, not the list
-    get_trade_for_market(m)
+    n = get_trade_for_market(m)
+    p = calculate_price(n)
 
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
