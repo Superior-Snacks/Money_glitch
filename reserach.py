@@ -37,21 +37,7 @@ def run_algo(market, trades):
     for i in trades:
         ...
 
-def book_test(trade):
-    token_id = trade["asset"]  # from your trade dict
-    print(token_id)
-    book = requests.get("https://clob.polymarket.com/book", params={"token_id": token_id}).json()
-    print(book.keys())
-
-    best_bid = max(book["bids"], key=lambda x: x["price"])["price"] if book["bids"] else None
-    best_ask = min(book["asks"], key=lambda x: x["price"])["price"] if book["asks"] else None
-
-    # Top-of-book depth (shares) at best prices:
-    bid_depth = sum(lvl["quantity"] for lvl in book["bids"] if lvl["price"] == best_bid) if best_bid else 0
-    ask_depth = sum(lvl["quantity"] for lvl in book["asks"] if lvl["price"] == best_ask) if best_ask else 0
-    print(best_bid, bid_depth, best_ask, ask_depth)
-
-
+def calculate_price(trades):
 
 
 # EXAMPLE USAGE
