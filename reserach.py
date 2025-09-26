@@ -33,6 +33,7 @@ def get_trade_for_market(marked_dict):
     for trader in payload:
         print(trader["name"], trader["title"],trader["outcome"], trader["side"],trader["size"], trader["price"], trader["outcome"], time.asctime(time.localtime(trader["timestamp"])))
         ...
+    return payload
 def run_algo(market, trades):
     outcome = market["outcome"]
     for i in trades:
@@ -42,17 +43,18 @@ def calculate_price(trades):
     """
     more elegance needed
     """
+    print("calc")
     for i in trades:
-        if (trades["outcome"] == "No") and (trades["size"] > 500):
-            print(f"price that I could have got is {trades["price"]}")
-            return trades["price"]
+        if (i["outcome"] == "No") and (i["size"] > 20):
+            print(f"price that I could have got is {i["price"]}")
+            return i["price"]
 
 
 # EXAMPLE USAGE
 def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
-    offset_trade = 4811 + 10000       #trade start
+    offset_trade = 4811 + 20000       #trade start
     markets = fetch_markets(1, offset_trade)
     m = markets[0]  # pass a single dict, not the list
     n = get_trade_for_market(m)
