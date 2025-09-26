@@ -29,6 +29,8 @@ def get_trade_for_market(marked_dict):
     for trader in payload:
         print(trader["name"], trader["title"], trader["side"], trader["price"], time.asctime(time.localtime(trader["timestamp"])))
 
+def run_algo(trades):
+    ...
 
 
 
