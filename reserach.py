@@ -26,9 +26,9 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[0])
-    print("------------------------------------------")
-    print(payload[0])
+    #print(payload[0])
+    #print("------------------------------------------")
+    #print(payload[0])
     #calculate_price(payload[:10])
     #for trader in payload:
     #    print(trader["name"], trader["title"],trader["outcome"], trader["side"],trader["size"], trader["price"], trader["outcome"], time.asctime(time.localtime(trader["timestamp"])))
@@ -60,7 +60,7 @@ def main():
     #p = calculate_price(n)
     for trades in markets:
         single = get_trade_for_market(trades)
-        print(single)
+        print(calculate_price(single))
 
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
