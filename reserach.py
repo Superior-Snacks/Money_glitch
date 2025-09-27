@@ -55,10 +55,13 @@ def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
     offset_trade = 4811 + 20000       #trade start
-    markets = fetch_markets(1, offset_trade)
-    m = markets[0]  # pass a single dict, not the list
-    n = get_trade_for_market(m)
-    p = calculate_price(n)
+    markets = fetch_markets(10, offset_trade)
+    #m = markets[0]  # pass a single dict, not the list
+    #n = get_trade_for_market(m)
+    #p = calculate_price(n)
+    for trades in markets:
+        single = get_trade_for_market(trades)
+        print(single)
 
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
