@@ -44,7 +44,10 @@ def calculate_price(trades):
     """
     print("calc")
     for i in trades:
-        if (i["outcome"] == "No") and (i["size"] > 20):
+        if (i["outcome"] == "No") and (i["size"] > 50) and (i["side"] == "BUY"):
+            print(f"price that I could have got is {i["price"]}")
+            return i["price"]
+        elif (i["outcome"] == "Yes") and (i["size"] > 50) and (i["side"] == "SELL"):
             print(f"price that I could have got is {i["price"]}")
             return i["price"]
 
@@ -53,7 +56,7 @@ def calculate_price(trades):
 def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
-    offset_trade = 4811 + 20000       #trade start
+    offset_trade = 4811 + 30000       #trade start
     markets = fetch_markets(10, offset_trade)
     #m = markets[0]  # pass a single dict, not the list
     #n = get_trade_for_market(m)
