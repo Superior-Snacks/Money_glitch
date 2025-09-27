@@ -45,10 +45,10 @@ def calculate_price(trades):
     print("calc")
     for i in trades:
         if (i["outcome"] == "No") and (i["size"] > 50) and (i["side"] == "BUY"):
-            print(f"price that I could have got is {i["price"]}")
+            print(f"price that I could have bought NO is {i["price"]}")
             return i["price"]
         elif (i["outcome"] == "Yes") and (i["size"] > 50) and (i["side"] == "SELL"):
-            print(f"price that I could have got is {i["price"]}")
+            print(f"price that I could have sold YES is {i["price"]}")
             return i["price"]
 
 
