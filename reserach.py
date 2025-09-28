@@ -44,10 +44,21 @@ def calculate_market(market, trades):
     return history
 
 def compress_trades(trades):
+    sections = []
     trades = sorted(trades, key=lambda t: trades["timestamp"])
     curr_price = trades[0]["price"]
     curr_size = trades[0]["size"]
     curr_time = trades[0]["timestamp"]
+
+    for trade in trades:
+        if trade["price"] == curr_price:
+            curr_size += curr_size
+        else:
+            sections.append(curr_price, curr_size, curr_time)
+            curr_price = trade["price"]
+            curr_size = trade["size"]
+            curr_time = trade["timestamp"]
+            
 
 
 # EXAMPLE USAGE
