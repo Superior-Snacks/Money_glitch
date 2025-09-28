@@ -41,6 +41,7 @@ def calculate_market(market, trades):
     history = []
     for period in range(0,len(trades), 40):
         history.append(trades[period:period+40])
+    return history
 
 # EXAMPLE USAGE
 def main():
