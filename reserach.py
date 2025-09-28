@@ -30,14 +30,7 @@ def calculate_price(trades):
     """
     calculate the price for a given time of trades
     """
-    print("calc")
-    for i in trades:
-        if (i["outcome"] == "No") and (i["size"] > 50) and (i["side"] == "BUY"):
-            print(f"price that I could have bought NO is {i["price"]}")
-            return i["price"]
-        elif (i["outcome"] == "Yes") and (i["size"] > 50) and (i["side"] == "SELL"):
-            print(f"price that I could have sold YES is {i["price"]}")
-            return i["price"]
+
         
 def calculate_market(market, trades):
     """
