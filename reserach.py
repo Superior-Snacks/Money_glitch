@@ -47,6 +47,7 @@ def calculate_market(market, trades):
 def compress_trades(trades):
     """
     adds up trades that are the same giving a lower bound on how much was able to be bought
+    needs to be filterd for the types I want to look at
     """
     print(trades[0]["timestamp"])
     sections = []
@@ -57,7 +58,8 @@ def compress_trades(trades):
 
     for trade in trades:
         print(trade["name"])
-        if (trade["price"] - curr_price) < 5 or (trade["price"] - curr_price) > -5:
+        #if (trade["price"] - curr_price) > 0.05 or (trade["price"] - curr_price) < -0.05:
+        if trade["price"] == curr_price:
             curr_size += curr_size
         else:
             sections.append({"time":curr_time, "size":curr_size, "price":curr_price})
