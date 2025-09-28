@@ -38,7 +38,9 @@ def calculate_market(market, trades):
     """
     if not trades:
         return "ERROR"
-
+    history = []
+    for period in range(0,len(trades), 4):
+        history.append(trades[period:period+4])
 
 # EXAMPLE USAGE
 def main():
