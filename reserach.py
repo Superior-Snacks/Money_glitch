@@ -50,8 +50,8 @@ def compress_trades(trades):
     sections = []
     trades = sorted(trades, key=lambda t: trades["timestamp"])
     curr_price = trades[0]["price"]
-    curr_size = trades[0]["size"]
     curr_time = trades[0]["timestamp"]
+    curr_size = 0
 
     for trade in trades:
         if trade["price"] == curr_price:
