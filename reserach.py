@@ -51,7 +51,7 @@ def compress_trades(trades):
     trades = sorted(trades, key=lambda t: trades["timestamp"])
     curr_price = trades[0]["price"]
     curr_time = trades[0]["timestamp"]
-    curr_size = 0
+    curr_size = 0 #first trade will always be true
 
     for trade in trades:
         if trade["price"] == curr_price:
