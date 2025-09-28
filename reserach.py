@@ -64,6 +64,10 @@ def compress_trades(trades):
     sections.append([curr_price, curr_size, curr_time])
     return sections
 
+def print_list(li):
+    for i in li:
+        print(i)
+
 
 # EXAMPLE USAGE
 def main():
