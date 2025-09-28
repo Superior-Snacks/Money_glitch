@@ -22,16 +22,9 @@ def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
               "sort": "asc",
               "limit": "max"}
-
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    #print(payload[0])
-    #print("------------------------------------------")
-    #print(payload[0])
-    #calculate_price(payload[:10])
-    #for trader in payload:
-    #    print(trader["name"], trader["title"],trader["outcome"], trader["side"],trader["size"], trader["price"], trader["outcome"], time.asctime(time.localtime(trader["timestamp"])))
     return payload
 
 def calculate_price(trades):
