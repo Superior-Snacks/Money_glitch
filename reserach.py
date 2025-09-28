@@ -44,6 +44,9 @@ def calculate_market(market, trades):
     return history
 
 def compress_trades(trades):
+    """
+    adds up trades that are the same giving a lower bound on how much was able to be bought
+    """
     sections = []
     trades = sorted(trades, key=lambda t: trades["timestamp"])
     curr_price = trades[0]["price"]
