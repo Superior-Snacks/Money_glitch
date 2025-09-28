@@ -48,8 +48,9 @@ def compress_trades(trades):
     """
     adds up trades that are the same giving a lower bound on how much was able to be bought
     """
+    print(trades[0]["timestamp"])
     sections = []
-    trades = sorted(trades, key=lambda t: trades["timestamp"])
+    trades = sorted(trades, key=lambda t: t["timestamp"])
     curr_price = trades[0]["price"]
     curr_time = trades[0]["timestamp"]
     curr_size = 0 #first trade will always be true
@@ -59,11 +60,11 @@ def compress_trades(trades):
         if trade["price"] == curr_price:
             curr_size += curr_size
         else:
-            sections.append([curr_price, curr_size, curr_time])
+            sections.append({"time":curr_time, "size":curr_size, "price":curr_price})
             curr_price = trade["price"]
             curr_size = trade["size"]
             curr_time = trade["timestamp"]
-    sections.append([curr_price, curr_size, curr_time])
+    sections.append({"time":curr_time, "size":curr_size, "price":curr_price})
     return sections
 
 def print_list(li):
@@ -75,9 +76,9 @@ def print_list(li):
 def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
-    offset_trade = 4811 + 30000       #trade start
+    offset_trade = 4811 + 30009       #trade start
     markets = fetch_markets(1, offset_trade)
-    #m = markets[0]  # pass a single dict, not the list
+    markets = markets[0]  # pass a single dict, not the list
     n = get_trade_for_market(markets)
     #p = calculate_price(n)
     c = compress_trades(n)
