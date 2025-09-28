@@ -40,7 +40,7 @@ def run_algo(market, trades):
 
 def calculate_price(trades):
     """
-    more elegance needed
+    calculate the price for a given time of trades
     """
     print("calc")
     for i in trades:
@@ -50,6 +50,11 @@ def calculate_price(trades):
         elif (i["outcome"] == "Yes") and (i["size"] > 50) and (i["side"] == "SELL"):
             print(f"price that I could have sold YES is {i["price"]}")
             return i["price"]
+        
+def calculate_market(market, trades):
+    """
+    give a list with sets that give the time and price available at the time
+    """
 
 
 # EXAMPLE USAGE
