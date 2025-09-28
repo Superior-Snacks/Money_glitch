@@ -45,9 +45,9 @@ def calculate_market(market, trades):
 
 def compress_trades(trades):
     trades = sorted(trades, key=lambda t: trades["timestamp"])
-    curr_price = trades["price"]
-    curr_size = trades["size"]
-    curr_time = trades["timestamp"]
+    curr_price = trades[0]["price"]
+    curr_size = trades[0]["size"]
+    curr_time = trades[0]["timestamp"]
 
 
 # EXAMPLE USAGE
