@@ -43,6 +43,10 @@ def calculate_market(market, trades):
         history.append(calculate_price(trades[period:period+40]))
     return history
 
+def compress_trades(trades):
+    trades = sorted(trades, key=lambda t: trades["timestamp"])
+
+
 # EXAMPLE USAGE
 def main():
     # Start near your discovered first-with-history offset
