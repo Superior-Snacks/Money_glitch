@@ -8,7 +8,7 @@ BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_TRADES = "http://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
 
-def fetch_markets(limit=20, offset=73983):
+def fetch_markets(limit=20, offset=4811):
     params = {
         "limit": limit,
         "offset": offset,
