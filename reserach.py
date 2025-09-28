@@ -12,8 +12,7 @@ def fetch_markets(limit=20, offset=73983):
     params = {
         "limit": limit,
         "offset": offset,
-        "sortBy": "creationTime"
-    }
+        "sortBy": "creationTime"}
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     return r.json()
