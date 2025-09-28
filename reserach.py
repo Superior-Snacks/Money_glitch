@@ -26,7 +26,7 @@ def get_trade_for_market(marked_dict):
     payload = r.json()
     return payload
 
-def calculate_price(trades):
+def calculate_price(trades): #price, size, time
     """
     calculate the price for a given time of trades
     """
@@ -39,7 +39,7 @@ def calculate_market(market, trades):
     if not trades:
         return "ERROR"
     history = []
-    for period in range(0,len(trades), 40):
+    for period in range(0, len(trades), 40):
         history.append(trades[period:period+40])
     return history
 
