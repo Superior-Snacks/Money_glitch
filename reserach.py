@@ -83,6 +83,7 @@ def main():
     #p = calculate_price(n)
     c = compress_trades(n)
     print_list(c)
+    print(f"size of unfliterd market {len(markets)}")
 
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
