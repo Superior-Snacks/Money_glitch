@@ -36,6 +36,8 @@ def calculate_market(market, trades):
     """
     give a list with sets that give the time and price available at the time
     """
+    if not trades:
+        return "ERROR"
 
 
 # EXAMPLE USAGE
