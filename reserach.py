@@ -57,7 +57,7 @@ def compress_trades(trades):
 
     for trade in trades:
         print(trade["name"])
-        if trade["price"] == curr_price:
+        if (trade["price"] - curr_price) < 5 or (trade["price"] - curr_price) > -5:
             curr_size += curr_size
         else:
             sections.append({"time":curr_time, "size":curr_size, "price":curr_price})
