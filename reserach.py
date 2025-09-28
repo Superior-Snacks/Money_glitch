@@ -78,9 +78,8 @@ def main():
     #m = markets[0]  # pass a single dict, not the list
     #n = get_trade_for_market(m)
     #p = calculate_price(n)
-    for trades in markets:
-        single = get_trade_for_market(trades)
-        print(calculate_price(single))
+    c = compress_trades(markets)
+    print_list(c)
 
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
