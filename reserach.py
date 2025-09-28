@@ -24,6 +24,7 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
+    print(payload[0].keys())
     return payload
 
 def calculate_price(trades): #price, size, time
@@ -54,6 +55,7 @@ def compress_trades(trades):
     curr_size = 0 #first trade will always be true
 
     for trade in trades:
+        print(trade["name"])
         if trade["price"] == curr_price:
             curr_size += curr_size
         else:
@@ -76,9 +78,9 @@ def main():
     offset_trade = 4811 + 30000       #trade start
     markets = fetch_markets(1, offset_trade)
     #m = markets[0]  # pass a single dict, not the list
-    #n = get_trade_for_market(m)
+    n = get_trade_for_market(markets)
     #p = calculate_price(n)
-    c = compress_trades(markets)
+    c = compress_trades(n)
     print_list(c)
 
     # If you want to loop multiple markets:
