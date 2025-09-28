@@ -58,7 +58,7 @@ def compress_trades(trades):
 
     for trade in trades:
         print(trade["name"])
-        #if (trade["price"] - curr_price) > 0.05 or (trade["price"] - curr_price) < -0.05:
+        #if (trade["price"] - curr_price) > 0.2 or (trade["price"] - curr_price) < -0.2:
         if trade["price"] == curr_price:
             curr_size += curr_size
         else:
