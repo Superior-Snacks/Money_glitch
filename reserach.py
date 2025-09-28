@@ -54,11 +54,11 @@ def compress_trades(trades):
         if trade["price"] == curr_price:
             curr_size += curr_size
         else:
-            sections.append(curr_price, curr_size, curr_time)
+            sections.append([curr_price, curr_size, curr_time])
             curr_price = trade["price"]
             curr_size = trade["size"]
             curr_time = trade["timestamp"]
-    sections.append(curr_price, curr_size, curr_time)
+    sections.append([curr_price, curr_size, curr_time])
 
 
 # EXAMPLE USAGE
