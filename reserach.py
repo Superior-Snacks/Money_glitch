@@ -33,10 +33,6 @@ def get_trade_for_market(marked_dict):
     #for trader in payload:
     #    print(trader["name"], trader["title"],trader["outcome"], trader["side"],trader["size"], trader["price"], trader["outcome"], time.asctime(time.localtime(trader["timestamp"])))
     return payload
-def run_algo(market, trades):
-    outcome = market["outcome"]
-    for i in trades:
-        ...
 
 def calculate_price(trades):
     """
@@ -78,6 +74,11 @@ def main():
     #     except Exception as e:
     #         print("[skip]", m.get("id"), e)
     #     time.sleep(0.15)  # be polite
+
+def run_algo(market, trades):
+    outcome = market["outcome"]
+    for i in trades:
+        ...
 
 if __name__ == "__main__":
     main()
