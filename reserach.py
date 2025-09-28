@@ -59,6 +59,7 @@ def compress_trades(trades):
             curr_size = trade["size"]
             curr_time = trade["timestamp"]
     sections.append([curr_price, curr_size, curr_time])
+    return sections
 
 
 # EXAMPLE USAGE
