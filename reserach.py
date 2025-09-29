@@ -120,7 +120,9 @@ def print_list(li):
 
 # EXAMPLE USAGE
 def main():
-    """result = []
+    """
+    offset_trade = 4811
+    result = []
     markets = fetch_markets(50, offset_trade)
     filterd_markets = filter_markets(markets)
     for market in filterd_markets:
@@ -129,7 +131,8 @@ def main():
         decision = run_algo(corrected_trade)
         result.append(decision)
     for bet in result:
-        print(bet)"""
+        print(bet)
+    """
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
     offset_trade = 4811 + 39999       #trade start
