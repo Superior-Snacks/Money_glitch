@@ -31,8 +31,6 @@ def filter_markets(markets):
     return cleaned
 
 
-
-
 def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
               "sort": "asc",
@@ -42,6 +40,10 @@ def get_trade_for_market(marked_dict):
     payload = r.json()
     print(payload[0].keys())
     return payload
+
+def filter_trades(trades):
+    if not trades:
+        return "ERRRO"
 
 def calculate_price(trades): #price, size, time
     """
