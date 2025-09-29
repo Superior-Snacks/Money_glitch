@@ -42,7 +42,9 @@ def get_trade_for_market(marked_dict):
     return payload
 
 def filter_no_trades(trades):
-    """"""
+    """
+    only interested in the no position rn
+    """
     if not trades:
         return "ERRRO"
     bucket = []
