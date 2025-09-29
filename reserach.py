@@ -22,6 +22,7 @@ def filter_markets(markets):
     """
     making sure to only check the weird bets
     """
+    print("filtering markets")
     if not markets:
         return "ERROR"
     cleaned = []
