@@ -145,15 +145,6 @@ def main():
     print(f"size of filterd market {len(c)}")
     print(f"size of unfliterd market {len(markets)}")
 """
-    # If you want to loop multiple markets:
-    # batch = fetch_markets(limit=50, offset=73983)
-    # for m in batch:
-    #     try:
-    #         get_history_for_market(m, "Yes", "max")
-    #     except Exception as e:
-    #         print("[skip]", m.get("id"), e)
-    #     time.sleep(0.15)  # be polite
-
 def run_algo(market, trades):
     outcome = market["outcome"]
     for i in trades:
