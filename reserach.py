@@ -27,9 +27,9 @@ def filter_markets(markets):
         return "ERROR"
     cleaned = []
     for mk in markets:
+        print(mk["outcomes"])
         if mk["outcomes"] == ["Yes", "No"]:
             cleaned.append(mk)
-            print("filterd")
     return cleaned
 
 
@@ -119,7 +119,7 @@ def main():
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
     offset_trade = 4811 + 30009       #trade start
-    markets = fetch_markets(1, offset_trade)
+    markets = fetch_markets(10, offset_trade)
     #markets = markets[0]  # pass a single dict, not the list
     look = filter_markets(markets)
     for i in look:
