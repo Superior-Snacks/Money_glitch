@@ -119,13 +119,13 @@ def main():
     markets = fetch_markets(50, offset_trade)
     filterd_markets = filter_markets(markets)
     for market in filterd_markets:
-        print(market)
         trades = get_trade_for_market(market)
         corrected_trade = filter_no_trades(trades)
         compress = compress_trades(corrected_trade)
         #decision = run_algo(compress)
         #result.append(decision)
         result.append(compress)
+        time.sleep(5)
     print_list(result)
     
     # Start near your discovered first-with-history offset
