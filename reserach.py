@@ -55,18 +55,18 @@ def filter_no_trades(trades):
     bucket = []
     for tr in trades:
         if tr["side"] == "BUY" and tr["outcome"] == "No":
+            bucket.append(tr)
             print("got no")
         elif tr["side"] == "SELL" and tr["outcome"] == "Yes":
             bucket.append(tr)
+            print("got YES")
     return bucket
 
 
 def calculate_price(trades): #price, size, time
     """
     calculate the price for a given time of trades
-    """
-
-        
+    """      
 def calculate_market(market, trades):
     """
     give a list with sets that give the time and price available at the time
