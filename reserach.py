@@ -19,7 +19,15 @@ def fetch_markets(limit=20, offset=4811):
     return r.json()
 
 def filter_markets(markets):
-    ...
+    if not markets:
+        return "ERROR"
+    cleaned = []
+    for mk in markets:
+        if mk["outcomes"] in ["YES","yes","Yes","NO","no","No"]:
+            cleaned.append(mk)
+
+
+
 
 def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
