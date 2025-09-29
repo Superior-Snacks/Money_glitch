@@ -19,6 +19,9 @@ def fetch_markets(limit=20, offset=4811):
     return r.json()
 
 def filter_markets(markets):
+    """
+    making sure to only check the weird bets
+    """
     if not markets:
         return "ERROR"
     cleaned = []
