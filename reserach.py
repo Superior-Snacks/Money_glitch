@@ -126,7 +126,8 @@ def main():
     for market in filterd_markets:
         trades = get_trade_for_market(market)
         corrected_trade = filter_no_trades(trades)
-        decision = run_algo(corrected_trade)
+        compress = compress_trades(corrected_trade)
+        decision = run_algo(compress)
         result.append(decision)
     print_list(result)
     """
