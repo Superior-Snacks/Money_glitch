@@ -45,14 +45,17 @@ def filter_no_trades(trades):
     """
     only interested in the no position rn
     """
+    print("started filtering out correct trades")
     if not trades:
         return "ERRRO"
     bucket = []
     for tr in trades:
         if tr["side"] == "BUY" and tr["outcome"] == "NO":
             bucket.append(tr)
+            print("got no")
         elif tr["side"] == "SELL" and tr["outcome"] == "YES":
             bucket.append(tr)
+            print("got yes")
     return bucket
             
 
@@ -117,7 +120,8 @@ def main():
     markets = markets[0]  # pass a single dict, not the list
     n = get_trade_for_market(markets)
     #p = calculate_price(n)
-    c = compress_trades(n)
+    filt = filter_no_trades(n)
+    c = compress_trades(filt)
     print_list(c)
     print(f"size of filterd market {len(c)}")
     print(f"size of unfliterd market {len(markets)}")
