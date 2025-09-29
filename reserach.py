@@ -24,7 +24,8 @@ def filter_markets(markets):
     """
     print("filtering markets")
     if not markets:
-        return "ERROR"
+        print("ERROR")
+        return None
     cleaned = []
     for mk in markets:
         outcomes = mk["outcomes"]
