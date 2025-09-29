@@ -88,7 +88,6 @@ def compress_trades(trades):
     if not trades:
         print("ERROR")
         return None
-    print(trades[0]["timestamp"])
     sections = []
     trades = sorted(trades, key=lambda t: t["timestamp"])
     curr_price = trades[0]["price"]
