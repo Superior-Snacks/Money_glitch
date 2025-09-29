@@ -29,6 +29,7 @@ def filter_markets(markets):
     for mk in markets:
         if mk["outcomes"] == ["Yes", "No"]:
             cleaned.append(mk)
+            print("filterd")
     return cleaned
 
 
