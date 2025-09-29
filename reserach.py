@@ -96,7 +96,6 @@ def compress_trades(trades):
     curr_size = 0 #first trade will always be true
 
     for trade in trades:
-        print(trade["name"])
         if trade["price"] == curr_price:
             curr_size += curr_size
         else:
