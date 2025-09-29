@@ -120,10 +120,18 @@ def print_list(li):
 
 # EXAMPLE USAGE
 def main():
+    result = []
+    markets = fetch_markets(50, offset_trade)
+    filterd_markets = filter_markets(markets)
+    for market in filterd_markets:
+        trades = get_trade_for_market(market)
+        corrected_trade = filter_no_trades(trades)
+        decision = run_algo(corrected_trade)
+        result.append(decision)
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
-    offset_trade = 4811 + 30009       #trade start
-    markets = fetch_markets(10, offset_trade)
+    offset_trade = 4811 + 39999       #trade start
+    markets = fetch_markets(20, offset_trade)
     #markets = markets[0]  # pass a single dict, not the list
     look = filter_markets(markets)
     for i in look:
