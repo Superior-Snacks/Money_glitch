@@ -83,6 +83,8 @@ def compress_trades(trades):
     adds up trades that are the same giving a lower bound on how much was able to be bought
     needs to be filterd for the types I want to look at
     """
+    if not trades:
+        return "ERROR"
     print(trades[0]["timestamp"])
     sections = []
     trades = sorted(trades, key=lambda t: t["timestamp"])
