@@ -121,7 +121,9 @@ def main():
     markets = fetch_markets(1, offset_trade)
     #markets = markets[0]  # pass a single dict, not the list
     look = filter_markets(markets)
-    print(markets)
+    for i in look:
+        print(i["question"], i["outcomes"])
+"""    print(markets)
     n = get_trade_for_market(markets)
     #p = calculate_price(n)
     filt = n
@@ -131,7 +133,7 @@ def main():
     print_list(c)
     print(f"size of filterd market {len(c)}")
     print(f"size of unfliterd market {len(markets)}")
-
+"""
     # If you want to loop multiple markets:
     # batch = fetch_markets(limit=50, offset=73983)
     # for m in batch:
