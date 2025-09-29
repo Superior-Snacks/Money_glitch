@@ -44,6 +44,19 @@ def get_trade_for_market(marked_dict):
 def filter_trades(trades):
     if not trades:
         return "ERRRO"
+    bucket = []
+    for tr in trades:
+        if tr["side"] == "BUY" and tr["outcome"] == "NO":
+            bucket.append(tr)
+        elif tr["side"] == "SELL" and tr["outcome"] == "YES":
+            bucket.append(tr)
+    return bucket
+            
+
+
+
+
+
 
 def calculate_price(trades): #price, size, time
     """
