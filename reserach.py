@@ -41,7 +41,8 @@ def get_trade_for_market(marked_dict):
     print(payload[0].keys())
     return payload
 
-def filter_trades(trades):
+def filter_no_trades(trades):
+    """"""
     if not trades:
         return "ERRRO"
     bucket = []
