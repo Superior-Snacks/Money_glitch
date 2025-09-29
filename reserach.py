@@ -118,7 +118,6 @@ def print_list(li):
         print(i)
 
 
-# EXAMPLE USAGE
 def main():
     """
     offset_trade = 4811
@@ -130,8 +129,7 @@ def main():
         corrected_trade = filter_no_trades(trades)
         decision = run_algo(corrected_trade)
         result.append(decision)
-    for bet in result:
-        print(bet)
+    print_list(result)
     """
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
