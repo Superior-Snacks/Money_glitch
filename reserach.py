@@ -42,7 +42,7 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    #print(payload[0].keys())
+    print(payload[0].keys())
     return payload
 
 def filter_no_trades(trades):
@@ -111,11 +111,12 @@ def print_list(li):
 
 def main():
     
-    offset_trade = 4811
+    offset_trade = 4811 + 39999
     result = []
     markets = fetch_markets(50, offset_trade)
     filterd_markets = filter_markets(markets)
     for market in filterd_markets:
+        print(market)
         trades = get_trade_for_market(market)
         corrected_trade = filter_no_trades(trades)
         compress = compress_trades(corrected_trade)
