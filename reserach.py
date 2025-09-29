@@ -12,10 +12,14 @@ def fetch_markets(limit=20, offset=4811):
     params = {
         "limit": limit,
         "offset": offset,
+        "outcomes": ["YES", "NO"],
         "sortBy": "creationTime"}
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     return r.json()
+
+def filter_markets(markets):
+    ...
 
 def get_trade_for_market(marked_dict):
     params = {"market": marked_dict["conditionId"],
