@@ -128,6 +128,8 @@ def main():
         corrected_trade = filter_no_trades(trades)
         decision = run_algo(corrected_trade)
         result.append(decision)
+    for bet in result:
+        print(bet)
     # Start near your discovered first-with-history offset
     offset_history = 74669      #history start
     offset_trade = 4811 + 39999       #trade start
