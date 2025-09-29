@@ -119,7 +119,8 @@ def main():
     offset_history = 74669      #history start
     offset_trade = 4811 + 30009       #trade start
     markets = fetch_markets(1, offset_trade)
-    markets = markets[0]  # pass a single dict, not the list
+    #markets = markets[0]  # pass a single dict, not the list
+    look = filter_markets(markets)
     print(markets)
     n = get_trade_for_market(markets)
     #p = calculate_price(n)
