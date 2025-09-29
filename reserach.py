@@ -26,7 +26,7 @@ def filter_markets(markets):
         return "ERROR"
     cleaned = []
     for mk in markets:
-        if mk["outcomes"] in ["YES","yes","Yes","NO","no","No"]:
+        if mk["outcomes"] == ["Yes", "No"]:
             cleaned.append(mk)
     return cleaned
 
@@ -50,12 +50,13 @@ def filter_no_trades(trades):
         return "ERRRO"
     bucket = []
     for tr in trades:
-        if tr["side"] == "BUY" and tr["outcome"] == "NO":
+        if tr["side"] == "BUY" and tr["outcome"] == "No":
             bucket.append(tr)
             print("got no")
-        elif tr["side"] == "SELL" and tr["outcome"] == "YES":
+        elif tr["side"] == "SELL" and tr["outcome"] == "Yes":
             bucket.append(tr)
             print("got yes")
+    print(bucket)
     return bucket
             
 
@@ -118,9 +119,12 @@ def main():
     offset_trade = 4811 + 30009       #trade start
     markets = fetch_markets(1, offset_trade)
     markets = markets[0]  # pass a single dict, not the list
+    print(markets)
     n = get_trade_for_market(markets)
     #p = calculate_price(n)
+    filt = n
     filt = filter_no_trades(n)
+    print(n[0])
     c = compress_trades(filt)
     print_list(c)
     print(f"size of filterd market {len(c)}")
