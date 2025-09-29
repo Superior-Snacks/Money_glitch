@@ -25,6 +25,7 @@ def filter_markets(markets):
     for mk in markets:
         if mk["outcomes"] in ["YES","yes","Yes","NO","no","No"]:
             cleaned.append(mk)
+    return cleaned
 
 
 
