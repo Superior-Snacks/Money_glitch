@@ -27,13 +27,11 @@ def filter_markets(markets):
         return "ERROR"
     cleaned = []
     for mk in markets:
-        print(mk["outcomes"])
         outcomes = mk["outcomes"]
         if isinstance(outcomes, str):
             outcomes = json.loads(outcomes)
         if outcomes == ["Yes", "No"]:
             cleaned.append(mk)
-            print("clean")
     return cleaned
 
 
@@ -44,7 +42,7 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[0].keys())
+    #print(payload[0].keys())
     return payload
 
 def filter_no_trades(trades):
@@ -57,18 +55,10 @@ def filter_no_trades(trades):
     bucket = []
     for tr in trades:
         if tr["side"] == "BUY" and tr["outcome"] == "No":
-            bucket.append(tr)
             print("got no")
         elif tr["side"] == "SELL" and tr["outcome"] == "Yes":
             bucket.append(tr)
-            print("got yes")
-    print(bucket)
     return bucket
-            
-
-
-
-
 
 
 def calculate_price(trades): #price, size, time
@@ -118,7 +108,7 @@ def print_list(li):
 
 
 def main():
-    """
+    
     offset_trade = 4811
     result = []
     markets = fetch_markets(50, offset_trade)
@@ -127,18 +117,19 @@ def main():
         trades = get_trade_for_market(market)
         corrected_trade = filter_no_trades(trades)
         compress = compress_trades(corrected_trade)
-        decision = run_algo(compress)
-        result.append(decision)
+        #decision = run_algo(compress)
+        #result.append(decision)
+        result.append(compress)
     print_list(result)
-    """
+    
     # Start near your discovered first-with-history offset
-    offset_history = 74669      #history start
-    offset_trade = 4811 + 39999       #trade start
-    markets = fetch_markets(20, offset_trade)
+    #offset_history = 74669      #history start
+    #offset_trade = 4811 + 39999       #trade start
+    #markets = fetch_markets(20, offset_trade)
     #markets = markets[0]  # pass a single dict, not the list
-    look = filter_markets(markets)
-    for i in look:
-        print(i["question"], i["outcomes"])
+    #look = filter_markets(markets)
+    #for i in look:
+    #    print(i["question"], i["outcomes"])
 """    print(markets)
     n = get_trade_for_market(markets)
     #p = calculate_price(n)
