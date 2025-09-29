@@ -42,7 +42,7 @@ def get_trade_for_market(marked_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[0].keys())
+    #print(payload[0].keys())
     return payload
 
 def filter_no_trades(trades):
@@ -51,7 +51,8 @@ def filter_no_trades(trades):
     """
     print("started filtering out correct trades")
     if not trades:
-        return "ERRRO"
+        print("ERROR")
+        return None
     bucket = []
     for tr in trades:
         if tr["side"] == "BUY" and tr["outcome"] == "No":
@@ -84,7 +85,8 @@ def compress_trades(trades):
     needs to be filterd for the types I want to look at
     """
     if not trades:
-        return "ERROR"
+        print("ERROR")
+        return None
     print(trades[0]["timestamp"])
     sections = []
     trades = sorted(trades, key=lambda t: t["timestamp"])
