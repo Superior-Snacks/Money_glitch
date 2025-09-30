@@ -141,9 +141,9 @@ def basic_buy_no_algo(trades, target=100):
             bought_shares += partial_shares
             spent += remaining
             print(f"Filled at NO={1-price:.3f} (YES={price:.3f})")
-            return bought_shares
+            return bought_shares, spent
 
-    return bought_shares
+    return bought_shares, spent
 
 
         
@@ -164,11 +164,11 @@ def main():
         decision = basic_buy_no_algo(compress)
         outcome = json.loads(market["outcomePrices"])
         if outcome == ["0", "1"] and decision:
-            pl += decision
+            pl += decision[0]
             print("WON!!!")
         else:
             print("LOST")
-            pl -= 100
+            pl -= decision[1]
 
         result.append([market["question"], outcome, decision, pl])
         time.sleep(1)
