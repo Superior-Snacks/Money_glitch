@@ -119,12 +119,13 @@ def basic_buy_no_algo(trades):
     """
     carry = 0
     for tr in trades:
+        print(tr["size"], tr["price"])
         if calc_dollar_value(tr["price"],tr["size"]) + carry > 80:
             print(f"Bought at {tr["price"]}")
             return 100/tr["price"]
         else:
             carry = calc_dollar_value(tr["price"],tr["size"])
-    return ("ERROR")
+    return 0
         
 
 def main():
