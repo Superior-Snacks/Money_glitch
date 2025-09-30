@@ -109,6 +109,11 @@ def print_list(li):
     for i in li:
         print(i)
 
+def calc_dollar_ammount(price, ammount):
+    """
+    calculate ammount of actual dollars was spent
+    """
+
 def basic_buy_no_algo(trades):
     """
     just buy same ammount of no shares, as in 100 dollars worth, 
