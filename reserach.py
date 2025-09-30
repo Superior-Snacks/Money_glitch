@@ -116,7 +116,7 @@ def calc_dollar_value(yes_price, shares):
     """
     return (1 - yes_price) * shares
 
-def basic_buy_no_algo(trades):
+def basic_buy_no_algo(trades, target=100):
     """
     Try to buy `target` dollars worth of NO shares.
     Assumes trades are chronological and all at same or better price
