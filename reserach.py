@@ -136,7 +136,7 @@ def go_through_it_all():
 
 
 def main():
-    """    offset_trade = 4811 + 55999
+    offset_trade = 4811 + 55999
     result = []
     pl = 0
     markets = fetch_markets(50, offset_trade)
@@ -158,7 +158,7 @@ def main():
         result.append([market["question"], outcome, decision, pl])
         time.sleep(1)
     print_list(result)
-    print(f"profit / loss {pl}")"""
+    print(f"profit / loss {pl}")
     
     # Start near your discovered first-with-history offset
     #offset_history = 74669      #history start
@@ -260,39 +260,5 @@ def compress_blocks_conservative(trades, window_s=5, min_trade_notional=5.0, min
 
     return blocks
 
-def buy_no_from_blocks(blocks, target=100.0):
-    """
-    Take blocks in chronological order; each block is 'no price move' size at that YES price.
-    """
-    bought_shares, spent = 0.0, 0.0
-    for b in blocks:
-        remaining = target - spent
-        if remaining <= 0: break
-        p_yes = b["price_yes"]
-        p_no  = 1.0 - p_yes
-        # how many shares can we still buy at this price?
-        max_dollars_here = b["spent_no"]
-        if spent + max_dollars_here <= target:
-            # take full block
-            spent += max_dollars_here
-            bought_shares += b["shares"]
-        else:
-            # partial
-            take = remaining
-            bought_shares += take / p_no
-            spent += take
-            break
-    return bought_shares, spent
-
-
-FEE_BPS = 100  # 1%
-def apply_fee(notional):
-    return notional * (1 + FEE_BPS/10000.0)
-
-
-def pnl_no(shares, spent, outcome_prices):  # outcome_prices like ["0","1"]
-    if spent <= 0: return 0.0
-    no_won = (outcome_prices == ["0","1"])
-    return (shares - spent) if no_won else (-spent)
 if __name__ == "__main__":
     main()
