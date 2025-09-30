@@ -144,7 +144,7 @@ def main():
     for market in filterd_markets:
         trades = get_trade_for_market(market)
         corrected_trade = filter_no_trades(trades)
-        compress = compress_trades(corrected_trade)
+        compress = compress_blocks_conservative(corrected_trade)
         decision = basic_buy_no_algo(compress)
         outcome = json.loads(market["outcomePrices"])
         shares, spent = decision
@@ -179,5 +179,85 @@ def main():
     print(f"size of filterd market {len(c)}")
     print(f"size of unfliterd market {len(markets)}")
 """
+
+
+
+TICK = 0.01
+def snap(p): return round(round(float(p)/TICK)*TICK, 2)
+
+def is_take_no(tr):
+    o = str(tr.get("outcome","")).strip().lower()
+    s = str(tr.get("side","")).strip().upper()
+    return (o == "no" and s == "BUY") or (o == "yes" and s == "SELL")
+
+def notional_no(tr):
+    p = float(tr["price"])
+    q = float(tr["size"])
+    return q * (1.0 - p)
+
+def compress_blocks_conservative(trades, window_s=5, min_trade_notional=5.0, min_price_no=0.02):
+    """
+    Build lower-bound blocks for 'taking NO' with hard stops:
+      - same snapped price
+      - same direction (taking NO)
+      - no intervening trade at a different price (any side)
+      - time-bounded window (<= window_s from block start)
+      - ignore dust trades (< min_trade_notional)
+      - ignore extreme NO prices (< min_price_no) unless cumulative notional >= min_trade_notional within window
+    Returns blocks: [{time, price_yes, shares, spent_no}]
+    """
+    if not trades: return []
+    trades = sorted(trades, key=lambda t: t["timestamp"])
+
+    blocks = []
+    i = 0
+    while i < len(trades):
+        tr = trades[i]
+        p_yes = snap(tr["price"])
+        p_no  = round(1.0 - p_yes, 2)
+        t0    = tr["timestamp"]
+
+        # Only start a block if this trade is actually 'taking NO' and not dust/too extreme
+        if not is_take_no(tr):
+            i += 1
+            continue
+        if notional_no(tr) < min_trade_notional:
+            i += 1
+            continue
+        if p_no < min_price_no:
+            # allow starting only if we'll accumulate >= min_trade_notional within the window
+            # we'll re-check after accumulation; skip for now
+            pass
+
+        shares = 0.0
+        spent  = 0.0
+        j = i
+        ok = True
+        while j < len(trades):
+            tj = trades[j]
+            pj = snap(tj["price"])
+            # stop if time window exceeded
+            if tj["timestamp"] - t0 > window_s: break
+            # stop if any trade at a different price (ANY side) appears
+            if pj != p_yes:
+                break
+            # only count 'taking NO' at exactly this price
+            if is_take_no(tj):
+                val = notional_no(tj)
+                if val >= min_trade_notional:  # ignore dust prints
+                    shares += float(tj["size"])
+                    spent  += val
+            j += 1
+
+        # enforce extreme-price guard
+        if p_no < min_price_no and spent < min_trade_notional:
+            ok = False
+
+        if ok and shares > 0:
+            blocks.append({"time": t0, "price_yes": p_yes, "shares": shares, "spent_no": spent})
+
+        i = max(j, i+1)
+
+    return blocks
 if __name__ == "__main__":
     main()
