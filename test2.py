@@ -136,6 +136,7 @@ def go_through_it_all():
 
 
 def main():
+    test2()
     """    offset_trade = 4811 + 55999
     result = []
     pl = 0
@@ -294,5 +295,94 @@ def pnl_no(shares, spent, outcome_prices):  # outcome_prices like ["0","1"]
     if spent <= 0: return 0.0
     no_won = (outcome_prices == ["0","1"])
     return (shares - spent) if no_won else (-spent)
+
+
+def test2(
+    offset=4811 + 49999,
+    limit=50,
+    target_no_usd=100.0,
+    fee_bps=100,              # 1% taker fee; set 0 to ignore
+    window_s=5,               # block window (seconds)
+    min_trade_notional=5.0,   # ignore dust (< $5 NO notional)
+    min_price_no=0.02,        # ignore NO prices < 2% unless enough notional in-window
+    sleep_s=0.3,
+):
+    """
+    Runs: fetch_markets → filter_markets → get trades → filter NO-taking trades →
+          compress into conservative blocks → simulate $ target NO buy → compute P&L.
+
+    Returns (results_list, final_pl)
+    results_list rows: [question, outcomePrices(list[str]), (shares, spent, avg_no), pnl, pl_running]
+    """
+
+    import time, json
+
+    results = []
+    pl_running = 0.0
+
+    # 1) get some markets and filter down to Yes/No
+    markets = fetch_markets(limit=limit, offset=offset)
+    markets = filter_markets(markets)
+
+    if not markets:
+        print("[test2] no markets after filtering")
+        return results, pl_running
+
+    for m in markets:
+        try:
+            # 2) trades (paginate if you have get_trades_all, else fallback)
+            condition_id = m["conditionId"]
+            try:
+                trades = get_trades_all(condition_id)   # if you implemented pagination
+            except NameError:
+                trades = get_trade_for_market(m)        # your original single-call version
+
+            if not trades:
+                results.append([m["question"], ["?", "?"], (0, 0, 0), 0.0, pl_running])
+                continue
+
+            # 3) only NO-taking prints
+            no_trades = filter_no_trades(trades)
+
+            # 4) conservative lower-bound blocks (no price move)
+            blocks = compress_blocks_conservative(
+                no_trades,
+                window_s=window_s,
+                min_trade_notional=min_trade_notional,
+                min_price_no=min_price_no,
+            )
+
+            # 5) simulate buying $target_no_usd of NO against those blocks
+            shares, spent = buy_no_from_blocks(blocks, target=target_no_usd)
+
+            # fee (taker)
+            if fee_bps and spent > 0:
+                spent *= (1.0 + fee_bps / 10000.0)
+
+            avg_no = (spent / shares) if shares else 0.0
+
+            # 6) outcome + P&L
+            outcome_prices = m["outcomePrices"]
+            if isinstance(outcome_prices, str):
+                outcome_prices = json.loads(outcome_prices)  # e.g. ["0","1"]
+
+            pnl = pnl_no(shares, spent, outcome_prices)
+            pl_running += pnl
+
+            # 7) record + print
+            row = [m["question"], outcome_prices, (shares, spent, avg_no), pnl, pl_running]
+            results.append(row)
+            print(row)
+
+            time.sleep(sleep_s)
+
+        except Exception as e:
+            print(f"[test2] skip {m.get('question','<no title>')} due to error: {e}")
+            continue
+
+    print("profit / loss", pl_running)
+    return results, pl_running
+
+
 if __name__ == "__main__":
     main()
