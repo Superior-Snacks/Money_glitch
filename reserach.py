@@ -136,7 +136,7 @@ def go_through_it_all():
 
 
 def main():
-    offset_trade = 4811 + 59999
+    offset_trade = 4811 + 69999
     result = []
     pl = 0
     markets = fetch_markets(50, offset_trade)
@@ -151,8 +151,10 @@ def main():
         if spent > 0:
             if outcome == ["0","1"]:
                 pl += (shares - spent)
+                print("won")
             else:
                 pl -= spent
+                print("lost")
         result.append([market["question"], outcome, decision, pl])
         time.sleep(1)
     print_list(result)
