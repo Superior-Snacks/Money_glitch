@@ -117,10 +117,14 @@ def basic_buy_no_algo(trades):
     just buy same ammount of no shares, as in 100 dollars worth, 
     the basic no algo will just have to make sure about 100 is available
     """
+    carry = 0
     for tr in trades:
-        if calc_dollar_value(tr["price"],tr["size"]) > 80:
+        if calc_dollar_value(tr["price"],tr["size"]) + carry > 80:
             print(f"Bought at {tr["price"]}")
             return (tr["price"],100/tr["price"])
+        else:
+            carry = calc_dollar_value(tr["price"],tr["size"])
+        
 
 def main():
     offset_trade = 4811 + 49999
