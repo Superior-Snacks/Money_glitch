@@ -117,6 +117,8 @@ def basic_buy_no_algo(trades):
     just buy same ammount of no shares, as in 100 dollars worth, 
     the basic no algo will just have to make sure about 100 is available
     """
+    if not trades:
+        return None
     carry = 0
     for tr in trades:
         print(tr["size"], tr["price"])
