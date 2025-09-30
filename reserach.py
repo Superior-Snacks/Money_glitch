@@ -129,6 +129,9 @@ def basic_buy_no_algo(trades):
     bought = 0.0
     for tr in trades:
         price = float(tr["price"])
+        size = float(tr["size"])
+        available_value = calc_dollar_value(price, size)
+
         
 def go_through_it_all():
     offset_trade = 4811
