@@ -140,7 +140,7 @@ def main():
         compress = compress_trades(corrected_trade)
         decision = basic_buy_no_algo(compress)
         outcome = json.loads(market["outcomePrices"])
-        if outcome == ["0", "1"]:
+        if outcome == ["0", "1"] and decision:
             pl += decision
             print("WON!!!")
         else:
