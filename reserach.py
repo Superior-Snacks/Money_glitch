@@ -58,10 +58,8 @@ def filter_no_trades(trades):
     for tr in trades:
         if tr["side"] == "BUY" and tr["outcome"] == "No":
             bucket.append(tr)
-            print("got no")
         elif tr["side"] == "SELL" and tr["outcome"] == "Yes":
             bucket.append(tr)
-            print("got YES")
     return bucket
 
 
