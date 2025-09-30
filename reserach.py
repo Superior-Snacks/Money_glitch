@@ -109,9 +109,10 @@ def print_list(li):
     for i in li:
         print(i)
 
+def basic_buy_no_algo(trades):
+    ...
 
 def main():
-    
     offset_trade = 4811 + 49999
     result = []
     markets = fetch_markets(50, offset_trade)
