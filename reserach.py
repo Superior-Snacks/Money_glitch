@@ -107,7 +107,7 @@ def compress_trades(trades):
 
 def print_list(li):
     for i in li:
-        print(i[:4])
+        print(i)
 
 
 def main():
