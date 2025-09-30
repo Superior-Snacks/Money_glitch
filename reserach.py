@@ -110,9 +110,6 @@ def print_list(li):
         print(i)
 
 def calc_dollar_value(price, ammount):
-    """
-
-    """
     return price * ammount
 
 def basic_buy_no_algo(trades):
