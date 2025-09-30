@@ -50,7 +50,7 @@ def filter_no_trades(trades):
     """
     only interested in the no position rn
     """
-    print("started filtering out correct trades")
+    #print("started filtering out correct trades")
     if not trades:
         print("ERROR")
         return None
@@ -58,8 +58,10 @@ def filter_no_trades(trades):
     for tr in trades:
         if tr["side"] == "BUY" and tr["outcome"] == "No":
             bucket.append(tr)
+            #print("got no")
         elif tr["side"] == "SELL" and tr["outcome"] == "Yes":
             bucket.append(tr)
+            #print("got YES")
     return bucket
 
 
