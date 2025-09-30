@@ -140,8 +140,9 @@ def main():
         #result.append(decision)
         result.append(compress)
         time.sleep(5)
-    for i in result:
-        basic_buy_no_algo(result)
+    for j, i in filterd_markets, result:
+        price = basic_buy_no_algo(result)
+        print(filterd_markets["outcome"], price)
     print_list(result)
     
     # Start near your discovered first-with-history offset
