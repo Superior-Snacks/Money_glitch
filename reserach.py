@@ -64,22 +64,6 @@ def filter_no_trades(trades):
             #print("got YES")
     return bucket
 
-
-def calculate_price(trades): #price, size, time
-    """
-    calculate the price for a given time of trades
-    """      
-def calculate_market(market, trades):
-    """
-    give a list with sets that give the time and price available at the time
-    """
-    if not trades:
-        return "ERROR"
-    history = []
-    for period in range(0, len(trades), 40):
-        history.append(calculate_price(trades[period:period+40]))
-    return history
-
 def compress_trades(trades):
     """
     adds up trades that are the same giving a lower bound on how much was able to be bought
