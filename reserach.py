@@ -120,6 +120,7 @@ def basic_buy_no_algo(trades):
     for tr in trades:
         if calc_dollar_value(tr["price"],tr["size"]) > 80:
             print(f"Bought at {tr["price"]}")
+            return (tr["price"],100/tr["price"])
 
 def main():
     offset_trade = 4811 + 49999
