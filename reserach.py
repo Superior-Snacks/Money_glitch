@@ -125,8 +125,8 @@ def basic_buy_no_algo(trades, target=100):
     """
     if not trades:
         return 0,0
-    spent = 0,0
-    bought = 0.0
+    spent = 0.0
+    bought_shares = 0.0
     for tr in trades:
         price = float(tr["price"])
         size = float(tr["size"])
@@ -134,7 +134,7 @@ def basic_buy_no_algo(trades, target=100):
 
         if available_value + spent <= target:
             spent += available_value
-            bought += size
+            bought_shares += size
         else:
             remaining = target - spent
             partial_shares = remaining / (1 - price)
