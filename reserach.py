@@ -118,20 +118,14 @@ def calc_dollar_value(yes_price, shares):
 
 def basic_buy_no_algo(trades):
     """
-    just buy same ammount of no shares, as in 100 dollars worth, 
-    the basic no algo will just have to make sure about 100 is available
+    Try to buy `target` dollars worth of NO shares.
+    Assumes trades are chronological and all at same or better price
+    until price changes.
+    Returns (shares_bought, avg_price_paid).
     """
     if not trades:
-        return None
-    carry = 0
-    for tr in trades:
-        print(tr["size"], tr["price"])
-        if calc_dollar_value(tr["price"],tr["size"]) + carry > 80:
-            print(f"Bought at {tr["price"]}")
-            return 100/tr["price"]
-        else:
-            carry = calc_dollar_value(tr["price"],tr["size"])
-    return 0
+        return 0,0
+
         
 def go_through_it_all():
     offset_trade = 4811
