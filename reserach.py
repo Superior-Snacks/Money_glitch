@@ -110,7 +110,10 @@ def print_list(li):
         print(i)
 
 def basic_buy_no_algo(trades):
-    ...
+    """
+    just buy same ammount of no shares, as in 100 dollars worth, 
+    the basic no algo will just have to make sure about 100 is available
+    """
 
 def main():
     offset_trade = 4811 + 49999
