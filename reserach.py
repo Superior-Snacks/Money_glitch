@@ -149,11 +149,10 @@ def main():
         outcome = json.loads(market["outcomePrices"])
         shares, spent = decision
         if spent > 0:
-            if outcome == ["0","1"]:           # Yes=0, No=1 → NO won
+            if outcome == ["0","1"]:
                 pl += (shares - spent)
-            else:                               # NO lost
+            else:
                 pl -= spent
-
         result.append([market["question"], outcome, decision, pl])
         time.sleep(1)
     print_list(result)
