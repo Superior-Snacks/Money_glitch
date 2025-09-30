@@ -121,7 +121,7 @@ def basic_buy_no_algo(trades):
     for tr in trades:
         if calc_dollar_value(tr["price"],tr["size"]) + carry > 80:
             print(f"Bought at {tr["price"]}")
-            return (100/tr["price"])
+            return 100/tr["price"]
         else:
             carry = calc_dollar_value(tr["price"],tr["size"])
     return ("ERROR")
@@ -130,7 +130,7 @@ def basic_buy_no_algo(trades):
 def main():
     offset_trade = 4811 + 49999
     result = []
-    p/l = 0
+    pl = 0
     markets = fetch_markets(50, offset_trade)
     filterd_markets = filter_markets(markets)
     for market in filterd_markets:
@@ -139,6 +139,9 @@ def main():
         compress = compress_trades(corrected_trade)
         decision = basic_buy_no_algo(compress)
         if market["outcome"] == "Yes":
+            pl += decision
+        else:
+            pl -= 100
 
         #result.append(decision)
         result.append(compress)
