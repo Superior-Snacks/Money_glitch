@@ -125,7 +125,10 @@ def basic_buy_no_algo(trades):
     """
     if not trades:
         return 0,0
-
+    spent = 0,0
+    bought = 0.0
+    for tr in trades:
+        price = float(tr["price"])
         
 def go_through_it_all():
     offset_trade = 4811
