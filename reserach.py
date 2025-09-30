@@ -96,7 +96,7 @@ def compress_trades(trades):
 
     for trade in trades:
         if trade["price"] == curr_price:
-            curr_size += curr_size
+            curr_size += trade["size"]
         else:
             sections.append({"time":curr_time, "size":curr_size, "price":curr_price})
             curr_price = trade["price"]
