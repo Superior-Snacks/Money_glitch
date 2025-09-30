@@ -129,6 +129,9 @@ def basic_buy_no_algo(trades):
             carry = calc_dollar_value(tr["price"],tr["size"])
     return 0
         
+def go_through_it_all():
+    offset_trade = 4811
+
 
 def main():
     offset_trade = 4811 + 49999
@@ -149,7 +152,7 @@ def main():
             print("LOST")
             pl -= 100
 
-        result.append([market["question"], outcome, decision])
+        result.append([market["question"], outcome, decision, pl])
         time.sleep(1)
     print_list(result)
     print(f"profit / loss {pl}")
