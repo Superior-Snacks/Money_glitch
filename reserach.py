@@ -109,12 +109,11 @@ def print_list(li):
     for i in li:
         print(i)
 
-def calc_dollar_ammount(price, ammount):
+def calc_dollar_to_size(price, dollar=100):
     """
-    calculate ammount of actual dollars was spent
-    is this neccecary?
+
     """
-    return ammount * price
+    return dollar / price
 
 def basic_buy_no_algo(trades):
     """
