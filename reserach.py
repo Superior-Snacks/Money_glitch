@@ -138,14 +138,15 @@ def main():
         corrected_trade = filter_no_trades(trades)
         compress = compress_trades(corrected_trade)
         decision = basic_buy_no_algo(compress)
-        if market["outcomePrices"] == ["0", "1"]:
+        outcome = json.loads(outcome)
+        if outcome == ["0", "1"]:
             pl += decision
             print("WON!!!")
         else:
             print("LOST")
             pl -= 100
 
-        result.append([market["question"], market["outcomePrices"], decision])
+        result.append([market["question"], outcome, decision])
         time.sleep(5)
     print_list(result)
     print(f"profit / loss {pl}")
