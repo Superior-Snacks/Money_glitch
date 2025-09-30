@@ -113,6 +113,7 @@ def calc_dollar_ammount(price, ammount):
     """
     calculate ammount of actual dollars was spent
     """
+    return ammount * price
 
 def basic_buy_no_algo(trades):
     """
