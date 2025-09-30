@@ -132,6 +132,14 @@ def basic_buy_no_algo(trades, target=100):
         size = float(tr["size"])
         available_value = calc_dollar_value(price, size)
 
+        if available_value + spent <= target:
+            spent += available_value
+            bought += size
+        else:
+            remaining = target - spent
+            
+
+
         
 def go_through_it_all():
     offset_trade = 4811
