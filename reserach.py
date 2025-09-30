@@ -109,8 +109,12 @@ def print_list(li):
     for i in li:
         print(i)
 
-def calc_dollar_value(price, ammount):
-    return price * ammount
+def calc_dollar_value(yes_price, shares):
+    """
+    Dollar cost of buying `shares` NO at given YES price.
+    NO price = 1 - YES price.
+    """
+    return (1 - yes_price) * shares
 
 def basic_buy_no_algo(trades):
     """
