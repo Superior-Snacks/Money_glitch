@@ -144,7 +144,7 @@ def main():
             pl -= 100
 
         #result.append(decision)
-        result.append(compress)
+        result.append(market["question"], market["outcome"], decision)
         time.sleep(5)
     for j, i in filterd_markets, result:
         price = basic_buy_no_algo(result)
