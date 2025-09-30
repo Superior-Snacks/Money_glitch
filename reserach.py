@@ -136,7 +136,7 @@ def go_through_it_all():
 
 
 def main():
-    offset_trade = 4811 + 69999
+    offset_trade = 4811 + 55999
     result = []
     pl = 0
     markets = fetch_markets(50, offset_trade)
