@@ -109,11 +109,11 @@ def print_list(li):
     for i in li:
         print(i)
 
-def calc_dollar_to_size(price, dollar=100):
+def calc_dollar_value(price, ammount):
     """
 
     """
-    return dollar / price
+    return price * ammount
 
 def basic_buy_no_algo(trades):
     """
