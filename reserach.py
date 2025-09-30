@@ -138,7 +138,7 @@ def main():
         corrected_trade = filter_no_trades(trades)
         compress = compress_trades(corrected_trade)
         decision = basic_buy_no_algo(compress)
-        outcome = json.loads(outcome)
+        outcome = json.loads(market["outcomePrices"])
         if outcome == ["0", "1"]:
             pl += decision
             print("WON!!!")
