@@ -107,12 +107,12 @@ def compress_trades(trades):
 
 def print_list(li):
     for i in li:
-        print(i)
+        print(i[:4])
 
 
 def main():
     
-    offset_trade = 4811 + 39999
+    offset_trade = 4811 + 49999
     result = []
     markets = fetch_markets(50, offset_trade)
     filterd_markets = filter_markets(markets)
