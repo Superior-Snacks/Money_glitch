@@ -145,10 +145,5 @@ def main():
     print(f"size of filterd market {len(c)}")
     print(f"size of unfliterd market {len(markets)}")
 """
-def run_algo(market, trades):
-    outcome = market["outcome"]
-    for i in trades:
-        ...
-
 if __name__ == "__main__":
     main()
