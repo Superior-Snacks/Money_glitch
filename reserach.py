@@ -112,6 +112,7 @@ def print_list(li):
 def calc_dollar_ammount(price, ammount):
     """
     calculate ammount of actual dollars was spent
+    is this neccecary?
     """
     return ammount * price
 
