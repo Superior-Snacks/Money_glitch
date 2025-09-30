@@ -150,7 +150,7 @@ def main():
             pl -= 100
 
         result.append([market["question"], outcome, decision])
-        time.sleep(5)
+        time.sleep(1)
     print_list(result)
     print(f"profit / loss {pl}")
     
