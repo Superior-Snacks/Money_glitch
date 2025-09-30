@@ -143,13 +143,10 @@ def main():
         else:
             pl -= 100
 
-        #result.append(decision)
         result.append(market["question"], market["outcome"], decision)
         time.sleep(5)
-    for j, i in filterd_markets, result:
-        price = basic_buy_no_algo(result)
-        print(filterd_markets["outcome"], price)
     print_list(result)
+    print(f"profit / loss {pl}")
     
     # Start near your discovered first-with-history offset
     #offset_history = 74669      #history start
