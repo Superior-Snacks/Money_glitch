@@ -124,6 +124,7 @@ def basic_buy_no_algo(trades):
             return (tr["price"],100/tr["price"])
         else:
             carry = calc_dollar_value(tr["price"],tr["size"])
+    return ("ERROR")
         
 
 def main():
