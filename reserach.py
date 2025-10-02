@@ -52,7 +52,6 @@ def normalize_trades():
   "notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
 }
     """
-    ...
 
 def simulate_market():
     ...
