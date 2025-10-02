@@ -71,6 +71,7 @@ def take_first_yes():
     should be bad if my theory is correct
     """
 
+
 def main():
     ...
 
