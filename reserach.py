@@ -112,8 +112,8 @@ def basic_buy_no_algo(trades, target=100):
     spent = 0.0
     bought_shares = 0.0
     for tr in trades:
-        price = float(tr["price"])
-        size = float(tr["size"])
+        price = float(tr["price_yes"])
+        size = float(tr["shares"])
         available_value = calc_dollar_value(price, size)
 
         if available_value + spent <= target:
@@ -136,7 +136,7 @@ def go_through_it_all():
 
 
 def main():
-    offset_trade = 4811 + 55999
+    offset_trade = 4811 + 40000
     result = []
     pl = 0
     markets = fetch_markets(50, offset_trade)
@@ -145,6 +145,7 @@ def main():
         trades = get_trade_for_market(market)
         corrected_trade = filter_no_trades(trades)
         compress = compress_blocks_conservative(corrected_trade)
+        print(compress)
         decision = basic_buy_no_algo(compress)
         outcome = json.loads(market["outcomePrices"])
         shares, spent = decision

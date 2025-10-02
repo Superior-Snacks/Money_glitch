@@ -298,7 +298,7 @@ def pnl_no(shares, spent, outcome_prices):  # outcome_prices like ["0","1"]
 
 
 def test2(
-    offset=4811 + 49999,
+    offset=4811 + 40000,
     limit=50,
     target_no_usd=100.0,
     fee_bps=100,              # 1% taker fee; set 0 to ignore
