@@ -18,10 +18,13 @@ def fetch_markets(limit=20, offset=4811):
     r.raise_for_status()
     return r.json()
 
+def fetch_trades():
+    ...
+
 def main():
     ...
 
-    
+
 if __name__ == "__main__":
     main()
 
