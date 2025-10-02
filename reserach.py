@@ -24,6 +24,11 @@ def fetch_trades(market_dict):
     "sort": "asc",
     "limit": "max"
     }
+    r = requests.get(BASE_TRADES, params=params, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    #print(payload[0].keys())
+    return payload
 
 def normalize_trades():
     ...
