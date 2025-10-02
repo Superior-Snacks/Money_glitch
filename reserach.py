@@ -35,6 +35,8 @@ def normalize_trades():
     ignore low share high value trades, condence no and yes shares together by time block
     Taking YES: (outcome=="Yes" and side=="BUY") or (outcome=="No" and side=="SELL")
     Taking NO: (outcome=="No" and side=="BUY") or (outcome=="Yes" and side=="SELL")
+    notional(YES) = shares * price
+    notional(NO) = shares * (1 - price)
     """
     ...
 
