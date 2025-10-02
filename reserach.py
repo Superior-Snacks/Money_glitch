@@ -61,7 +61,15 @@ def simulate_market():
     ...
 
 def take_first_no():
-    ...
+    """
+    take first 100 dollar no shares available
+    """
+
+def take_first_yes():
+    """
+    take first 100 dollar yes shares available
+    should be bad if my theory is correct
+    """
 
 def main():
     ...
