@@ -18,8 +18,12 @@ def fetch_markets(limit=20, offset=4811):
     r.raise_for_status()
     return r.json()
 
-def fetch_trades():
-    ...
+def fetch_trades(market_dict):
+    params = {
+    "market": market_dict["conditionId"],
+    "sort": "asc",
+    "limit": "max"
+    }
 
 def normalize_trades():
     ...
