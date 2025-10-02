@@ -54,6 +54,10 @@ def normalize_trades():
     """
 
 def simulate_market():
+    """
+    pretty much just print the trade blocks in time order? or gives a "book best price"
+    add fees here
+    """
     ...
 
 def take_first_no():
