@@ -27,6 +27,9 @@ def normalize_trades():
 def simulate_market():
     ...
 
+def take_first_no():
+    ...
+
 def main():
     ...
 
