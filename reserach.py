@@ -18,10 +18,94 @@ def fetch_markets(limit=20, offset=4811):
     r.raise_for_status()
     return r.json()
 
+def main():
+    ...
+
+    
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+first idea
+import json
+import time
+import requests
+from datetime import datetime, timezone
+
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_HISTORY = "https://clob.polymarket.com/prices-history"
+BASE_TRADES = "http://data-api.polymarket.com/trades"
+BASE_BOOK = "https://clob.polymarket.com/book"
+
+def fetch_markets(limit=20, offset=4811):
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "outcomes": ["YES", "NO"],
+        "sortBy": "creationTime"}
+    r = requests.get(BASE_GAMMA, params=params, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
 def filter_markets(markets):
-    """
     making sure to only check the weird bets
-    """
     print("filtering markets")
     if not markets:
         print("ERROR")
@@ -47,9 +131,7 @@ def get_trade_for_market(marked_dict):
     return payload
 
 def filter_no_trades(trades):
-    """
     only interested in the no position rn
-    """
     #print("started filtering out correct trades")
     if not trades:
         print("ERROR")
@@ -65,10 +147,8 @@ def filter_no_trades(trades):
     return bucket
 
 def compress_trades(trades):
-    """
     adds up trades that are the same giving a lower bound on how much was able to be bought
     needs to be filterd for the types I want to look at
-    """
     if not trades:
         print("ERROR")
         return None
@@ -94,19 +174,15 @@ def print_list(li):
         print(i)
 
 def calc_dollar_value(yes_price, shares):
-    """
     Dollar cost of buying `shares` NO at given YES price.
     NO price = 1 - YES price.
-    """
     return (1 - yes_price) * shares
 
 def basic_buy_no_algo(trades, target=100):
-    """
     Try to buy `target` dollars worth of NO shares.
     Assumes trades are chronological and all at same or better price
     until price changes.
     Returns (shares_bought, avg_price_paid).
-    """
     if not trades:
         return 0,0
     spent = 0.0
@@ -160,27 +236,6 @@ def main():
         time.sleep(1)
     print_list(result)
     print(f"profit / loss {pl}")
-    
-    # Start near your discovered first-with-history offset
-    #offset_history = 74669      #history start
-    #offset_trade = 4811 + 39999       #trade start
-    #markets = fetch_markets(20, offset_trade)
-    #markets = markets[0]  # pass a single dict, not the list
-    #look = filter_markets(markets)
-    #for i in look:
-    #    print(i["question"], i["outcomes"])
-"""    print(markets)
-    n = get_trade_for_market(markets)
-    #p = calculate_price(n)
-    filt = n
-    filt = filter_no_trades(n)
-    print(n[0])
-    c = compress_trades(filt)
-    print_list(c)
-    print(f"size of filterd market {len(c)}")
-    print(f"size of unfliterd market {len(markets)}")
-"""
-
 
 
 TICK = 0.01
@@ -197,7 +252,6 @@ def notional_no(tr):
     return q * (1.0 - p)
 
 def compress_blocks_conservative(trades, window_s=5, min_trade_notional=5.0, min_price_no=0.02):
-    """
     Build lower-bound blocks for 'taking NO' with hard stops:
       - same snapped price
       - same direction (taking NO)
@@ -206,7 +260,6 @@ def compress_blocks_conservative(trades, window_s=5, min_trade_notional=5.0, min
       - ignore dust trades (< min_trade_notional)
       - ignore extreme NO prices (< min_price_no) unless cumulative notional >= min_trade_notional within window
     Returns blocks: [{time, price_yes, shares, spent_no}]
-    """
     if not trades: return []
     trades = sorted(trades, key=lambda t: t["timestamp"])
 
@@ -262,4 +315,4 @@ def compress_blocks_conservative(trades, window_s=5, min_trade_notional=5.0, min
     return blocks
 
 if __name__ == "__main__":
-    main()
+    main()"""
