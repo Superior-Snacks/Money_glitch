@@ -37,6 +37,20 @@ def normalize_trades():
     Taking NO: (outcome=="No" and side=="BUY") or (outcome=="Yes" and side=="SELL")
     notional(YES) = shares * price
     notional(NO) = shares * (1 - price)
+
+    Window: group consecutive trades within ≤ 10s of the first print.
+    Same snapped price only; stop the block on any trade (any side) at a different snapped price.
+    Build two streams: one for taking YES, one for taking NO.
+    Store per block:
+    {
+  "time": t0,                # first fill time in block
+  "price_yes": p_yes,        # snapped YES price in [0,1]
+  "price_no":  1 - p_yes,
+  "side": "TAKE_NO" | "TAKE_YES",
+  "shares": cumulative_shares_in_block,
+  "notional_yes": shares * p_yes   if TAKE_YES else 0,
+  "notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
+}
     """
     ...
 
