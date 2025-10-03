@@ -27,6 +27,8 @@ def filter_markets(markets):
     cleaned =[]
     for mk in markets:
         outcomes = mk["outcomes"]
+        if isinstance(outcomes, str):
+            outcomes = json.loads(outcomes)
         if outcomes == ["Yes", "No"]:
             cleaned.append(mk)
             print(cleaned)
