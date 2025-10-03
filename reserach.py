@@ -71,8 +71,9 @@ if trade is too small with too good odds
 def valid_no(trade):
     if not trade:
         return False
-    if (trade["outcome"] == "buy") and (trade["size"] < 5) and (trade["price"] < 0.08):
-        "lower better"
+    if (trade["outcome"] == "buy") and (trade["size"] < 5) or (trade["price"] < 0.05):
+        return False
+    elif (trade["outcome"] == "sell") and (trade["size"] < 5) or (trade["price"] < 0.95):
 
 
     
