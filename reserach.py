@@ -61,7 +61,8 @@ def normalize_trades(trades):
     #print(trades[0].keys())
     
     for tr in trades:
-        ...
+        if not valid_trade(tr):
+            continue
 
 
 
