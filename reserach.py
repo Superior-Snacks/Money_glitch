@@ -27,7 +27,7 @@ def fetch_trades(market_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    #print(payload[0].keys())
+    print(payload[0].keys())
     return payload
 
 
@@ -56,6 +56,9 @@ def normalize_trades(trades):
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return None
+    
+    for tr in trades:
+        print(tr.keys())
 
 def simulate_market():
     """
@@ -77,7 +80,9 @@ def take_first_yes():
 
 #start with a few 50 markets, then test rolling continuous
 def main():
-    ...
+    m = fetch_markets(limit=20, offset=4811)
+    t = fetch_trades(m[0])
+    normalize_trades(t)
 
 
 if __name__ == "__main__":
