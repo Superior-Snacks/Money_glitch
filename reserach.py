@@ -68,7 +68,7 @@ def normalize_trades(trades):
 """
 if trade is too small with too good odds
 """
-def valid_no(trade):
+def valid_trade(trade):
     if not trade:
         return False
     if (trade["outcome"] == "buy") and (trade["size"] < 5) or (trade["price"] < 0.05):
