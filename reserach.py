@@ -24,6 +24,13 @@ def filter_markets(markets):
     if not markets:
         print("ERROR")
         return None
+    cleaned =[]
+    for mk in markets:
+        outcomes = mk["outcomes"]
+        if outcomes == ["Yes", "No"]:
+            cleaned.append(mk)
+            print(cleaned)
+    print(f"{len(cleaned)} markets remaining")
 
 
 def fetch_trades(market_dict):
