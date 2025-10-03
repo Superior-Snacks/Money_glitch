@@ -79,8 +79,12 @@ def valid_trade(trade, min_spend=5):
 
     if trade["outcome"].lower() == "yes":
         cost = price * size
-    if trade["outcome"].lower() == "no":
+    elif trade["outcome"].lower() == "no":
         cost = (1 - price) * size
+    else:
+        return False
+
+
 
     if cost < min_spend:
         return False
