@@ -21,18 +21,21 @@ def fetch_markets(limit=20, offset=4811):
     return payload
 
 def filter_markets(markets):
+    """
+    making sure to only check the weird bets
+    """
+    print("filtering markets")
     if not markets:
         print("ERROR")
         return None
-    cleaned =[]
+    cleaned = []
     for mk in markets:
         outcomes = mk["outcomes"]
         if isinstance(outcomes, str):
             outcomes = json.loads(outcomes)
         if outcomes == ["Yes", "No"]:
             cleaned.append(mk)
-            print(cleaned)
-    print(f"{len(cleaned)} markets remaining")
+    print(f"valid markets {len(cleaned)}")
     return cleaned
 
 
@@ -88,7 +91,7 @@ def normalize_trades(trades):
 if trade is too small with too good odds
 """
 def valid_trade(trade, min_spend=5, dust=0.01):
-    print(trade)
+    #print(trade)
     if not trade:
         print(1)
         return False
@@ -141,7 +144,7 @@ def take_first_yes():
 #start with a few 50 markets, then test rolling continuous
 def main():
     m = filter_markets(fetch_markets(limit=20, offset=4811))
-    t = fetch_trades(m)
+    t = fetch_trades(m[0])
     normalize_trades(t)
 
 
