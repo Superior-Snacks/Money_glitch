@@ -82,6 +82,7 @@ def normalize_trades(trades):
     for tr in trades:
         print(valid_trade(tr))
         if not valid_trade(tr):
+            print(valid_trade(tr))
             continue
 
 
