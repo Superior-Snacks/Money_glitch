@@ -20,6 +20,12 @@ def fetch_markets(limit=20, offset=4811):
     #print(payload[0].keys())
     return payload
 
+def filter_markets(markets):
+    if not markets:
+        print("ERROR")
+        return None
+
+
 def fetch_trades(market_dict):
     params = {
     "market": market_dict["conditionId"],
@@ -72,7 +78,9 @@ def normalize_trades(trades):
 if trade is too small with too good odds
 """
 def valid_trade(trade, min_spend=5, dust=0.01):
+    print(trade)
     if not trade:
+        print(1)
         return False
     price = trade["price"]
     size = trade["size"]
@@ -82,11 +90,14 @@ def valid_trade(trade, min_spend=5, dust=0.01):
     elif trade["outcome"].lower() == "no":
         cost = (1 - price) * size
     else:
+        print(2)
         return False
 
     if cost < min_spend:
+        print(3)
         return False
     if (price < dust) or (price > 1 - dust):
+        print(4)
         return False
     #valid
     return True
