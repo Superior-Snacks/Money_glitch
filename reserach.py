@@ -86,7 +86,7 @@ def valid_trade(trade, min_spend=5, dust=0.01):
 
     if cost < min_spend:
         return False
-    if (price < dust) or (price > dust + 1):
+    if (price < dust) or (price > 1 - dust):
         return False
 
 
