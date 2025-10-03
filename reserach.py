@@ -74,6 +74,9 @@ def valid_no(trade):
     if (trade["outcome"] == "buy") and (trade["size"] < 5) or (trade["price"] < 0.05):
         return False
     elif (trade["outcome"] == "sell") and (trade["size"] < 5) or (trade["price"] < 0.95):
+        return False
+    else:
+        return True
 
 
     
