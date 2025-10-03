@@ -63,8 +63,14 @@ def normalize_trades(trades):
     for tr in trades:
         ...
 
+
+
+"""
+if trade is too small with too good odds
+"""
 def valid_no(trade):
-    ...
+    if not trade:
+        return False
 
 def valid_yes(trade):
     ...
