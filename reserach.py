@@ -88,14 +88,8 @@ def valid_trade(trade, min_spend=5, dust=0.01):
         return False
     if (price < dust) or (price > 1 - dust):
         return False
-
-
-    if (trade["side"] == "BUY") and (trade["size"] < 5) or (trade["price"] < 0.05):
-        return False
-    elif (trade["side"] == "SELL") and (trade["size"] < 5) or (trade["price"] < 0.95):
-        return False
-    else:
-        return True
+    #valid
+    return True
 
 
     
