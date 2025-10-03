@@ -33,6 +33,7 @@ def filter_markets(markets):
             cleaned.append(mk)
             print(cleaned)
     print(f"{len(cleaned)} markets remaining")
+    return cleaned
 
 
 def fetch_trades(market_dict):
