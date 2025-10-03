@@ -71,7 +71,7 @@ def normalize_trades(trades):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=5):
+def valid_trade(trade, min_spend=5, dust=0.01):
     if not trade:
         return False
     price = trade["price"]
@@ -84,11 +84,10 @@ def valid_trade(trade, min_spend=5):
     else:
         return False
 
-
-
     if cost < min_spend:
         return False
-
+    if (price < dust) or (price > dust + 1):
+        return False
 
 
     if (trade["side"] == "BUY") and (trade["size"] < 5) or (trade["price"] < 0.05):
