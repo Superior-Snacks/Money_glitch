@@ -16,7 +16,9 @@ def fetch_markets(limit=20, offset=4811):
         "sortBy": "creationTime"}
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
-    return r.json()
+    payload = r.json()
+    #print(payload[0].keys())
+    return payload
 
 def fetch_trades(market_dict):
     params = {
@@ -27,7 +29,7 @@ def fetch_trades(market_dict):
     r = requests.get(BASE_TRADES, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[0].keys())
+    #print(payload[0].keys())
     return payload
 
 
@@ -56,13 +58,19 @@ def normalize_trades(trades):
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return None
-    print(trades[0].keys())
+    #print(trades[0].keys())
     
     for tr in trades:
         ...
 
+def valid_no(trade):
+    ...
 
-        
+def valid_yes(trade):
+    ...
+
+
+
 def simulate_market():
     """
     pretty much just print the trade blocks in time order? or gives a "book best price"
