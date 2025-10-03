@@ -56,10 +56,13 @@ def normalize_trades(trades):
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return None
+    print(trades[0].keys())
     
     for tr in trades:
-        print(tr.keys())
+        ...
 
+
+        
 def simulate_market():
     """
     pretty much just print the trade blocks in time order? or gives a "book best price"
