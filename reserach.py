@@ -74,6 +74,7 @@ Store per block:
 }
 """
 def normalize_trades(trades):
+    print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return None
@@ -145,8 +146,8 @@ def take_first_yes():
 #start with a few 50 markets, then test rolling continuous
 def main():
     m = filter_markets(fetch_markets(limit=20, offset=4811))
-    t = fetch_trades(m[0])
-    normalize_trades(t)
+    for i in m:
+        normalize_trades(fetch_trades(i))
 
 
 if __name__ == "__main__":
