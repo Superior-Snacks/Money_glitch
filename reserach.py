@@ -61,6 +61,7 @@ def normalize_trades(trades):
     #print(trades[0].keys())
     
     for tr in trades:
+        print(valid_trade(tr))
         if not valid_trade(tr):
             continue
 
@@ -70,9 +71,19 @@ def normalize_trades(trades):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade):
+def valid_trade(trade, min_spend=5):
     if not trade:
         return False
+    price = trade["price"]
+    size = trade["size"]
+
+    if trade["outcome"].lower() == "yes":
+        cost = price * size
+    if trade["outcome"].lower() == "no":
+        cost = (1 - price) * size
+
+
+
     if (trade["side"] == "BUY") and (trade["size"] < 5) or (trade["price"] < 0.05):
         return False
     elif (trade["side"] == "SELL") and (trade["size"] < 5) or (trade["price"] < 0.95):
