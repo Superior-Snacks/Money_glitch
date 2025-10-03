@@ -137,8 +137,8 @@ def take_first_yes():
 
 #start with a few 50 markets, then test rolling continuous
 def main():
-    m = fetch_markets(limit=20, offset=4811)
-    t = fetch_trades(m[0])
+    m = filter_markets(fetch_markets(limit=20, offset=4811))
+    t = fetch_trades(m)
     normalize_trades(t)
 
 
