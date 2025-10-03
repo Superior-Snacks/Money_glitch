@@ -53,7 +53,9 @@ Store per block:
 }
 """
 def normalize_trades(trades):
-    ...
+    if not trades:
+        print("ERROR NO TRADES AVAILABLE")
+        return None
 
 def simulate_market():
     """
