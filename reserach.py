@@ -82,11 +82,14 @@ def normalize_trades(trades, time_block=60):
     #print(trades[0].keys())
     
     for tr in trades:
-        outcome = tr["outcome"].lower()
-        side = tr["side"].lower()
         if not valid_trade(tr):
             continue
-
+        outcome = tr["outcome"].lower()
+        side = tr["side"].lower()
+        if (outcome == "yes" and side == "sell") or (outcome == "no" and side == "buy"):
+            taking = "no"
+        if (outcome =="no" and side == "sell") or (outcome == "yes" and side == "buy"):
+            taking = "yes"
 
 
 """
