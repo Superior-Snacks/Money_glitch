@@ -91,10 +91,14 @@ def normalize_trades(trades, time_block=60):
         if (outcome =="no" and side == "sell") or (outcome == "yes" and side == "buy"):
             taking = "yes"
 
-def notion_yes(price, ammount):
-    return price * ammount
-def notion_no(price, ammount):
-    return ammount * (1-price)
+
+
+
+
+def notion_yes(trade):
+    return float(trade["size"]) * float(trade["price"])
+def notion_no(trade):
+    return float(trade["size"]) * (1 - float(trade["price"]))
 
 """
 if trade is too small with too good odds
