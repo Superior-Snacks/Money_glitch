@@ -94,8 +94,16 @@ def normalize_trades(trades, time_block=60):
 
 
 def take_yes(trade):
+        if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
+            return True
+        else:
+            return False
 
 def take_no(trade):
+    if (trade["outcome"].lower() == "yes" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "no" and trade["side"].lower() == "buy"):
+        return True
+    else:
+        return False
 
 def notion_yes(trade):
     return float(trade["size"]) * float(trade["price"])
