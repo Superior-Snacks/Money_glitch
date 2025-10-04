@@ -74,6 +74,7 @@ Store per block:
 }
 """
 def normalize_trades(trades):
+    count = 0
     print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
@@ -81,10 +82,12 @@ def normalize_trades(trades):
     #print(trades[0].keys())
     
     for tr in trades:
-        print(valid_trade(tr))
+        
         if not valid_trade(tr):
-            print(valid_trade(tr))
             continue
+        else:
+            count += 1
+    print(count, len(trades))
 
 
 
@@ -93,9 +96,7 @@ def normalize_trades(trades):
 if trade is too small with too good odds
 """
 def valid_trade(trade, min_spend=5, dust=0.01):
-    #print(trade)
     if not trade:
-        print(1)
         return False
     price = trade["price"]
     size = trade["size"]
@@ -105,14 +106,11 @@ def valid_trade(trade, min_spend=5, dust=0.01):
     elif trade["outcome"].lower() == "no":
         cost = (1 - price) * size
     else:
-        print(2)
         return False
 
     if cost < min_spend:
-        print(3)
         return False
     if (price < dust) or (price > 1 - dust):
-        print(4)
         return False
     #valid
     return True
