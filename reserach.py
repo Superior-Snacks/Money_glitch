@@ -93,7 +93,9 @@ def normalize_trades(trades, time_block=60):
 
 
 
+def take_yes(trade):
 
+def take_no(trade):
 
 def notion_yes(trade):
     return float(trade["size"]) * float(trade["price"])
