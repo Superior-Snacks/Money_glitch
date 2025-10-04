@@ -73,8 +73,8 @@ Store per block:
 "notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
 }
 """
-def normalize_trades(trades):
-    count = 0
+def normalize_trades(trades, time_block=60):
+    blocks = []
     print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
@@ -82,13 +82,10 @@ def normalize_trades(trades):
     #print(trades[0].keys())
     
     for tr in trades:
-        
+        outcome = tr["outcome"].lower()
+        side = tr["side"].lower()
         if not valid_trade(tr):
             continue
-        else:
-            count += 1
-    print(count, len(trades))
-
 
 
 
