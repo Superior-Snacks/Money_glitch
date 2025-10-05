@@ -82,6 +82,7 @@ def normalize_trades(trades, time_block=60):
     
     j = 0
     i = 0
+    side = None
     blocks = []
     while i < len(trades):
         if not valid_trade(tr):
@@ -107,10 +108,13 @@ def normalize_trades(trades, time_block=60):
                 value = notion_yes(tr)
                 shares += float(tr["size"])
                 notional += value
+                side = "yes"
             elif take_no(tr):
                 shares += float(tr["size"])
                 notional += value
+                side = "no"
             j += 1
+        blocks.append({"time":time0, "side":})
 
 def take_yes(trade):
     if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
