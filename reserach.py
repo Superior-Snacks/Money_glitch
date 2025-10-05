@@ -85,8 +85,10 @@ def normalize_trades(trades, time_block=60):
     side = None
     blocks = []
     while i < len(trades):
+        print(i, "i")
         tr1 = trades[i]
         if not valid_trade(tr1):
+                print("not valid?")
                 continue
         tr1 = trades[i]
         p_yes = round(tr1["price"], 2)
@@ -97,10 +99,13 @@ def normalize_trades(trades, time_block=60):
         shares = 0.0
         j = i    
         while j < len(trades):
+            print(j, "j")
             tr = trades[j]
             if tr["timestamp"] - time0 > time_block:
+                print("broke time")
                 break
             if round(tr["price"], 2) != p_yes:
+                print("broke price")
                 break
             if not valid_trade(tr):
                 j += 1
@@ -114,6 +119,7 @@ def normalize_trades(trades, time_block=60):
                 notional += notion_no(tr)
                 side = "no"
             j += 1
+
         if take_yes(tr1):
             notional_yes = notional
             notional_no = 0.0
@@ -121,7 +127,7 @@ def normalize_trades(trades, time_block=60):
             notional_no = notional
             notional_yes = 0.0
         blocks.append({"time":time0, "side": side, "price_yes":p_yes, "price_no":p_no, "shares":shares, "notional_yes":notional_yes, "notional_no":notional_no})
-        i = max(i,j + 1) 
+        i = max(j, i+1) 
     return blocks
 
 def take_yes(trade):
@@ -184,7 +190,7 @@ def take_first_yes():
 
 #start with a few 50 markets, then test rolling continuous
 def main():
-    m = filter_markets(fetch_markets(limit=10, offset=50000))
+    m = filter_markets(fetch_markets(limit=1, offset=50005))
     for i in m:
         n = normalize_trades(fetch_trades(i))
         for j in n:
