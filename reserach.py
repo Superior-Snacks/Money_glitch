@@ -85,6 +85,7 @@ def normalize_trades(trades, time_block=60):
     side = None
     blocks = []
     while i < len(trades):
+        tr1 = trades[i]
         if not valid_trade(tr1):
                 continue
         tr1 = trades[i]
