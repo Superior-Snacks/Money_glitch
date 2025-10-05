@@ -207,7 +207,7 @@ def main():
     for i in k:
         print(i["timestamp"] , i["size"], i["price"])
 
-
+#klára bæta við checka gegn raw data
 if __name__ == "__main__":
     main()
 
