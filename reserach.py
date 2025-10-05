@@ -83,6 +83,8 @@ def normalize_trades(trades, time_block=60):
     j = 0
     blocks = []
     while j <= len(trades):
+        if not valid_trade(trades[j]):
+            continue
 
 
 def take_yes(trade):
