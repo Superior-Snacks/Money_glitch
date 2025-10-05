@@ -74,17 +74,15 @@ Store per block:
 }
 """
 def normalize_trades(trades, time_block=60):
-    blocks = []
     print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return None
     #print(trades[0].keys())
     
-    for tr in trades:
-        if not valid_trade(tr):
-            continue
-
+    j = 0
+    blocks = []
+    while j <= len(trades):
 
 
 def take_yes(trade):
@@ -92,7 +90,6 @@ def take_yes(trade):
         return True
     else:
         return False
-
 def take_no(trade):
     if (trade["outcome"].lower() == "yes" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "no" and trade["side"].lower() == "buy"):
         return True
