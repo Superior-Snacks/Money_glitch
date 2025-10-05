@@ -121,6 +121,7 @@ def normalize_trades(trades, time_block=60):
             notional_yes = 0.0
         blocks.append({"time":time0, "side": side, "price_yes":p_yes, "price_no":p_no, "shares":shares, "notional_yes":notional_yes, "notional_no":notional_no})
         i = max(i,j + 1) 
+    return blocks
 
 def take_yes(trade):
     if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
@@ -182,9 +183,11 @@ def take_first_yes():
 
 #start with a few 50 markets, then test rolling continuous
 def main():
-    m = filter_markets(fetch_markets(limit=20, offset=4811))
+    m = filter_markets(fetch_markets(limit=10, offset=50000))
     for i in m:
-        normalize_trades(fetch_trades(i))
+        n = normalize_trades(fetch_trades(i))
+        for j in n:
+            print(j)
 
 
 if __name__ == "__main__":
