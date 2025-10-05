@@ -86,9 +86,10 @@ def normalize_trades(trades, time_block=60):
         tr = trades[j]
         if not valid_trade(tr):
             continue
-        if notion_yes(tr):
-            ...
-        if notion_no(tr):
+        if take_yes(tr):
+            value = notion_yes(tr)
+            
+        if take_no(tr):
             ...
 
 def take_yes(trade):
@@ -129,13 +130,6 @@ def valid_trade(trade, min_spend=5, dust=0.01):
         return False
     #valid
     return True
-
-
-    
-
-def valid_yes(trade):
-    ...
-
 
 
 def simulate_market():
