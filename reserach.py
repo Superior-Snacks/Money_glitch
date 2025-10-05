@@ -89,6 +89,7 @@ def normalize_trades(trades, time_block=60):
         tr1 = trades[i]
         if not valid_trade(tr1):
                 print("not valid?")
+                i += 1
                 continue
         tr1 = trades[i]
         p_yes = round(tr1["price"], 2)
@@ -149,7 +150,7 @@ def notion_no(trade):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=5, dust=0.01):
+def valid_trade(trade, min_spend=1, dust=0.01):
     if not trade:
         return False
     price = trade["price"]
