@@ -198,12 +198,13 @@ def take_first_yes():
 def main():
     m = filter_markets(fetch_markets(limit=1, offset=50005))
     for i in m:
-        n = normalize_trades(fetch_trades(i))
+        k = fetch_trades(i)
+        n = normalize_trades(k)
         for j in n:
             print(j)
         
-    for i in m:
-        print(i["size"], i["price"])
+    for i in k:
+        print(i["timestamp"] , i["size"], i["price"])
 
 
 if __name__ == "__main__":
