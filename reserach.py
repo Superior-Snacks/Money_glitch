@@ -83,11 +83,12 @@ def normalize_trades(trades, time_block=60):
     j = 0
     blocks = []
     while j <= len(trades):
-        if not valid_trade(trades[j]):
+        tr = trades[j]
+        if not valid_trade(tr):
             continue
-        if notion_yes(trades[j]):
+        if notion_yes(tr):
             ...
-        if notion_no(trades[j]):
+        if notion_no(tr):
             ...
 
 def take_yes(trade):
