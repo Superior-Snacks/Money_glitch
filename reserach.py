@@ -131,6 +131,10 @@ def normalize_trades(trades, time_block=60):
         i = max(j, i+1) 
     return blocks
 
+def snap_price(p, tick=0.01):
+    # snap to exchange tick, then round nicely
+    return round(round(float(p) / tick) * tick, 2)
+
 def take_yes(trade):
     if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
         return True
