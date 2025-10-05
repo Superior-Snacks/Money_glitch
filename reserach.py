@@ -120,6 +120,7 @@ def normalize_trades(trades, time_block=60):
             notional_no = notional
             notional_yes = 0.0
         blocks.append({"time":time0, "side": side, "price_yes":p_yes, "price_no":p_no, "shares":shares, "notional_yes":notional_yes, "notional_no":notional_no})
+        i = max(i,j + 1) 
 
 def take_yes(trade):
     if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
