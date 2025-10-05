@@ -93,7 +93,7 @@ def normalize_trades(trades, time_block=60):
                 i += 1
                 continue
         tr1 = trades[i]
-        p_yes = round(tr1["price"], 2)
+        p_yes = snap_price(tr1["price"], 0.01)
         p_no = round(1 - p_yes, 2)
         time0 = tr1["timestamp"]
 
@@ -106,7 +106,7 @@ def normalize_trades(trades, time_block=60):
             if tr["timestamp"] - time0 > time_block:
                 print("broke time")
                 break
-            if round(tr["price"], 2) != p_yes:
+            if snap_price(tj["price"], 0.01) != p_yes:
                 print("broke price")
                 break
             if not valid_trade(tr):
