@@ -201,6 +201,9 @@ def main():
         n = normalize_trades(fetch_trades(i))
         for j in n:
             print(j)
+        
+    for i in m:
+        print(i["size"], i["price"])
 
 
 if __name__ == "__main__":
