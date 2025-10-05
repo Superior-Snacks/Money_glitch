@@ -198,6 +198,7 @@ def take_first_yes():
 def main():
     m = filter_markets(fetch_markets(limit=1, offset=50005))
     for i in m:
+        print(i["question"])
         k = fetch_trades(i)
         n = normalize_trades(k)
         for j in n:
