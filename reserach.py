@@ -77,8 +77,9 @@ def normalize_trades(trades, time_block=60):
     print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
-        return None
+        return []
     #print(trades[0].keys())
+    trades = sorted(trades, key=lambda t: t["timestamp"])
     
     j = 0
     i = 0
