@@ -166,19 +166,6 @@ def fetch_trades(market_dict, page=500):
             break
         offset += page
     return out
-"""
-def fetch_trades(market_dict):
-    params = {
-    "market": market_dict["conditionId"],
-    "sort": "asc",
-    "limit": "max"
-    }
-    r = requests.get(BASE_TRADES, params=params, timeout=30)
-    r.raise_for_status()
-    payload = r.json()
-    #print(payload[0].keys())
-    return payload
-"""
 
 """
 ignore low share high value trades, condence no and yes shares together by time block
