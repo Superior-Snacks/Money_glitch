@@ -89,7 +89,7 @@ def main():
         trades = normalize_trades(fetch_trades(market))
         first_t = trades[0]["time"]
         sim = SimMarket(trades)
-        sim.take_first_no(first_t)
+        run = sim.take_first_no(first_t)
 
 
     """ plotting
