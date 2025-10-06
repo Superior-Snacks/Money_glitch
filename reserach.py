@@ -238,6 +238,10 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
 
 
 
+def ls_print(li):
+    for i in li:
+        print(i)
+
 # ---------- Core helpers ----------
 
 def blocks_to_df(blocks):
