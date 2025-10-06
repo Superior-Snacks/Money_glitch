@@ -41,7 +41,7 @@ class SimMarket:
             if spent >= dollars: break
 
         if shares == 0: 
-            return 0.0, 0.0, 0.0, []
+            return 0.0, 0.0, 0.0, 0.0, []
 
         gross = spent * (1 + self.fee + self.slip)
         return shares, gross, spent, gross/shares, trades_taken
@@ -217,11 +217,11 @@ def main():
         if outcome == ["0","1"]:
             pl += profit
             print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} getting {shares * avg_price} current pl:{pl}")
+            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} getting {profit} current pl:{pl}, WON")
         else:
             pl -= spent
             print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}")
+            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}, LOST")
         time.sleep(2)
 
 
