@@ -226,12 +226,10 @@ def main():
         k = fetch_trades(i)
         n = normalize_trades(k)
         simulate_market(n)
-    print("raw trades")
     """
     for i in k:
         print(i["timestamp"] ,"size", i["size"],"price", snap_price(i["price"], 0.01))"""
 
-#klára bæta við checka gegn raw data
 if __name__ == "__main__":
     main()
 
