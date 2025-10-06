@@ -100,7 +100,7 @@ def normalize_trades(trades, time_block=10):
         j = i    
         while j < len(trades):
             tr = trades[j]
-            if tr["timestamp"] - time0 > time_block:
+            if int(tr["timestamp"]) - time0 > time_block:
                 #print("broke time")
                 break
             if snap_price(tr["price"], 0.01) != p_yes:
