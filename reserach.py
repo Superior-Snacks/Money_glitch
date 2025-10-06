@@ -41,11 +41,39 @@ class SimMarket:
 
         gross = spent * (1 + self.fee + self.slip)
         return shares, gross, gross/shares, trades_taken
-    def take_first_yes():
+    
+
+    def take_first_yes(self, t_from, dollars=100, max_yes_price=None):
         """
         take first 100 dollar yes shares available
         should be bad if my theory is correct
         """
+        spent = 0.0
+        trades_taken = []
+        for trade in self.blocks:
+            if trade["side"] != "no" or trade["time"] < t_from:
+                continue
+            p_no = trade["price_no"]
+            if max_no_price is not None and p_no > max_no_price:
+                continue
+            available = trade["notional_no"]
+            if available <= 0:
+                continue
+            need = dollars - spent
+            if need <= 0:
+                break
+            take = min(need, available)
+            add_shares = take / p_no
+            shares += add_shares
+            spent  += take
+            trades_taken.append((trade["time"], p_no, add_shares, take))
+            if spent >= dollars: break
+
+        if shares == 0: 
+            return 0.0, 0.0, 0.0, []
+
+        gross = spent * (1 + self.fee + self.slip)
+        return shares, gross, gross/shares, trades_taken
 
 
 
