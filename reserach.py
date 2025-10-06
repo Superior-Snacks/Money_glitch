@@ -5,6 +5,23 @@ from datetime import datetime, timezone
 import pandas as pd
 import matplotlib.pyplot as plt
 
+class SimMarket():
+    def __init__():
+        ...
+        
+    def take_first_no():
+        """
+        take first 100 dollar no shares available
+        """
+
+    def take_first_yes():
+        """
+        take first 100 dollar yes shares available
+        should be bad if my theory is correct
+        """
+
+
+
 #start with a few 50 markets, then test rolling continuous
 def main():
     m = filter_markets(fetch_markets(limit=1, offset=51005))
@@ -219,25 +236,6 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
         return cost >= min_extreme_notional
     #valid
     return True
-
-"""
-pretty much just print the trade blocks in time order? or gives a "book best price"
-add fees here
-"""
-def simulate_market(history):
-    for block in history:
-        print(block)
-
-def take_first_no():
-    """
-    take first 100 dollar no shares available
-    """
-
-def take_first_yes():
-    """
-    take first 100 dollar yes shares available
-    should be bad if my theory is correct
-    """
 
 
 
