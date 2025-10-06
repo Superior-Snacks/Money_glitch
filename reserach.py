@@ -14,6 +14,13 @@ def main():
         k = fetch_trades(i)
         n = normalize_trades(k)
         simulate_market(n)
+    df = blocks_to_df(n)
+    print(df.head())
+
+    plot_yes_price(df)
+    plot_no_price(df)
+    plot_notional_flow(df, freq="2min")
+    plot_depth_scatter(df)
     """
     for i in k:
         print(i["timestamp"] ,"size", i["size"],"price", snap_price(i["price"], 0.01))"""
