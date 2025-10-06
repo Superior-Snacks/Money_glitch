@@ -5,6 +5,19 @@ from datetime import datetime, timezone
 import pandas as pd
 import matplotlib.pyplot as plt
 
+#start with a few 50 markets, then test rolling continuous
+def main():
+    m = filter_markets(fetch_markets(limit=1, offset=50005))
+    for i in m:
+        print(i["question"])
+        print("normalized trades")
+        k = fetch_trades(i)
+        n = normalize_trades(k)
+        simulate_market(n)
+    """
+    for i in k:
+        print(i["timestamp"] ,"size", i["size"],"price", snap_price(i["price"], 0.01))"""
+
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_TRADES = "http://data-api.polymarket.com/trades"
@@ -219,18 +232,121 @@ def take_first_yes():
     should be bad if my theory is correct
     """
 
-#start with a few 50 markets, then test rolling continuous
-def main():
-    m = filter_markets(fetch_markets(limit=1, offset=50005))
-    for i in m:
-        print(i["question"])
-        print("normalized trades")
-        k = fetch_trades(i)
-        n = normalize_trades(k)
-        simulate_market(n)
+
+
+# ---------- Core helpers ----------
+
+def blocks_to_df(blocks):
     """
-    for i in k:
-        print(i["timestamp"] ,"size", i["size"],"price", snap_price(i["price"], 0.01))"""
+    Convert your list of block dicts into a tidy DataFrame.
+    Required keys per block:
+      - time (epoch seconds, int)
+      - side ("TAKE_NO" | "TAKE_YES")
+      - price_yes (float in [0,1])
+      - price_no  (float in [0,1]) [optional; computed if missing]
+      - shares (float)
+      - EITHER: notional (float)
+        OR:     notional_yes / notional_no (floats; we’ll pick the right one by side)
+    """
+    if not blocks:
+        return pd.DataFrame(columns=["time","side","price_yes","price_no","shares","notional"])
+
+    rows = []
+    for b in blocks:
+        ts = datetime.fromtimestamp(int(b["time"]), tz=timezone.utc)
+        side = b["side"]
+        p_yes = float(b["price_yes"])
+        p_no  = float(b.get("price_no", 1.0 - p_yes))
+        shares = float(b.get("shares", 0.0))
+
+        if "notional" in b:
+            notional = float(b["notional"])
+        else:
+            if side == "TAKE_NO":
+                notional = float(b.get("notional_no", 0.0))
+            else:
+                notional = float(b.get("notional_yes", 0.0))
+
+        rows.append({
+            "time": ts,
+            "side": side,
+            "price_yes": p_yes,
+            "price_no": p_no,
+            "shares": shares,
+            "notional": notional,
+        })
+
+    df = pd.DataFrame(rows).sort_values("time").reset_index(drop=True)
+    return df
+
+# ---------- Plots ----------
+
+def plot_yes_price(df):
+    """Line chart of YES price over time (per block)."""
+    if df.empty:
+        print("No data to plot.")
+        return
+    plt.figure(figsize=(9,4))
+    plt.plot(df["time"], df["price_yes"])
+    plt.title("YES Price Over Time (per block)")
+    plt.xlabel("Time (UTC)")
+    plt.ylabel("YES Price (0–1)")
+    plt.tight_layout()
+    plt.show()
+
+def plot_no_price(df):
+    """Line chart of NO price over time (per block)."""
+    if df.empty:
+        print("No data to plot.")
+        return
+    plt.figure(figsize=(9,4))
+    plt.plot(df["time"], df["price_no"])
+    plt.title("NO Price Over Time (per block)")
+    plt.xlabel("Time (UTC)")
+    plt.ylabel("NO Price (0–1)")
+    plt.tight_layout()
+    plt.show()
+
+def plot_notional_flow(df, freq="5min"):
+    """
+    Bar chart of notional flow by side in time buckets.
+    freq: pandas offset alias (e.g., '1min','5min','15min','1H')
+    """
+    if df.empty:
+        print("No data to plot.")
+        return
+    g = (df.set_index("time")
+           .groupby([pd.Grouper(freq=freq), "side"])["notional"]
+           .sum()
+           .unstack(fill_value=0.0))
+    plt.figure(figsize=(10,4))
+    plt.bar(g.index, g.get("TAKE_YES", pd.Series(index=g.index, dtype=float)), width=0.01)
+    plt.bar(g.index, g.get("TAKE_NO", pd.Series(index=g.index, dtype=float)))
+    plt.title(f"Notional Flow by Side (bucket={freq})")
+    plt.xlabel("Time (UTC)")
+    plt.ylabel("Notional ($)")
+    plt.tight_layout()
+    plt.show()
+
+def plot_depth_scatter(df):
+    """
+    Scatter of per-block 'available' shares vs price.
+    Uses YES price for TAKE_YES points and NO price for TAKE_NO.
+    """
+    if df.empty:
+        print("No data to plot.")
+        return
+    yes_pts = df[df["side"]=="TAKE_YES"]
+    no_pts  = df[df["side"]=="TAKE_NO"]
+    plt.figure(figsize=(7,5))
+    plt.scatter(yes_pts["price_yes"], yes_pts["shares"])
+    plt.scatter(no_pts["price_no"],  no_pts["shares"])
+    plt.title("Per-block Lower-bound Shares vs Price")
+    plt.xlabel("Price (YES for TAKE_YES, NO for TAKE_NO)")
+    plt.ylabel("Shares (lower bound)")
+    plt.tight_layout()
+    plt.show()
+
 
 if __name__ == "__main__":
     main()
