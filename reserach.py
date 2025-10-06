@@ -126,7 +126,14 @@ def normalize_trades(trades, time_block=60):
         else:
             notional_no = notional
             notional_yes = 0.0
-        blocks.append({"time":time0, "side": side, "price_yes":p_yes, "price_no":p_no, "shares":shares, "notional_yes":notional_yes, "notional_no":notional_no})
+        if shares > 0 and notional > 0:
+            blocks.append({"time":time0, 
+                           "side": side, 
+                           "price_yes":p_yes, 
+                           "price_no":p_no, 
+                           "shares":shares, 
+                           "notional_yes":notional_yes, 
+                           "notional_no":notional_no})
         i = max(j, i+1) 
     return blocks
 
@@ -153,7 +160,7 @@ def notion_no(trade):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=1, dust=0.01, extreme_price=0.01 ,min_extreme_notional=50.0):
+def valid_trade(trade, min_spend=1, dust=0.01, extreme_price=0.01 ,min_extreme_notional=20.0):
     if not trade:
         return False
     
