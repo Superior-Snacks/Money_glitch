@@ -175,7 +175,7 @@ def notion_no(trade):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=2, dust=0.01, extreme_price=0.01 ,min_extreme_notional=20.0):
+def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.0):
     if not trade:
         return False
     
