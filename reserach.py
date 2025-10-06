@@ -88,6 +88,8 @@ def main():
     pl = 0
     for market in markets:
         trades = normalize_trades(fetch_trades(market))
+        if not trades:
+            continue
         sim = SimMarket(trades)
         shares, spent, avg_price, fills = sim.take_first_no(trades[0]["time"])
         outcome = json.loads(market["outcomePrices"])
@@ -97,6 +99,7 @@ def main():
         else:
             pl -= spent
             print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}")
+        time.sleep(2)
 
 
 
