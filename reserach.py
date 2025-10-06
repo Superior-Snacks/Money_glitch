@@ -14,71 +14,97 @@ class SimMarket:
         self.fee = fee_bps/10000.0
         self.slip = slip_bps/10000.0
 
-    def take_first_no(self, t_from, dollars=100, max_no_price=None):
-        """
-        take first 100 dollar no shares available
-        """
-        spent = 0.0
+    def take_first_no(self, t_from, dollars=100.0, max_no_price=None):
+        spent_pre = 0.0     # pre-fee notional spent on NO
         shares = 0.0
-        trades_taken = []
-        for trade in self.blocks:
-            if trade["side"] != "no" or trade["time"] < t_from:
+        fills = []          # list of dicts
+
+        for b in self.blocks:
+            if b["side"] != "no" or b["time"] < t_from:
                 continue
-            p_no = trade["price_no"]
+            p_no = float(b["price_no"])
             if max_no_price is not None and p_no > max_no_price:
                 continue
-            available = trade["notional_no"]
+            available = float(b.get("notional_no", 0.0))
             if available <= 0:
                 continue
-            need = dollars - spent
+
+            need = dollars - spent_pre
             if need <= 0:
                 break
-            take = min(need, available)
+
+            take = min(need, available)      # notional taken from this block (pre fee)
             add_shares = take / p_no
-            shares += add_shares
-            spent  += take
-            trades_taken.append(trade)
-            if spent >= dollars: break
 
-        if shares == 0: 
-            return 0.0, 0.0, 0.0, []
+            fills.append({
+                "time": b["time"],
+                "side": "no",
+                "price_no": p_no,
+                "price_yes": float(b["price_yes"]),
+                "take_notional_pre_fee": take,
+                "take_shares": add_shares,
+                # keep a snapshot of the source block if you want
+                "block": b,
+            })
 
-        gross = spent * (1 + self.fee + self.slip)
-        return shares, gross, gross/shares, trades_taken
-    
+            spent_pre += take
+            shares    += add_shares
 
-    def take_first_yes(self, t_from, dollars=100, max_yes_price=None):
-        """
-        take first 100 dollar yes shares available
-        should be bad if my theory is correct
-        """
-        spent = 0.0
+            if spent_pre >= dollars:
+                break
+
+        if shares == 0.0:
+            return 0.0, 0.0, 0.0, []   # no fill
+
+        # apply trading frictions once on the *total* notional
+        spent_after = spent_pre * (1.0 + self.fee + self.slip)
+        avg_no = spent_after / shares
+        return shares, spent_after, avg_no, fills
+
+    def take_first_yes(self, t_from, dollars=100.0, max_yes_price=None):
+        spent_pre = 0.0
         shares = 0.0
-        trades_taken = []
-        for trade in self.blocks:
-            if trade["side"] != "yes" or trade["time"] < t_from:
+        fills = []
+
+        for b in self.blocks:
+            if b["side"] != "yes" or b["time"] < t_from:
                 continue
-            p_yes = trade["price_yes"]
+            p_yes = float(b["price_yes"])
             if max_yes_price is not None and p_yes > max_yes_price:
                 continue
-            available = trade["notional_yes"]
+            available = float(b.get("notional_yes", 0.0))
             if available <= 0:
                 continue
-            need = dollars - spent
+
+            need = dollars - spent_pre
             if need <= 0:
                 break
+
             take = min(need, available)
             add_shares = take / p_yes
-            shares += add_shares
-            spent  += take
-            trades_taken.append((trade["time"], p_yes, add_shares, take))
-            if spent >= dollars: break
 
-        if shares == 0: 
+            fills.append({
+                "time": b["time"],
+                "side": "yes",
+                "price_yes": p_yes,
+                "price_no": float(b["price_no"]),
+                "take_notional_pre_fee": take,
+                "take_shares": add_shares,
+                "block": b,
+            })
+
+            spent_pre += take
+            shares    += add_shares
+
+            if spent_pre >= dollars:
+                break
+
+        if shares == 0.0:
             return 0.0, 0.0, 0.0, []
 
-        gross = spent * (1 + self.fee + self.slip)
-        return shares, gross, gross/shares, trades_taken
+        spent_after = spent_pre * (1.0 + self.fee + self.slip)
+        avg_yes = spent_after / shares
+        return shares, spent_after, avg_yes, fills
 
 
 def main():
