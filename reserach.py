@@ -30,6 +30,7 @@ def main():
         print("normalized trades")
         k = fetch_trades(i)
         n = normalize_trades(k)
+        ls_print(n)
 
 
     """ plotting
