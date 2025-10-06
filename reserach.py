@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 
 class SimMarket:
     def __init__(self, blocks, fee_bps=150, slip_bps=20):
+        # blocks: list of dicts with keys:
+        #  time, side ("yes"|"no"), price_yes, price_no, notional_yes, notional_no, shares
         self.blocks = sorted(blocks, key=lambda b: b["time"])
         self.fee = fee_bps/10000.0
         self.slip = slip_bps/10000.0
@@ -79,14 +81,6 @@ class SimMarket:
 
 #start with a few 50 markets, then test rolling continuous
 def main():
-    m = filter_markets(fetch_markets(limit=1, offset=51005))
-    for i in m:
-        print(i["question"])
-        print("normalized trades")
-        k = fetch_trades(i)
-        n = normalize_trades(k)
-        ls_print(n)
-        print(len(n))
 
 
     """ plotting
