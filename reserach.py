@@ -6,9 +6,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 class SimMarket:
-    def __init__():
-        ...
-
+    def __init__(self, blocks, fee_bps=150, slip_bps=20):
+        self.blocks = sorted(blocks, key=lambda b: b["time"])
+        self.fee = fee_bps/10000.0
+        self.slip = slip_bps/10000.0
     def take_first_no():
         """
         take first 100 dollar no shares available
