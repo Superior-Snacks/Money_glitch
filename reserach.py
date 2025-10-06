@@ -206,6 +206,17 @@ def simulate_strategy(blocks: list[dict],
 #start with a few 50 markets, then test rolling continuous
 def main():
     markets = filter_markets(fetch_markets(limit=50, offset= 60000))
+    for market in markets:
+        blocks = normalize_trades(fetch_trades(market))
+        outcome = json.loads(market["outcomePrices"])
+        outcome_prices = outcome
+        res = simulate_strategy(blocks, side="no", t_from=blocks[0]["time"], dollars=100,
+                                max_price_cap=0.30, fee_bps=0, slip_bps=20,
+                                onramp_bps=0, offramp_bps=10, fixed_onramp=0.0, fixed_offramp=0.0,
+                                outcome_prices=outcome_prices)
+        print(res)
+
+    """    markets = filter_markets(fetch_markets(limit=50, offset= 60000))
     pl = 0
     for market in markets:
         trades = normalize_trades(fetch_trades(market))
@@ -223,7 +234,7 @@ def main():
             print(market["question"])
             print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}")
         time.sleep(2)
-
+"""
 
 
     """ plotting
