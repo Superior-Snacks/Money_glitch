@@ -85,11 +85,14 @@ class SimMarket:
 #start with a few 50 markets, then test rolling continuous
 def main():
     markets = filter_markets(fetch_markets(limit=50, offset= 60000))
+
     for market in markets:
         trades = normalize_trades(fetch_trades(market))
         first_t = trades[0]["time"]
         sim = SimMarket(trades)
         run = sim.take_first_no(first_t)
+        print(run)
+
 
 
     """ plotting
