@@ -16,6 +16,8 @@ class SimMarket:
         """
         take first 100 dollar no shares available
         """
+        spent = 0.0
+        trades_taken = []
 
     def take_first_yes():
         """
