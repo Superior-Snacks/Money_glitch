@@ -108,26 +108,50 @@ class SimMarket:
 
 
 def main():
-    markets = filter_markets(fetch_markets(limit=50, offset= 60000))
-    pl = 0
-    for market in markets:
-        trades = normalize_trades(fetch_trades(market))
-        if not trades:
-            continue
-        sim = SimMarket(trades)
-        shares, spent_after, avg_no, fills = sim.take_first_no(trades[0]["time"])
-        outcome = json.loads(market["outcomePrices"])
-        if outcome == ["0","1"]:
-            for tk in fills:
-                pl += shares - spent_after
-            print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent_after} at avg_price:{avg_no}, current pl:{pl}, WON {len(fills)}")
-        else:
-            pl -= spent_after
-            print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent_after} at avg_price:{avg_no} loosing {spent_after} current pl:{pl}, LOST")
-        time.sleep(2)
+    pl = 0.0
+    markets = filter_markets(fetch_markets(limit=50, offset=60000))
 
+    for market in markets:
+        try:
+            trades = normalize_trades(fetch_trades(market))
+            if not trades:
+                continue
+
+            sim = SimMarket(trades, fee_bps=0, slip_bps=20)
+
+            # Decision time: first block time. You can also choose an external t_from.
+            t_from = trades[0]["time"]
+
+            shares, spent_after, avg_no, fills = sim.take_first_no(
+                t_from, dollars=100.0, max_no_price=None
+            )
+
+            # No fill → skip
+            if shares == 0.0 or spent_after == 0.0:
+                continue
+
+            # Resolve outcome
+            outcome_raw = market.get("outcomePrices", ["?", "?"])
+            if isinstance(outcome_raw, str):
+                outcome = json.loads(outcome_raw)
+            else:
+                outcome = outcome_raw
+
+            no_won = (outcome == ["0", "1"])
+            pnl = (shares - spent_after) if no_won else (-spent_after)
+            pl += pnl
+
+            print(market["question"])
+            print(
+                f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
+                f"| avg_NO={avg_no:.4f} | outcome={outcome} | pnl={pnl:.2f} | running_PL={pl:.2f}"
+            )
+
+            time.sleep(2)
+
+        except Exception as e:
+            print(f"[skip] {market.get('question','<no title>')}: {e}")
+            continue
 
 
     """ plotting
