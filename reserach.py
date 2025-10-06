@@ -246,8 +246,6 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
     #valid
     return True
 
-
-
 def ls_print(li):
     for i in li:
         print(i)
@@ -368,12 +366,6 @@ def plot_depth_scatter(df):
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
 
 """
 first idea
