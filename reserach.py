@@ -215,9 +215,10 @@ def main():
         shares, profit, spent, avg_price, fills = sim.take_first_no(trades[0]["time"])
         outcome = json.loads(market["outcomePrices"])
         if outcome == ["0","1"]:
-            pl += profit
+            for tk in fills:
+                pl += tk["notional_no"]
             print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} getting {profit} current pl:{pl}, WON")
+            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price}, current pl:{pl}, WON")
         else:
             pl -= spent
             print(market["question"])
