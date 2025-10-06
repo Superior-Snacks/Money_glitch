@@ -4,6 +4,7 @@ import requests
 from datetime import datetime, timezone
 import pandas as pd
 import matplotlib.pyplot as plt
+from dataclasses import dataclass
 
 class SimMarket:
     def __init__(self, blocks, fee_bps=0, slip_bps=20):
@@ -80,7 +81,127 @@ class SimMarket:
         return shares, gross, gross/shares, trades_taken
 
 
+@dataclass
+class SimResult:
+    side: str                 # "yes" | "no"
+    t_from: int               # epoch seconds
+    dollars_target: float
+    max_price_cap: float|None
+    shares: float
+    spent_trading: float      # includes trading fee + slippage from SimMarket
+    avg_fill_price: float     # (spent_trading / shares)
+    fills: list               # [(time, price, shares, notional), ...]
+    onramp_cost: float
+    offramp_cost: float
+    pnl: float
+    won: bool
 
+def compute_pnl_binary(side: str, shares: float, spent_trading: float,
+                       outcome_prices: list[str],
+                       onramp_bps: int = 0, offramp_bps: int = 0,
+                       fixed_onramp: float = 0.0, fixed_offramp: float = 0.0) -> tuple[float, float, float, bool]:
+    """
+    Returns (pnl, onramp_cost, offramp_cost, won)
+    - outcome_prices e.g. ["1","0"] means YES won, ["0","1"] means NO won.
+    - Trading fees/slippage are assumed included in spent_trading already.
+    - Onramp is charged on the dollars you deploy (spent_trading).
+    - Offramp is charged on gross proceeds when you win, or 0 if you lose.
+    """
+    yes_won = outcome_prices == ["1","0"]
+    no_won  = outcome_prices == ["0","1"]
+    assert yes_won or no_won, "Outcome must be resolved to ['1','0'] (YES) or ['0','1'] (NO)."
+
+    # onramp cost applies to capital you deploy
+    onramp_cost = spent_trading * (onramp_bps / 10000.0) + fixed_onramp
+
+    if (side.lower() == "yes" and yes_won) or (side.lower() == "no" and no_won):
+        # You win → shares redeem at $1 each
+        proceeds = shares * 1.0
+        offramp_cost = proceeds * (offramp_bps / 10000.0) + fixed_offramp
+        pnl = (proceeds - offramp_cost) - (spent_trading + onramp_cost)
+        won = True
+    else:
+        # You lose → position settles at $0
+        offramp_cost = 0.0
+        pnl = - (spent_trading + onramp_cost)
+        won = False
+
+    return pnl, onramp_cost, offramp_cost, won
+
+def simulate_strategy(blocks: list[dict],
+                      side: str = "no",
+                      t_from: int = 0,
+                      dollars: float = 100.0,
+                      max_price_cap: float | None = None,
+                      # trading frictions (applied *inside* SimMarket):
+                      fee_bps: int = 0,
+                      slip_bps: int = 20,
+                      # end-to-end costs:
+                      onramp_bps: int = 0,      # % of deployed capital
+                      offramp_bps: int = 0,     # % of redeemed proceeds (only if win)
+                      fixed_onramp: float = 0.0,
+                      fixed_offramp: float = 0.0,
+                      outcome_prices: list[str] | None = None) -> SimResult:
+    """
+    Run a simple 'take first liquidity' strategy:
+      - side: "no" or "yes"
+      - t_from: start time (epoch seconds) to begin consuming blocks
+      - dollars: target notional to deploy
+      - max_price_cap: optional price cap (NO cap compares to price_no; YES cap compares to price_yes)
+      - fee_bps/slip_bps: trading fee & slippage cushion (inside SimMarket)
+      - on/off-ramp: optional end-to-end costs (outside SimMarket)
+      - outcome_prices: required to compute P&L, e.g., ["0","1"] for NO win
+    """
+    assert side in ("yes", "no"), "side must be 'yes' or 'no'"
+
+    sim = SimMarket(blocks, fee_bps=fee_bps, slip_bps=slip_bps)
+
+    if side == "no":
+        shares, spent, avg_price, fills = sim.take_first_no(t_from, dollars=dollars, max_no_price=max_price_cap)
+    else:
+        shares, spent, avg_price, fills = sim.take_first_yes(t_from, dollars=dollars, max_yes_price=max_price_cap)
+
+    # If you didn't get filled, return zero-y result (no outcome needed)
+    if shares == 0.0 or spent == 0.0:
+        return SimResult(
+            side=side, t_from=t_from, dollars_target=dollars, max_price_cap=max_price_cap,
+            shares=0.0, spent_trading=0.0, avg_fill_price=0.0, fills=[],
+            onramp_cost=0.0, offramp_cost=0.0, pnl=0.0, won=False
+        )
+
+    if outcome_prices is None:
+        raise ValueError("simulate_strategy: outcome_prices is required to compute P&L.")
+
+    pnl, onramp_cost, offramp_cost, won = compute_pnl_binary(
+        side=side, shares=shares, spent_trading=spent,
+        outcome_prices=outcome_prices,
+        onramp_bps=onramp_bps, offramp_bps=offramp_bps,
+        fixed_onramp=fixed_onramp, fixed_offramp=fixed_offramp
+    )
+
+    return SimResult(
+        side=side,
+        t_from=t_from,
+        dollars_target=dollars,
+        max_price_cap=max_price_cap,
+        shares=shares,
+        spent_trading=spent,
+        avg_fill_price=avg_price,
+        fills=fills,
+        onramp_cost=onramp_cost,
+        offramp_cost=offramp_cost,
+        pnl=pnl,
+        won=won
+    )
+
+# ---------- Example ----------
+# Assuming you already have `blocks` from normalize_trades(..) and a resolved market:
+# outcome_prices = ["0","1"]  # NO won
+# res = simulate_strategy(blocks, side="no", t_from=blocks[0]["time"], dollars=100,
+#                         max_price_cap=0.30, fee_bps=0, slip_bps=20,
+#                         onramp_bps=0, offramp_bps=10, fixed_onramp=0.0, fixed_offramp=0.0,
+#                         outcome_prices=outcome_prices)
+# print(res)
 
 #start with a few 50 markets, then test rolling continuous
 def main():
