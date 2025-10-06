@@ -44,7 +44,7 @@ class SimMarket:
             return 0.0, 0.0, 0.0, 0.0, []
 
         gross = spent * (1 + self.fee + self.slip)
-        return shares, gross, spent, gross/shares, trades_taken
+        return shares, gross, gross/shares, trades_taken
     
 
     def take_first_yes(self, t_from, dollars=100, max_yes_price=None):
