@@ -153,15 +153,17 @@ def notion_no(trade):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=1, dust=0.01, extreme_price=1 ,min_extreme_notional=50.0):
+def valid_trade(trade, min_spend=1, dust=0.01, extreme_price=0.01 ,min_extreme_notional=50.0):
     if not trade:
         return False
-    price = trade["price"]
-    size = trade["size"]
+    
+    price = float(trade["price"])
+    size = float(trade["size"])
+    outcome = str(trade.get("outcome","")).strip().lower()
 
-    if trade["outcome"].lower() == "yes":
+    if outcome == "yes":
         cost = price * size
-    elif trade["outcome"].lower() == "no":
+    elif outcome == "no":
         cost = (1 - price) * size
     else:
         return False
