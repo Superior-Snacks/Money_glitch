@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class SimMarket():
     def __init__():
         ...
-        
+
     def take_first_no():
         """
         take first 100 dollar no shares available
@@ -30,7 +30,6 @@ def main():
         print("normalized trades")
         k = fetch_trades(i)
         n = normalize_trades(k)
-        simulate_market(n)
 
 
     """ plotting
