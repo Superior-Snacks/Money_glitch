@@ -10,6 +10,8 @@ class SimMarket:
         self.blocks = sorted(blocks, key=lambda b: b["time"])
         self.fee = fee_bps/10000.0
         self.slip = slip_bps/10000.0
+
+
     def take_first_no():
         """
         take first 100 dollar no shares available
@@ -188,7 +190,8 @@ def normalize_trades(trades, time_block=10):
                            "price_no":p_no, 
                            "shares":shares, 
                            "notional_yes":notional_yes, 
-                           "notional_no":notional_no})
+                           "notional_no":notional_no,
+                           "compressed": compressed})
         i = max(j, i+1) 
     return sorted(blocks, key=lambda b: b["time"])
 
