@@ -185,7 +185,6 @@ def normalize_trades(trades, time_block=10):
         p_yes = snap_price(tr1["price"], 0.01)
         p_no = round(1 - p_yes, 2)
         time0 = tr1["timestamp"]
-        side = "TAKE_YES" 
         if take_yes(tr1):
              side = "yes"
         elif take_no(tr1):
