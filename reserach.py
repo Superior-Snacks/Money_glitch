@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import matplotlib.pyplot as plt
 
-class SimMarket():
+class SimMarket:
     def __init__():
         ...
 
