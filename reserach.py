@@ -86,10 +86,9 @@ def normalize_trades(trades, time_block=60):
     side = None
     blocks = []
     while i < len(trades):
-        print(i, "i")
         tr1 = trades[i]
         if not valid_trade(tr1):
-                print("not valid?")
+                #print("not valid?")
                 i += 1
                 continue
         tr1 = trades[i]
@@ -101,13 +100,12 @@ def normalize_trades(trades, time_block=60):
         shares = 0.0
         j = i    
         while j < len(trades):
-            print(j, "j")
             tr = trades[j]
             if tr["timestamp"] - time0 > time_block:
-                print("broke time")
+                #print("broke time")
                 break
             if snap_price(tr["price"], 0.01) != p_yes:
-                print("broke price")
+                #print("broke price")
                 break
             if not valid_trade(tr):
                 j += 1
@@ -199,13 +197,14 @@ def main():
     m = filter_markets(fetch_markets(limit=1, offset=50005))
     for i in m:
         print(i["question"])
+        print("normalized trades")
         k = fetch_trades(i)
         n = normalize_trades(k)
         for j in n:
             print(j)
-        
+    print("raw trades")
     for i in k:
-        print(i["timestamp"] , i["size"], i["price"])
+        print(i["timestamp"] ,"size", i["size"],"price", i["price"])
 
 #klára bæta við checka gegn raw data
 if __name__ == "__main__":
