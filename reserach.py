@@ -22,6 +22,11 @@ class SimMarket:
                 continue
             p_no = trade["price_no"]
             if max_no_price is not None and p_no > max_no_price:
+                continue
+            available = trade["notional_no"]
+            if available <= 0:
+                continue
+            
 
     def take_first_yes():
         """
