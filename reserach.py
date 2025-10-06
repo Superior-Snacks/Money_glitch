@@ -34,6 +34,7 @@ def main():
         k = fetch_trades(i)
         n = normalize_trades(k)
         ls_print(n)
+        print(len(n))
 
 
     """ plotting
@@ -116,7 +117,7 @@ Store per block:
 }
 """
 def normalize_trades(trades, time_block=10):
-    print("new market")
+    #print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return []
