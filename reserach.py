@@ -146,6 +146,7 @@ def normalize_trades(trades, time_block=10):
 
         notional = 0.0
         shares = 0.0
+        compressed = 0
         j = i    
         while j < len(trades):
             tr = trades[j]
@@ -166,6 +167,7 @@ def normalize_trades(trades, time_block=10):
                     continue
                 shares += float(tr["size"])
                 notional += notion_yes(tr)
+                compressed += 1
                 
             elif side == "no":
                 if not take_no(tr):
@@ -175,6 +177,8 @@ def normalize_trades(trades, time_block=10):
                     continue
                 shares += float(tr["size"])
                 notional += notion_no(tr)
+                compressed += 1
+
             j += 1
 
         if side == "yes":
