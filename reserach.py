@@ -73,7 +73,7 @@ Store per block:
 "notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
 }
 """
-def normalize_trades(trades, time_block=60):
+def normalize_trades(trades, time_block=10):
     print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
