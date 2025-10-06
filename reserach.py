@@ -95,9 +95,11 @@ def main():
         outcome = json.loads(market["outcomePrices"])
         if outcome == ["0","1"]:
             pl += shares * avg_price - spent
+            print(market["question"])
             print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} getting {shares * avg_price} current pl:{pl}")
         else:
             pl -= spent
+            print(market["question"])
             print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}")
         time.sleep(2)
 
