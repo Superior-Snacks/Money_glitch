@@ -88,10 +88,11 @@ def main():
 
     for market in markets:
         trades = normalize_trades(fetch_trades(market))
-        first_t = trades[0]["time"]
-        sim = SimMarket(trades)
-        run = sim.take_first_no(first_t)
-        print(run)
+        if trades[0]["time"]:
+            
+            sim = SimMarket(trades)
+            shares, spent, avg_price, fills = sim.take_first_no(first_t)
+            print(f"shares:{shares}, spent{spent}, avg_price:{avg_price}")
 
 
 
