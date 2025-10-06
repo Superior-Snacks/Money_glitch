@@ -12,7 +12,7 @@ class SimMarket:
         self.slip = slip_bps/10000.0
 
 
-    def take_first_no():
+    def take_first_no(self, t_from, dollars=100, max_no_price=None):
         """
         take first 100 dollar no shares available
         """
