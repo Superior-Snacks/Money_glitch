@@ -26,10 +26,10 @@ class SimMarket:
             available = trade["notional_no"]
             if available <= 0:
                 continue
-            left = dollars - spent
-            if left <= 0:
+            need = dollars - spent
+            if need <= 0:
                 break
-            take = min(left, available)
+            take = min(need, available)
             add_shares = take / p_no
             shares += add_shares
             spent  += take
