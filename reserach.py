@@ -116,10 +116,16 @@ def normalize_trades(trades, time_block=10):
             if not valid_trade(tr):
                 j += 1
                 continue
-            if take_yes(tr):
+            if side == "yes":
+                if not take_yes(tr):
+                    break
+                if not valid_trade(tr):
+                    j += 1
+                    continue
                 shares += float(tr["size"])
                 notional += notion_yes(tr)
                 side = "yes"
+                
             elif take_no(tr):
                 shares += float(tr["size"])
                 notional += notion_no(tr)
