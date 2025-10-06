@@ -90,7 +90,8 @@ def main():
         trades = normalize_trades(fetch_trades(market))
         sim = SimMarket(trades)
         shares, spent, avg_price, fills = sim.take_first_no(trades[0]["time"])
-        if market["outcome"] == "no":
+        outcome = json.loads(market["outcomePrices"])
+        if outcome == ["0","1"]:
             pl += shares * avg_price - spent
             print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} getting {shares * avg_price} current pl:{pl}")
         else:
@@ -122,7 +123,7 @@ def fetch_markets(limit=20, offset=4811):
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    #print(payload[0].keys())
+    print(payload[0].keys())
     return payload
 
 def filter_markets(markets):
