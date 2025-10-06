@@ -18,6 +18,7 @@ class SimMarket:
         take first 100 dollar no shares available
         """
         spent = 0.0
+        shares = 0.0
         trades_taken = []
         for trade in self.blocks:
             if trade["side"] != "no" or trade["time"] < t_from:
@@ -51,6 +52,7 @@ class SimMarket:
         should be bad if my theory is correct
         """
         spent = 0.0
+        shares = 0.0
         trades_taken = []
         for trade in self.blocks:
             if trade["side"] != "yes" or trade["time"] < t_from:
