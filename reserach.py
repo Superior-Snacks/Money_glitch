@@ -17,6 +17,9 @@ class SimMarket:
         """
         spent = 0.0
         trades_taken = []
+        for trade in self.blocks:
+            if trade["side"] != "no" or trade["time"] < t_from:
+                continue
 
     def take_first_yes():
         """
