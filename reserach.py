@@ -91,7 +91,6 @@ def normalize_trades(trades, time_block=10):
                 #print("not valid?")
                 i += 1
                 continue
-        tr1 = trades[i]
         p_yes = snap_price(tr1["price"], 0.01)
         p_no = round(1 - p_yes, 2)
         time0 = tr1["timestamp"]
