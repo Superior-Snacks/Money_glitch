@@ -209,7 +209,7 @@ def main():
             print(j)
     print("raw trades")
     for i in k:
-        print(i["timestamp"] ,"size", i["size"],"price", i["price"])
+        print(i["timestamp"] ,"size", i["size"],"price", snap_price(i["price"], 0.01))
 
 #klára bæta við checka gegn raw data
 if __name__ == "__main__":
