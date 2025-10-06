@@ -198,13 +198,13 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
     #valid
     return True
 
-
-def simulate_market():
-    """
-    pretty much just print the trade blocks in time order? or gives a "book best price"
-    add fees here
-    """
-    ...
+"""
+pretty much just print the trade blocks in time order? or gives a "book best price"
+add fees here
+"""
+def simulate_market(history):
+    for block in history:
+        print(block)
 
 def take_first_no():
     """
