@@ -2,6 +2,8 @@ import json
 import time
 import requests
 from datetime import datetime, timezone
+import pandas as pd
+import matplotlib.pyplot as plt
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
