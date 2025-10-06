@@ -29,6 +29,12 @@ class SimMarket:
             left = dollars - spent
             if left <= 0:
                 break
+            take = min(left, available)
+            add_shares = take / p_no
+            shares += add_shares
+            spent  += take
+            trades_taken.append((trade["time"], p_no, add_shares, take))
+            if spent >= dollars: break
 
     def take_first_yes():
         """
