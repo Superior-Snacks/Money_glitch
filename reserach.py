@@ -172,7 +172,7 @@ def normalize_trades(trades, time_block=10):
                            "notional_yes":notional_yes, 
                            "notional_no":notional_no})
         i = max(j, i+1) 
-    return blocks
+    return sorted(blocks, key=lambda b: b["time"])
 
 def snap_price(p, tick=0.01):
     # snap to exchange tick, then round nicely
