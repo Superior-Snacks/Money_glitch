@@ -36,6 +36,11 @@ class SimMarket:
             trades_taken.append((trade["time"], p_no, add_shares, take))
             if spent >= dollars: break
 
+        if shares == 0: 
+            return 0.0, 0.0, 0.0, []
+
+        gross = spent * (1 + self.fee + self.slip)
+        return shares, gross, gross/shares, trades_taken
     def take_first_yes():
         """
         take first 100 dollar yes shares available
