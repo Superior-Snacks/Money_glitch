@@ -153,7 +153,7 @@ def notion_no(trade):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=1, dust=0.01):
+def valid_trade(trade, min_spend=1, dust=0.01, extreme_price=1 ,min_extreme_notional=50.0):
     if not trade:
         return False
     price = trade["price"]
@@ -170,6 +170,9 @@ def valid_trade(trade, min_spend=1, dust=0.01):
         return False
     if (price < dust) or (price > 1 - dust):
         return False
+    # Extreme prices allowed only for big enough notional
+    if price < extreme_price or price > 1.0 - extreme_price:
+        return cost >= min_extreme_notional
     #valid
     return True
 
