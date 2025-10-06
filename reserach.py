@@ -87,9 +87,9 @@ def main():
     markets = filter_markets(fetch_markets(limit=50, offset= 60000))
     for market in markets:
         trades = normalize_trades(fetch_trades(market))
+        first_t = trades[0]["time"]
         sim = SimMarket(trades)
-    if side == "no":
-        shares, spent, avg_price, fills = sim.take_first_no(t_from, dollars=dollars, max_no_price=max_price_cap)
+        sim.take_first_no(first_t)
 
 
     """ plotting
