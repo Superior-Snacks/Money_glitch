@@ -51,22 +51,22 @@ class SimMarket:
         spent = 0.0
         trades_taken = []
         for trade in self.blocks:
-            if trade["side"] != "no" or trade["time"] < t_from:
+            if trade["side"] != "yes" or trade["time"] < t_from:
                 continue
-            p_no = trade["price_no"]
-            if max_no_price is not None and p_no > max_no_price:
+            p_yes = trade["price_yes"]
+            if max_yes_price is not None and p_yes > max_yes_price:
                 continue
-            available = trade["notional_no"]
+            available = trade["notional_yes"]
             if available <= 0:
                 continue
             need = dollars - spent
             if need <= 0:
                 break
             take = min(need, available)
-            add_shares = take / p_no
+            add_shares = take / p_yes
             shares += add_shares
             spent  += take
-            trades_taken.append((trade["time"], p_no, add_shares, take))
+            trades_taken.append((trade["time"], p_yes, add_shares, take))
             if spent >= dollars: break
 
         if shares == 0: 
