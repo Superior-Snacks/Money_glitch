@@ -20,6 +20,8 @@ class SimMarket:
         for trade in self.blocks:
             if trade["side"] != "no" or trade["time"] < t_from:
                 continue
+            p_no = trade["price_no"]
+            if max_no_price is not None and p_no > max_no_price:
 
     def take_first_yes():
         """
