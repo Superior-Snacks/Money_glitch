@@ -135,10 +135,10 @@ def normalize_trades(trades, time_block=10):
                 notional += notion_no(tr)
             j += 1
 
-        if take_yes(tr1):
+        if side == "yes":
             notional_yes = notional
             notional_no = 0.0
-        else:
+        elif side == "no":
             notional_no = notional
             notional_yes = 0.0
         if shares > 0 and notional > 0:
