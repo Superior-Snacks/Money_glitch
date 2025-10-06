@@ -170,8 +170,6 @@ def valid_trade(trade, min_spend=1, dust=0.01, extreme_price=0.01 ,min_extreme_n
 
     if cost < min_spend:
         return False
-    if (price < dust) or (price > 1 - dust):
-        return False
     # Extreme prices allowed only for big enough notional
     if price < extreme_price or price > 1.0 - extreme_price:
         return cost >= min_extreme_notional
