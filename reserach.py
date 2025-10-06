@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 class SimMarket:
-    def __init__(self, blocks, fee_bps=150, slip_bps=20):
+    def __init__(self, blocks, fee_bps=0, slip_bps=20):
         # blocks: list of dicts with keys:
         #  time, side ("yes"|"no"), price_yes, price_no, notional_yes, notional_no, shares
         self.blocks = sorted(blocks, key=lambda b: b["time"])
@@ -85,14 +85,17 @@ class SimMarket:
 #start with a few 50 markets, then test rolling continuous
 def main():
     markets = filter_markets(fetch_markets(limit=50, offset= 60000))
-
+    pl = 0
     for market in markets:
         trades = normalize_trades(fetch_trades(market))
-        if trades[0]["time"]:
-            
-            sim = SimMarket(trades)
-            shares, spent, avg_price, fills = sim.take_first_no(first_t)
-            print(f"shares:{shares}, spent{spent}, avg_price:{avg_price}")
+        sim = SimMarket(trades)
+        shares, spent, avg_price, fills = sim.take_first_no(trades[0]["time"])
+        if market["outcome"] == "no":
+            pl += shares * avg_price - spent
+            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} getting {shares * avg_price} current pl:{pl}")
+        else:
+            pl -= spent
+            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}")
 
 
 
