@@ -115,17 +115,17 @@ def main():
         if not trades:
             continue
         sim = SimMarket(trades)
-        shares, spent, avg_price, fills = sim.take_first_no(trades[0]["time"])
+        shares, spent_after, avg_no, fills = sim.take_first_no(trades[0]["time"])
         outcome = json.loads(market["outcomePrices"])
         if outcome == ["0","1"]:
             for tk in fills:
-                pl += tk["notional_no"]
+                pl += shares - spent_after
             print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price}, current pl:{pl}, WON {len(fills)}")
+            print(f"bought shares:{shares} for spent:{spent_after} at avg_price:{avg_no}, current pl:{pl}, WON {len(fills)}")
         else:
-            pl -= spent
+            pl -= spent_after
             print(market["question"])
-            print(f"bought shares:{shares} for spent:{spent} at avg_price:{avg_price} loosing {spent} current pl:{pl}, LOST")
+            print(f"bought shares:{shares} for spent:{spent_after} at avg_price:{avg_no} loosing {spent_after} current pl:{pl}, LOST")
         time.sleep(2)
 
 
