@@ -170,7 +170,7 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=0, 
             no_won = (no_p > yes_p)
 
             pnl = (shares - spent_after) if no_won else (-spent_after)
-            if pnl > 1000 and no_won:
+            if avg_no < 0.09 and no_won:
                 pnl = 0
 
             # update account & totals
