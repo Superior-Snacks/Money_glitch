@@ -76,3 +76,5 @@ amount of bets:520 | batch P/L: 0.00 | total P/L: 36805.57 | bank: 41805.57 | ne
 amount of bets:520 | batch P/L: 0.00 | total P/L: 36805.57 | bank: 41805.57 | next offset: 25231
 
 amount of bets:520 | batch P/L: 0.00 | total P/L: 36805.57 | bank: 41805.57 | next offset: 25231
+------------------------------------------------------------------------------------------------------------------------
+no w no price cap 0.4
