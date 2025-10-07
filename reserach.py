@@ -129,7 +129,7 @@ class SimMarket:
         avg_yes = spent_after / shares
         return shares, spent_after, avg_yes, fills
 
-def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=20):
+def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):
     """
     Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
     Returns (pnl_sum, bank, next_offset).
