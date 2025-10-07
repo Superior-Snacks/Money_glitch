@@ -166,7 +166,7 @@ def main():
     offset = 4811
     while bank > 0:
 
-        rolling_markets(bank, 50, offset)
+        pl, bank = rolling_markets(bank, 50, offset)
         offset += 50
 
 
