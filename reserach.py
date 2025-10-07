@@ -188,7 +188,7 @@ def rolling_markets(check, bank, limit=50, offset=4811, max_price_cap=None, fee_
             print(market["question"])
             print(
                 f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
-                f"| avg_NO={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
+                f"| avg={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
                 f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
             )
 
