@@ -113,6 +113,14 @@ def rolling_markets(bank, limit= 50, offset=4811):
             trades = normalize_trades(fetch_trades(market))
             if not trades:
                 continue
+            if bank >= 100:
+                bet = 100.0
+            elif bank >= 10:
+                bet = bank
+            else:
+                print("out of money")
+                break
+                
 
             sim = SimMarket(trades, fee_bps=0, slip_bps=20)
 
@@ -120,7 +128,7 @@ def rolling_markets(bank, limit= 50, offset=4811):
             t_from = trades[0]["time"]
 
             shares, spent_after, avg_no, fills = sim.take_first_no(
-                t_from, dollars=100.0, max_no_price=None
+                t_from, dollars=bet, max_no_price=None
             )
 
             # No fill → skip
