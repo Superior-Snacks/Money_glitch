@@ -105,66 +105,70 @@ class SimMarket:
         avg_yes = spent_after / shares
         return shares, spent_after, avg_yes, fills
 
-def rolling_markets(bank, limit= 50, offset=4811):
-    pl = 0.0
+def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=0, slip_bps=20):
+    """
+    Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
+    Returns (pnl_sum, bank, next_offset).
+    """
+    pnl_sum = 0.0
     markets = filter_markets(fetch_markets(limit, offset))
+    next_offset = offset + len(markets)
+
     for market in markets:
         try:
             trades = normalize_trades(fetch_trades(market))
             if not trades:
                 continue
-            if bank >= 100:
+
+            # sizing
+            if bank >= 100.0:
                 bet = 100.0
-            elif bank >= 10:
-                bet = bank
+            elif bank >= 10.0:
+                bet = float(bank)          # go all-in if small
             else:
                 print("out of money")
                 break
-                
 
-            sim = SimMarket(trades, fee_bps=0, slip_bps=20)
-
-            # Decision time: first block time. You can also choose an external t_from.
+            sim = SimMarket(trades, fee_bps=fee_bps, slip_bps=slip_bps)
             t_from = trades[0]["time"]
 
             shares, spent_after, avg_no, fills = sim.take_first_no(
-                t_from, dollars=bet, max_no_price=None
+                t_from, dollars=bet, max_no_price=max_price_cap
             )
-            
 
-            # No fill → skip
+            # skip if no fill
             if shares == 0.0 or spent_after == 0.0:
                 continue
 
-            # Resolve outcome
-            outcome_raw = market.get("outcomePrices", ["?", "?"])
-            if isinstance(outcome_raw, str):
-                outcome = json.loads(outcome_raw)
-            else:
-                outcome = outcome_raw
+            # parse outcome robustly
+            outcome_raw = market.get("outcomePrices", ["0", "0"])
+            outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
+            yes_p, no_p = float(outcome[0]), float(outcome[1])
+            no_won = (no_p > yes_p)
 
-            if float(outcome[1]) > float(outcome[0]): #no won
-                pnl = shares - spent_after
-                result = "WON"
-            else: 
-                pnl = -spent_after
-                result = "LOST"
-            pl += pnl
-            bank += pl
+            pnl = (shares - spent_after) if no_won else (-spent_after)
+
+            # update account & totals
+            bank += pnl
+            pnl_sum += pnl
 
             print(market["question"])
             print(
                 f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
-                f"| avg_NO={avg_no:.4f} | outcome={result} | pnl={pnl:.2f} | running_PL={pl:.2f}"
+                f"| avg_NO={avg_no:.4f} | outcome={'WON' if no_won else 'LOST'} "
+                f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
             )
 
-            time.sleep(2)
+            time.sleep(1)  # optional
+
+            if bank < 10.0:
+                print("bank below min bet; stopping batch.")
+                break
 
         except Exception as e:
             print(f"[skip] {market.get('question','<no title>')}: {e}")
-            continue
 
-    return pl, bank
+    return pnl_sum, bank, next_offset
 
 def main():
     bank = 5000.0
