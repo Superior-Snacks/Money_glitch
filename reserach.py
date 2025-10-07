@@ -206,7 +206,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
 
 def main():
     bank = 5000.0
-    offset = 4811 + 18900
+    offset = 4811 + 18900 #pressent
     all_pl = 0.0
     all_bets = 0
 
