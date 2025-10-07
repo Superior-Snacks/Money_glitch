@@ -150,6 +150,12 @@ def rolling_markets(limit= 50, offset=4811):
             print(f"[skip] {market.get('question','<no title>')}: {e}")
             continue
 def main():
+    bank = 5000
+    offset = 4811
+    while bank > 0:
+
+        rolling_markets(50, offset)
+        offset += 50
 
 
 
