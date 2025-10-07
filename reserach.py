@@ -172,7 +172,7 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=0, 
 
 def main():
     bank = 5000.0
-    offset = 4811
+    offset = 4811 +10000
     all_pl = 0.0
 
     # stop when bank < $10 or when you decide to cap batches
