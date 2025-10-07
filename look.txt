@@ -126,3 +126,27 @@ amount of bets:439 | batch P/L: 160.42 | total P/L: 32914.43 | bank: 37914.43 | 
 amount of bets:477 | batch P/L: 3440.48 | total P/L: 36354.91 | bank: 41354.91 | next offset: 25188
 -------------------------------------------------------------------------------------------------------------------------------
 back to price cap 0.4 w timeperiod
+
+amount of bets:47 | batch P/L: 8011.99 | total P/L: 8011.99 | bank: 13011.99 | next offset: 24758 | timestamp2024-12-29T17:38:00.916304Z
+
+amount of bets:89 | batch P/L: 5552.38 | total P/L: 13564.37 | bank: 18564.37 | next offset: 24800 | timestamp2024-12-30T05:06:48.95824Z
+
+amount of bets:135 | batch P/L: 3836.89 | total P/L: 17401.26 | bank: 22401.26 | next offset: 24846 | timestamp2024-12-30T16:06:21.715532Z
+
+amount of bets:163 | batch P/L: 2143.34 | total P/L: 19544.60 | bank: 24544.60 | next offset: 24874 | timestamp2024-12-30T21:07:56.26993Z
+
+amount of bets:200 | batch P/L: 5978.12 | total P/L: 25522.71 | bank: 30522.71 | next offset: 24911 | timestamp2024-12-30T22:15:24.800963Z
+
+amount of bets:245 | batch P/L: 7564.26 | total P/L: 33086.98 | bank: 38086.98 | next offset: 24956 | timestamp2024-12-31T17:31:45.373494Z
+
+amount of bets:292 | batch P/L: 3557.74 | total P/L: 36644.72 | bank: 41644.72 | next offset: 25003 | timestamp2024-12-31T21:16:02.66538Z
+
+amount of bets:339 | batch P/L: 2248.00 | total P/L: 38892.72 | bank: 43892.72 | next offset: 25050 | timestamp2025-01-02T01:08:52.393792Z
+
+amount of bets:389 | batch P/L: 3633.66 | total P/L: 42526.38 | bank: 47526.38 | next offset: 25100 | timestamp2025-01-02T19:31:07.195746Z
+
+amount of bets:439 | batch P/L: 1799.31 | total P/L: 44325.69 | bank: 49325.69 | next offset: 25150 | timestamp2025-01-03T01:11:34.187778Z
+
+amount of bets:477 | batch P/L: 3257.00 | total P/L: 47582.69 | bank: 52582.69 | next offset: 25188 | timestamp2025-01-03T19:59:27.019843Z
+
+amount of bets:500 | batch P/L: 1022.06 | total P/L: 48604.75 | bank: 53604.75 | next offset: 25211 | timestamp2025-01-03T22:45:10.684452Z
