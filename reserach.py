@@ -143,8 +143,10 @@ def rolling_markets(bank, limit= 50, offset=4811):
             else:
                 outcome = outcome_raw
 
-            no_won = (outcome == ["0", "1"])
-            pnl = (shares - spent_after) if no_won else (-spent_after)
+            if float(outcome[1]) > float(outcome[0]): #no won
+                pnl = shares - spent_after
+            else: 
+                pnl = -spent_after
             pl += pnl
             bank += pl
 
