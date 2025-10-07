@@ -479,7 +479,7 @@ def write_to_file(filename, data):
         # if file already has content, add newline first
         file.seek(0, os.SEEK_END)
         if file.tell() > 0:
-        file.write(data + "\n")
+            file.write(data + "\n")
 # ---------- Core helpers ----------
 
 def blocks_to_df(blocks):
