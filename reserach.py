@@ -214,7 +214,7 @@ def main():
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(5)
         pnl_batch, bank, offset, bets = rolling_markets(
-            bank, check="no",
+            bank, check="yes",
             limit=50, offset=offset,
             max_price_cap=None,  # e.g., 0.40 to avoid expensive NO
             fee_bps=0, slip_bps=20

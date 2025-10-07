@@ -28,3 +28,13 @@ amount of bets:281 | batch P/L: 2371.29 | total P/L: 19240.23 | bank: 24240.23 |
 amount of bets:314 | batch P/L: 4283.41 | total P/L: 23523.65 | bank: 28523.65 | next offset: 15025
 --------------------------------------------------------------------------------------------------
 yes
+
+amount of bets:50 | batch P/L: -511.69 | total P/L: -511.69 | bank: 4488.31 | next offset: 14761
+
+amount of bets:99 | batch P/L: -286.70 | total P/L: -798.39 | bank: 4201.61 | next offset: 14810
+
+amount of bets:149 | batch P/L: -1078.42 | total P/L: -1876.81 | bank: 3123.19 | next offset: 14860
+
+amount of bets:192 | batch P/L: -1668.25 | total P/L: -3545.06 | bank: 1454.94 | next offset: 14903
+
+amount of bets:238 | batch P/L: -1446.14 | total P/L: -4991.20 | bank: 8.80 | next offset: 14949
