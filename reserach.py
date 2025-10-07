@@ -202,7 +202,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
         except Exception as e:
             print(f"[skip] {market.get('question','<no title>')}: {e}")
 
-    return pnl_sum, bank, next_offset, len(markets)
+    return pnl_sum, bank, next_offset, len(markets), markets[0]["timestamp"]
 
 def main():
     bank = 5000.0
