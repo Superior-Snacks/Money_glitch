@@ -173,8 +173,9 @@ def main():
 
         pl, bank = rolling_markets(bank, 50, offset)
         offset += 50
+        all_pl += pl
         print("-------------------------------------------------------------")
-        print(f"profit/loss {pl}, bank balance {bank}")
+        print(f"profit/loss {all_pl}, bank balance {bank}")
         print("-------------------------------------------------------------")
 
 
