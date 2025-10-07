@@ -4,6 +4,29 @@ import requests
 from datetime import datetime, timezone
 import pandas as pd
 import matplotlib.pyplot as plt
+import time, json, requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# 1) One session for the whole script
+def make_session():
+    s = requests.Session()
+    retry = Retry(
+        total=5,
+        connect=5,
+        read=5,
+        backoff_factor=0.5,  # 0.5, 1.0, 2.0, ...
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=("GET", "POST"),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    s.headers.update({"User-Agent": "research-bot/1.0"})
+    return s
+
+SESSION = make_session()
 
 class SimMarket:
     def __init__(self, blocks, fee_bps=0, slip_bps=20):
