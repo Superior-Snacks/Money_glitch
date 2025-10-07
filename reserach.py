@@ -130,7 +130,7 @@ class SimMarket:
         avg_yes = spent_after / shares
         return shares, spent_after, avg_yes, fills
 
-def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):
+def rolling_markets(check, bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):
     """
     Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
     Returns (pnl_sum, bank, next_offset).
@@ -156,11 +156,14 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600
 
             sim = SimMarket(trades, fee_bps=fee_bps, slip_bps=slip_bps)
             t_from = trades[0]["time"]
-
-            shares, spent_after, avg_no, fills = sim.take_first_no(
-                t_from, dollars=bet, max_no_price=max_price_cap
-            )
-
+            if check == "no":
+                shares, spent_after, avg_, fills = sim.take_first_no(
+                    t_from, dollars=bet, max_no_price=max_price_cap
+                )
+            elif check == "yes":
+                shares, spent_after, avg_, fills = sim.take_first_no(
+                    t_from, dollars=bet, max_yes_price=max_price_cap
+                )
             # skip if no fill
             if shares == 0.0 or spent_after == 0.0:
                 continue
@@ -169,10 +172,10 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600
             outcome_raw = market.get("outcomePrices", ["0", "0"])
             outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
             yes_p, no_p = float(outcome[0]), float(outcome[1])
-            no_won = (no_p > yes_p)
+            won = (no_p > yes_p)
 
-            pnl = (shares - spent_after) if no_won else (-spent_after)
-            if avg_no < 0.09 and no_won:
+            pnl = (shares - spent_after) if won else (-spent_after)
+            if avg_ < 0.09 and won:
                 pnl = 0
 
             # update account & totals
@@ -182,7 +185,7 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600
             print(market["question"])
             print(
                 f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
-                f"| avg_NO={avg_no:.4f} | outcome={'WON' if no_won else 'LOST'} "
+                f"| avg_NO={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
                 f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
             )
 
