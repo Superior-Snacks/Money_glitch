@@ -211,4 +211,10 @@ amount of bets:452 | total spent 23685.24 | batch P/L: 3838.46 | total P/L: 4576
 
 amount of bets:497 | total spent 25977.95 | batch P/L: 5281.48 | total P/L: 51046.71 | bank: 56046.71 | next offset: 11208 | timestamp2024-05-09T17:05:33.598358Z
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200
+offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200 ignore under 10%
+
+amount of bets:36 | total spent 1806.32 | batch P/L: 4325.35 | total P/L: 4325.35 | bank: 9325.35 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:80 | total spent 5161.89 | batch P/L: 8396.59 | total P/L: 12721.93 | bank: 17721.93 | next offset: 10791 | timestamp2024-04-16T15:47:33.487624Z
+
+amount of bets:118 | total spent 7412.93 | batch P/L: 2707.42 | total P/L: 15429.36 | bank: 20429.36 | next offset: 10829 | timestamp2024-04-18T17:52:46.987586Z
