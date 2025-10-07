@@ -4,7 +4,6 @@ import requests
 from datetime import datetime, timezone
 import pandas as pd
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
 
 class SimMarket:
     def __init__(self, blocks, fee_bps=0, slip_bps=20):
