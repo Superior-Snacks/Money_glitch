@@ -8,6 +8,7 @@ import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass
+import os
 
 # 1) One session for the whole script
 def make_session():
@@ -469,6 +470,12 @@ def ls_print(li):
     for i in li:
         print(i)
 
+def write_to_file(f, data):
+    with open(f, "a", encoding="utf-8") as f:
+        f.seek(0, os.SEEK_END)
+        if f.tell() > 0:
+            f.write("\n")
+            f.write(data + "\n")
 # ---------- Core helpers ----------
 
 def blocks_to_df(blocks):
