@@ -187,3 +187,24 @@ amount of bets:475 | total spent 19231.32 | batch P/L: 0.00 | total P/L: 30537.7
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 offset = 4811 + 5900 cap 0.4
 
+amount of bets:36 | total spent 1675.87 | batch P/L: 4398.18 | total P/L: 4398.18 | bank: 9398.18 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:80 | total spent 4789.09 | batch P/L: 7535.64 | total P/L: 11933.82 | bank: 16933.82 | next offset: 10791 | timestamp2024-04-16T15:47:33.487624Z
+
+amount of bets:118 | total spent 6877.55 | batch P/L: 1744.07 | total P/L: 13677.89 | bank: 18677.89 | next offset: 10829 | timestamp2024-04-18T17:52:46.987586Z
+
+amount of bets:156 | total spent 9557.04 | batch P/L: 4764.65 | total P/L: 18442.54 | bank: 23442.54 | next offset: 10867 | timestamp2024-04-21T19:37:24.129579Z
+
+amount of bets:194 | total spent 11613.78 | batch P/L: 3382.40 | total P/L: 21824.95 | bank: 26824.95 | next offset: 10905 | timestamp2024-04-24T16:20:39.314095Z
+
+amount of bets:228 | total spent 13665.77 | batch P/L: 5971.94 | total P/L: 27796.89 | bank: 32796.89 | next offset: 10939 | timestamp2024-04-25T19:47:39.206888Z
+
+amount of bets:275 | total spent 16549.81 | batch P/L: 6582.97 | total P/L: 34379.86 | bank: 39379.86 | next offset: 10986 | timestamp2024-04-29T19:08:29.945793Z
+
+amount of bets:319 | total spent 18187.33 | batch P/L: 2933.32 | total P/L: 37313.19 | bank: 42313.19 | next offset: 11030 | timestamp2024-04-30T22:38:45.124486Z
+
+amount of bets:367 | total spent 19786.54 | batch P/L: 1977.55 | total P/L: 39290.74 | bank: 44290.74 | next offset: 11078 | timestamp2024-05-02T19:18:02.699215Z
+
+amount of bets:408 | total spent 21739.85 | batch P/L: 2636.04 | total P/L: 41926.77 | bank: 46926.77 | next offset: 11119 | timestamp2024-05-03T22:47:21.058029Z
+
+amount of bets:452 | total spent 23685.24 | batch P/L: 3838.46 | total P/L: 45765.23 | bank: 50765.23 | next offset: 11163 | timestamp2024-05-07T16:16:19.70116Z
