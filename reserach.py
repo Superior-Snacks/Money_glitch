@@ -224,7 +224,7 @@ def main():
         print("-" * 61)
         print(f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset}")
         print("-" * 61)
-        write_to_file("look.txt", f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{datetime.fromtimestamp(int(createdAt), tz=timezone.utc)}")
+        write_to_file("look.txt", f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{createdAt}")
 
         if bank < 10.0:
             break
