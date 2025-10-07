@@ -9,35 +9,6 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass
 
-@dataclass
-class Fill:
-    time: int
-    side: str
-    price: float
-    shares: float
-    notional_pre_fee: float
-    notional_after: float
-    block: dict
-
-@dataclass
-class TradeResult:
-    side: str
-    shares: float
-    spent_pre_fee: float
-    spent_after_entry: float
-    fills: list[Fill]
-    fees_entry: float
-    gas_cost: float
-
-@dataclass
-class SettleResult:
-    won: bool
-    proceeds_gross: float
-    settlement_fee: float
-    offramp_cost: float
-    funding_cost: float
-    pnl: float
-    onramp_cost: float
 # 1) One session for the whole script
 def make_session():
     s = requests.Session()
@@ -158,7 +129,7 @@ class SimMarket:
         avg_yes = spent_after / shares
         return shares, spent_after, avg_yes, fills
 
-def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=0, slip_bps=20):
+def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=20):
     """
     Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
     Returns (pnl_sum, bank, next_offset).
