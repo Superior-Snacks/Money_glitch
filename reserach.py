@@ -232,6 +232,13 @@ BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_TRADES = "http://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
 
+# 2) Safe GET with strict timeouts (connect, read)
+def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
+    return SESSION.get(url, params=params, timeout=timeout)
+
+# 3) Paginated trades with a per-market time budget
+DATA_TRADES = "https://data-api.polymarket.com/trades"
+
 def fetch_markets(limit=20, offset=4811):
     params = {
         "limit": limit,
