@@ -174,6 +174,7 @@ def main():
     bank = 5000.0
     offset = 4811 + 10000
     all_pl = 0.0
+    all_bets = 0
 
     # stop when bank < $10 or when you decide to cap batches
     for _ in range(100):  # up to 100 * 50 = 5000 markets
