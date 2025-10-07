@@ -86,5 +86,5 @@ amount of bets:7 | batch P/L: 0.00 | total P/L: -8.52 | bank: 4991.48 | next off
 amount of bets:8 | batch P/L: 0.00 | total P/L: -8.52 | bank: 4991.48 | next offset: 23719
 
 ------------------------------------------------------------------------------------------------------------------------
-no w no price cap 0.4 ?_ offset = 4811 + 19900
+no w price cap at 0.4 ?_ offset = 4811 + 19900
 amount of bets:47 | batch P/L: 8017.80 | total P/L: 8017.80 | bank: 13017.80 | next offset: 24758
