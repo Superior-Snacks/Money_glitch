@@ -146,7 +146,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
             trades = normalize_trades(fetch_trades(market))
             if not trades:
                 continue
-
+            print(datetime.fromtimestamp(int(trades[0]["timestamp"]), tz=timezone.utc))
             # sizing
             if bank >= 100.0:
                 bet = 100.0
