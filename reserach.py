@@ -128,6 +128,7 @@ class SimMarket:
 
         spent_after = spent_pre * (1.0 + self.fee + self.slip)
         avg_yes = spent_after / shares
+        print(shares, spent_after, avg_yes, fills)
         return shares, spent_after, avg_yes, fills
 
 def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):
@@ -213,7 +214,7 @@ def main():
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(5)
         pnl_batch, bank, offset, bets = rolling_markets(
-            bank, check="yes",
+            bank, check="no",
             limit=50, offset=offset,
             max_price_cap=None,  # e.g., 0.40 to avoid expensive NO
             fee_bps=0, slip_bps=20
