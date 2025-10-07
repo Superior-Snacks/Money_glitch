@@ -124,3 +124,5 @@ amount of bets:389 | batch P/L: 6369.44 | total P/L: 32754.02 | bank: 37754.02 |
 amount of bets:439 | batch P/L: 160.42 | total P/L: 32914.43 | bank: 37914.43 | next offset: 25150
 
 amount of bets:477 | batch P/L: 3440.48 | total P/L: 36354.91 | bank: 41354.91 | next offset: 25188
+-------------------------------------------------------------------------------------------------------------------------------
+back to price cap 0.4 w timeperiod
