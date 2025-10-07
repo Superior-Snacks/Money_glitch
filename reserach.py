@@ -162,7 +162,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
                     t_from, dollars=bet, max_no_price=max_price_cap
                 )
             elif check == "yes":
-                shares, spent_after, avg_, fills = sim.take_first_no(
+                shares, spent_after, avg_, fills = sim.take_first_yes(
                     t_from, dollars=bet, max_yes_price=max_price_cap
                 )
             # skip if no fill
