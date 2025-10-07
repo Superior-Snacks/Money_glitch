@@ -102,3 +102,25 @@ amount of bets:245 | batch P/L: 7564.26 | total P/L: 33084.04 | bank: 38084.04 |
 amount of bets:292 | batch P/L: 3540.89 | total P/L: 36624.93 | bank: 41624.93 | next offset: 25003
 --------------------------------------------------------------------------------------------------------------------------------
 no price no cap offset = 4811 + 19900
+
+amount of bets:47 | batch P/L: 6495.05 | total P/L: 6495.05 | bank: 11495.05 | next offset: 24758
+
+amount of bets:89 | batch P/L: 3669.01 | total P/L: 10164.06 | bank: 15164.06 | next offset: 24800
+
+amount of bets:135 | batch P/L: 3785.53 | total P/L: 13949.59 | bank: 18949.59 | next offset: 24846
+
+amount of bets:163 | batch P/L: 1119.18 | total P/L: 15068.77 | bank: 20068.77 | next offset: 24874
+
+amount of bets:200 | batch P/L: 3489.24 | total P/L: 18558.01 | bank: 23558.01 | next offset: 24911
+
+amount of bets:245 | batch P/L: 5740.06 | total P/L: 24298.07 | bank: 29298.07 | next offset: 24956
+
+amount of bets:292 | batch P/L: 1741.36 | total P/L: 26039.43 | bank: 31039.43 | next offset: 25003
+
+amount of bets:339 | batch P/L: 345.14 | total P/L: 26384.57 | bank: 31384.57 | next offset: 25050
+
+amount of bets:389 | batch P/L: 6369.44 | total P/L: 32754.02 | bank: 37754.02 | next offset: 25100
+
+amount of bets:439 | batch P/L: 160.42 | total P/L: 32914.43 | bank: 37914.43 | next offset: 25150
+
+amount of bets:477 | batch P/L: 3440.48 | total P/L: 36354.91 | bank: 41354.91 | next offset: 25188
