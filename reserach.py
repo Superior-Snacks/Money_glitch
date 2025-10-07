@@ -130,6 +130,7 @@ def rolling_markets(bank, limit= 50, offset=4811):
             shares, spent_after, avg_no, fills = sim.take_first_no(
                 t_from, dollars=bet, max_no_price=None
             )
+            bank -= spent_after
 
             # No fill → skip
             if shares == 0.0 or spent_after == 0.0:
@@ -158,7 +159,7 @@ def rolling_markets(bank, limit= 50, offset=4811):
             print(f"[skip] {market.get('question','<no title>')}: {e}")
             continue
 
-    return pl,
+    return pl, bank
 
 def main():
     bank = 5000
