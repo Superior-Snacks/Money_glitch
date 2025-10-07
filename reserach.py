@@ -145,15 +145,17 @@ def rolling_markets(bank, limit= 50, offset=4811):
 
             if float(outcome[1]) > float(outcome[0]): #no won
                 pnl = shares - spent_after
+                result = "WON"
             else: 
                 pnl = -spent_after
+                result = "LOST"
             pl += pnl
             bank += pl
 
             print(market["question"])
             print(
                 f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
-                f"| avg_NO={avg_no:.4f} | outcome={outcome} | pnl={pnl:.2f} | running_PL={pl:.2f}"
+                f"| avg_NO={avg_no:.4f} | outcome={result} | pnl={pnl:.2f} | running_PL={pl:.2f}"
             )
 
             time.sleep(2)
