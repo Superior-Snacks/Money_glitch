@@ -471,12 +471,16 @@ def ls_print(li):
     for i in li:
         print(i)
 
-def write_to_file(f, data):
-    with open(f, "a", encoding="utf-8") as f:
-        f.seek(0, os.SEEK_END)
-        if f.tell() > 0:
-            f.write("\n")
-            f.write(data + "\n")
+def write_to_file(filename, data):
+    # ensure parent folder exists
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+
+    with open(filename, "a", encoding="utf-8") as file:
+        # if file already has content, add newline first
+        file.seek(0, os.SEEK_END)
+        if file.tell() > 0:
+            file.write("\n")
+        file.write(data + "\n")
 # ---------- Core helpers ----------
 
 def blocks_to_df(blocks):
