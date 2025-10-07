@@ -167,19 +167,24 @@ def rolling_markets(bank, limit= 50, offset=4811):
     return pl, bank
 
 def main():
-    bank = 5000
+    bank = 5000.0
     offset = 4811
-    while bank > 0:
+    all_pl = 0.0
 
-        pl, bank = rolling_markets(bank, 50, offset)
-        offset += 50
-        all_pl += pl
-        print("-------------------------------------------------------------")
-        print(f"profit/loss {all_pl}, bank balance {bank}")
-        print("-------------------------------------------------------------")
+    # stop when bank < $10 or when you decide to cap batches
+    for _ in range(100):  # up to 100 * 50 = 5000 markets
+        pnl_batch, bank, offset = rolling_markets(
+            bank, limit=50, offset=offset,
+            max_price_cap=None,  # e.g., 0.40 to avoid expensive NO
+            fee_bps=0, slip_bps=20
+        )
+        all_pl += pnl_batch
+        print("-" * 61)
+        print(f"batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset}")
+        print("-" * 61)
 
-
-
+        if bank < 10.0:
+            break
 
     """ plotting
     df = blocks_to_df(n)
