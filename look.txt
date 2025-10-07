@@ -88,3 +88,17 @@ amount of bets:8 | batch P/L: 0.00 | total P/L: -8.52 | bank: 4991.48 | next off
 ------------------------------------------------------------------------------------------------------------------------
 no w price cap at 0.4 ?_ offset = 4811 + 19900
 amount of bets:47 | batch P/L: 8017.80 | total P/L: 8017.80 | bank: 13017.80 | next offset: 24758
+
+amount of bets:89 | batch P/L: 5552.38 | total P/L: 13570.18 | bank: 18570.18 | next offset: 24800
+
+amount of bets:135 | batch P/L: 3831.93 | total P/L: 17402.11 | bank: 22402.11 | next offset: 24846
+
+amount of bets:163 | batch P/L: 2139.55 | total P/L: 19541.66 | bank: 24541.66 | next offset: 24874
+
+amount of bets:200 | batch P/L: 5978.12 | total P/L: 25519.78 | bank: 30519.78 | next offset: 24911
+
+amount of bets:245 | batch P/L: 7564.26 | total P/L: 33084.04 | bank: 38084.04 | next offset: 24956
+
+amount of bets:292 | batch P/L: 3540.89 | total P/L: 36624.93 | bank: 41624.93 | next offset: 25003
+--------------------------------------------------------------------------------------------------------------------------------
+no price no cap offset = 4811 + 19900
