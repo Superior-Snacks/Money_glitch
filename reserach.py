@@ -269,23 +269,49 @@ def filter_markets(markets):
     print(f"valid markets {len(cleaned)}")
     return cleaned
 
-def fetch_trades(market_dict, page=500):
+def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
+    """Pull full trade history with retries+timeouts and a hard time budget."""
     cid = market_dict["conditionId"]
-    out, offset = [], 0
+    out = []
+    offset = 0
+    pages = 0
+    t0 = time.monotonic()
+
     while True:
-        r = requests.get(
-            "https://data-api.polymarket.com/trades",
-            params={"market": cid, "sort": "asc", "limit": page, "offset": offset},
-            timeout=30
-        )
-        r.raise_for_status()
-        batch = r.json()
+        # circuit breaker for this market
+        if time.monotonic() - t0 > per_market_budget_s:
+            print(f"[timeout] trades for {market_dict.get('question','<?>')} — skipping.")
+            break
+
+        try:
+            resp = safe_get(
+                DATA_TRADES,
+                params={"market": cid, "sort": "asc", "limit": page, "offset": offset},
+                timeout=(5, 20)
+            )
+            # explicit check; Retry handles many cases but not all
+            resp.raise_for_status()
+            batch = resp.json()
+        except (requests.Timeout, requests.ConnectionError) as e:
+            print(f"[net] {e} — skipping market.")
+            break
+        except requests.HTTPError as e:
+            print(f"[http {resp.status_code}] {e} — skipping market.")
+            break
+        except Exception as e:
+            print(f"[err] {e} — skipping market.")
+            break
+
         if not batch:
             break
+
         out.extend(batch)
-        if len(batch) < page:
+        pages += 1
+        if len(batch) < page or pages >= max_pages:
             break
+
         offset += page
+
     return out
 
 """
