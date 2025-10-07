@@ -216,7 +216,7 @@ def main():
         pnl_batch, bank, offset, bets = rolling_markets(
             bank, check="no",
             limit=50, offset=offset,
-            max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
+            max_price_cap=None,  # e.g., 0.40 to avoid expensive NO
             fee_bps=0, slip_bps=20
         )
         all_pl += pnl_batch
