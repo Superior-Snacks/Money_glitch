@@ -294,7 +294,7 @@ def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
             timeout=(5, 20)
         )
         resp.raise_for_status()
-        payload = r.json()
+        payload = resp.json()
         #print(payload[0].keys())
         return payload
     except:
