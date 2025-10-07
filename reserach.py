@@ -105,8 +105,7 @@ class SimMarket:
         avg_yes = spent_after / shares
         return shares, spent_after, avg_yes, fills
 
-
-def main():
+def rolling_markets(limit= 50, offset=4811):
     pl = 0.0
     markets = filter_markets(fetch_markets(limit=50, offset=60000))
 
@@ -151,6 +150,8 @@ def main():
         except Exception as e:
             print(f"[skip] {market.get('question','<no title>')}: {e}")
             continue
+def main():
+
 
 
     """ plotting
