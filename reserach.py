@@ -287,43 +287,19 @@ def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
     offset = 0
     pages = 0
     t0 = time.monotonic()
+    try:
+        resp = safe_get(
+            DATA_TRADES,
+            params={"market": cid, "sort": "asc", "limit": 100},
+            timeout=(5, 20)
+        )
+        resp.raise_for_status()
+        payload = r.json()
+        #print(payload[0].keys())
+        return payload
+    except:
+        return None
 
-    while True:
-        # circuit breaker for this market
-        if time.monotonic() - t0 > per_market_budget_s:
-            print(f"[timeout] trades for {market_dict.get('question','<?>')} — skipping.")
-            break
-
-        try:
-            resp = safe_get(
-                DATA_TRADES,
-                params={"market": cid, "sort": "asc", "limit": page, "offset": offset},
-                timeout=(5, 20)
-            )
-            # explicit check; Retry handles many cases but not all
-            resp.raise_for_status()
-            batch = resp.json()
-        except (requests.Timeout, requests.ConnectionError) as e:
-            print(f"[net] {e} — skipping market.")
-            break
-        except requests.HTTPError as e:
-            print(f"[http {resp.status_code}] {e} — skipping market.")
-            break
-        except Exception as e:
-            print(f"[err] {e} — skipping market.")
-            break
-
-        if not batch:
-            break
-
-        out.extend(batch)
-        pages += 1
-        if len(batch) < page or pages >= max_pages:
-            break
-
-        offset += page
-
-    return out
 
 """
 ignore low share high value trades, condence no and yes shares together by time block
