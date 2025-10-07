@@ -7,7 +7,37 @@ import matplotlib.pyplot as plt
 import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from dataclasses import dataclass
 
+@dataclass
+class Fill:
+    time: int
+    side: str
+    price: float
+    shares: float
+    notional_pre_fee: float
+    notional_after: float
+    block: dict
+
+@dataclass
+class TradeResult:
+    side: str
+    shares: float
+    spent_pre_fee: float
+    spent_after_entry: float
+    fills: list[Fill]
+    fees_entry: float
+    gas_cost: float
+
+@dataclass
+class SettleResult:
+    won: bool
+    proceeds_gross: float
+    settlement_fee: float
+    offramp_cost: float
+    funding_cost: float
+    pnl: float
+    onramp_cost: float
 # 1) One session for the whole script
 def make_session():
     s = requests.Session()
