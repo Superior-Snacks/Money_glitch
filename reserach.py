@@ -214,7 +214,7 @@ def main():
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(5)
         pnl_batch, bank, offset, bets = rolling_markets(
-            bank, check="no",
+            bank, check="yes",
             limit=50, offset=offset,
             max_price_cap=None,  # e.g., 0.40 to avoid expensive NO
             fee_bps=0, slip_bps=20
@@ -840,3 +840,51 @@ def compress_blocks_conservative(trades, window_s=5, min_trade_notional=5.0, min
 
 if __name__ == "__main__":
     main()"""
+
+
+"""fetch all, ALL
+def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
+    Pull full trade history with retries+timeouts and a hard time budget.
+    cid = market_dict["conditionId"]
+    out = []
+    offset = 0
+    pages = 0
+    t0 = time.monotonic()
+
+    while True:
+        # circuit breaker for this market
+        if time.monotonic() - t0 > per_market_budget_s:
+            print(f"[timeout] trades for {market_dict.get('question','<?>')} — skipping.")
+            break
+
+        try:
+            resp = safe_get(
+                DATA_TRADES,
+                params={"market": cid, "sort": "asc", "limit": page, "offset": offset},
+                timeout=(5, 20)
+            )
+            # explicit check; Retry handles many cases but not all
+            resp.raise_for_status()
+            batch = resp.json()
+        except (requests.Timeout, requests.ConnectionError) as e:
+            print(f"[net] {e} — skipping market.")
+            break
+        except requests.HTTPError as e:
+            print(f"[http {resp.status_code}] {e} — skipping market.")
+            break
+        except Exception as e:
+            print(f"[err] {e} — skipping market.")
+            break
+
+        if not batch:
+            break
+
+        out.extend(batch)
+        pages += 1
+        if len(batch) < page or pages >= max_pages:
+            break
+
+        offset += page
+
+    return out
+"""
