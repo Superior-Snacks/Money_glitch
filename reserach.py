@@ -174,7 +174,7 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=0, 
 
 def main():
     bank = 5000.0
-    offset = 4811 + 1000
+    offset = 4811 + 7000
     all_pl = 0.0
     all_bets = 0
 
