@@ -156,3 +156,5 @@ amount of bets:513 | batch P/L: 17.19 | total P/L: 48621.94 | bank: 53621.94 | n
 amount of bets:520 | batch P/L: -68.44 | total P/L: 48553.50 | bank: 53553.50 | next offset: 25231 | timestamp2025-01-05T00:58:08.644752Z
 --------------------------------------------------------------------------------------------------------------------------------------
 offset = 4811 + 15900 cap 0.4
+
+amount of bets:36 | total spent 2111.9167015980006 | batch P/L: 3442.49 | total P/L: 3442.49 | bank: 8442.49 | next offset: 20747 | timestamp2024-11-05T16:32:39.20192Z
