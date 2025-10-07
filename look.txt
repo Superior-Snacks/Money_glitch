@@ -1,0 +1,3 @@
+amount of bets:46 | batch P/L: 8357.32 | total P/L: 8357.32 | bank: 13357.32 | next offset: 13857
+
+amount of bets:88 | batch P/L: 3130.58 | total P/L: 11487.90 | bank: 16487.90 | next offset: 13899

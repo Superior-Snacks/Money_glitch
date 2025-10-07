@@ -479,7 +479,6 @@ def write_to_file(filename, data):
         # if file already has content, add newline first
         file.seek(0, os.SEEK_END)
         if file.tell() > 0:
-            file.write("\n")
         file.write(data + "\n")
 # ---------- Core helpers ----------
 
