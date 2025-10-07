@@ -172,7 +172,10 @@ def rolling_markets(check, bank, limit=50, offset=4811, max_price_cap=None, fee_
             outcome_raw = market.get("outcomePrices", ["0", "0"])
             outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
             yes_p, no_p = float(outcome[0]), float(outcome[1])
-            won = (no_p > yes_p)
+            if check == "no":
+                won = (no_p > yes_p)
+            elif check == "yes":
+                won = (no_p < yes_p)
 
             pnl = (shares - spent_after) if won else (-spent_after)
             if avg_ < 0.09 and won:
