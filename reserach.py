@@ -107,8 +107,7 @@ class SimMarket:
 
 def rolling_markets(limit= 50, offset=4811):
     pl = 0.0
-    markets = filter_markets(fetch_markets(limit=50, offset=60000))
-
+    markets = filter_markets(fetch_markets(limit, offset))
     for market in markets:
         try:
             trades = normalize_trades(fetch_trades(market))
