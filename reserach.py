@@ -186,7 +186,7 @@ def rolling_markets(bank, limit=50, offset=4811, max_price_cap=None, fee_bps=600
                 f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
             )
 
-            time.sleep(1)  # optional
+            time.sleep(3)  # optional
 
             if bank < 10.0:
                 print("bank below min bet; stopping batch.")
