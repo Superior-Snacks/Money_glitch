@@ -139,6 +139,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
     pnl_sum = 0.0
     markets = filter_markets(fetch_markets(limit, offset))
     next_offset = offset + len(markets)
+    spent = 0.0
 
     for market in markets:
         try:
@@ -185,6 +186,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
             # update account & totals
             bank += pnl
             pnl_sum += pnl
+            spent += spent_after
 
             print(market["question"])
             print(
@@ -202,7 +204,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
         except Exception as e:
             print(f"[skip] {market.get('question','<no title>')}: {e}")
 
-    return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"]
+    return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"], spent
 
 def main():
     bank = 5000.0
@@ -214,7 +216,7 @@ def main():
     # stop when bank < $10 or when you decide to cap batches
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
-        pnl_batch, bank, offset, bets, createdAt = rolling_markets(
+        pnl_batch, bank, offset, bets, createdAt, sp = rolling_markets(
             bank, check="no",
             limit=50, offset=offset,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
@@ -222,10 +224,11 @@ def main():
         )
         all_pl += pnl_batch
         all_bets += bets
+        spent += sp
         print("-" * 61)
         print(f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset}")
         print("-" * 61)
-        write_to_file("look.txt", f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{createdAt}")
+        write_to_file("look.txt", f"amount of bets:{all_bets} | total spent {spent} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{createdAt}")
 
         if bank < 10.0:
             break
