@@ -207,77 +207,70 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
     return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"], spent
 
 
-def timed_rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):
+def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, slip_bps=200):
     """
     Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
     makes a note of time placed and market finnish
     """
     pnl_sum = 0.0
-    next_offset = offset + len(markets)
     spent = 0.0
 
-    for market in markets:
-        try:
-            trades = normalize_trades(fetch_trades(market))
-            if not trades:
-                continue
-            print(datetime.fromtimestamp(int(trades[0]["time"]), tz=timezone.utc))
-            # sizing
-            if bank >= 100.0:
-                bet = 100.0
-            elif bank >= 10.0:
-                bet = float(bank)          # go all-in if small
-            else:
-                print("out of money")
-                break
+    try:
+        trades = normalize_trades(fetch_trades(market))
+        if not trades:
+            return None #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # sizing
+        if bank >= 100.0:
+            bet = 100.0
+        elif bank >= 10.0:
+            bet = float(bank)          # go all-in if small
+        else:
+            print("out of money")
+            return None #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-            sim = SimMarket(trades, fee_bps=fee_bps, slip_bps=slip_bps)
-            t_from = trades[0]["time"]
-            if check == "no":
-                shares, spent_after, avg_, fills = sim.take_first_no(
-                    t_from, dollars=bet, max_no_price=max_price_cap
-                )
-            elif check == "yes":
-                shares, spent_after, avg_, fills = sim.take_first_yes(
-                    t_from, dollars=bet, max_yes_price=max_price_cap
-                )
-            # skip if no fill
-            if shares == 0.0 or spent_after == 0.0:
-                continue
-
-            # parse outcome robustly
-            outcome_raw = market.get("outcomePrices", ["0", "0"])
-            outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
-            yes_p, no_p = float(outcome[0]), float(outcome[1])
-            if check == "no":
-                won = (no_p > yes_p)
-            elif check == "yes":
-                won = (no_p < yes_p)
-
-            pnl = (shares - spent_after) if won else (-spent_after)
-            if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                pnl = 0
-
-            # update account & totals
-            bank += pnl
-            pnl_sum += pnl
-            spent += spent_after
-
-            print(market["question"])
-            print(
-                f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
-                f"| avg={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
-                f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
+        sim = SimMarket(trades, fee_bps=fee_bps, slip_bps=slip_bps)
+        t_from = trades[0]["time"]
+        if check == "no":
+            shares, spent_after, avg_, fills = sim.take_first_no(
+                t_from, dollars=bet, max_no_price=max_price_cap
             )
+        elif check == "yes":
+            shares, spent_after, avg_, fills = sim.take_first_yes(
+                t_from, dollars=bet, max_yes_price=max_price_cap
+            )
+        # skip if no fill
+        if shares == 0.0 or spent_after == 0.0:
+            continue
 
-            time.sleep(2)  # optional
+        # parse outcome robustly
+        outcome_raw = market.get("outcomePrices", ["0", "0"])
+        outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
+        yes_p, no_p = float(outcome[0]), float(outcome[1])
+        if check == "no":
+            won = (no_p > yes_p)
+        elif check == "yes":
+            won = (no_p < yes_p)
 
-            if bank < 10.0:
-                print("bank below min bet; stopping batch.")
-                break
+        pnl = (shares - spent_after) if won else (-spent_after)
+        if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            pnl = 0
 
-        except Exception as e:
-            print(f"[skip] {market.get('question','<no title>')}: {e}")
+        # update account & totals
+        bank += pnl
+        pnl_sum += pnl
+        spent += spent_after
+
+        print(market["question"])
+        print(
+            f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
+            f"| avg={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
+            f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
+        )
+
+        time.sleep(2)  # optional
+
+    except Exception as e:
+        print(f"[skip] {market.get('question','<no title>')}: {e}")
 
     return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"], spent
 
