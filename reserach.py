@@ -275,11 +275,10 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
         print(f"[skip] {market.get('question','<no title>')}: {e}")
         return bank, spent, None, None
     #id, time trade taken, spent on trade
-    pending = {"id":market["conditionId"], "time0":datetime.fromtimestamp(int(fills[0]["time"]), tz=timezone.utc), "question":market["question"], 
+    pending = {"id":market["conditionId"], "time0":normalize_time(fills[0]["time"]), "question":market["question"], 
                "shares":shares, "price":avg_, "spent":spent}
     print(pending)
-    print(market["umaEndDate"])
-    end = parse_iso(market["umaEndDate"])
+    end = normalize_time(market["umaEndDate"])
     #id, time_of_result, result_of_trade, fills, shares, price, pl, 
     result = {"id":market["conditionId"], "time1":end,"outcome":won, "question":market["question"], "shares":shares, "price":avg_, "pl":pnl}
     print(result)
@@ -402,7 +401,7 @@ def filter_markets(markets):
         if outcomes == ["Yes", "No"]:
             cleaned.append(mk)
     print(f"valid markets {len(cleaned)}")
-    cleaned = sorted(cleaned, key=lambda x: parse_iso(x["startDate"]))
+    cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
     return cleaned
 
 def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
