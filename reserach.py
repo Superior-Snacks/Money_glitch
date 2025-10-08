@@ -302,19 +302,11 @@ def main():
         markets.append(filter_markets(fetch_markets(limit, offset)))
         while markets:
             current = markets.pop()
-            pnl_batch, bank, offset, bets, createdAt, sp = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
+            bank, spent, pending, result = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
             bank, check="no",
             market=current,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
-            fee_bps=600, slip_bps=200
-        )
-        all_pl += pnl_batch
-        all_bets += bets
-        spent += sp
-        print("-" * 61)
-        print(f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset}")
-        print("-" * 61)
-        write_to_file("look.txt", f"amount of bets:{all_bets} | total spent {spent:.2f} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{createdAt}")
+            fee_bps=600, slip_bps=200)
 
         if bank < 10.0:
             break
