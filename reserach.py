@@ -288,7 +288,7 @@ when last bought is later than first winc con, then release proftit/loss and add
 now only add 1 to rolling amrket at a time, but request n keep alot of markets in a list and roll through with a while len x
 """
 def main():
-
+    run_simple()
 
 
 
@@ -348,6 +348,35 @@ BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_TRADES = "http://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
+
+def run_simple():
+    bank = 5000.0
+    offset = 4811 + 5900 #pressent 21186
+    all_pl = 0.0
+    all_bets = 0
+    spent = 0.0
+    pending = []
+    end = []
+
+    # stop when bank < $10 or when you decide to cap batches
+    for _ in range(100):  # up to 100 * 50 = 5000 markets
+        time.sleep(1)
+        pnl_batch, bank, offset, bets, createdAt, sp = rolling_markets(
+            bank, check="no",
+            limit=50, offset=offset,
+            max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
+            fee_bps=600, slip_bps=200
+        )
+        all_pl += pnl_batch
+        all_bets += bets
+        spent += sp
+        print("-" * 61)
+        print(f"amount of bets:{all_bets} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset}")
+        print("-" * 61)
+        write_to_file("look.txt", f"amount of bets:{all_bets} | total spent {spent:.2f} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{createdAt}")
+
+        if bank < 10.0:
+            break
 
 # 2) Safe GET with strict timeouts (connect, read)
 def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
