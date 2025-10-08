@@ -214,6 +214,8 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
     """
     pnl_sum = 0.0
     spent = 0.0
+    pending = []
+    result = []
 
     try:
         trades = normalize_trades(fetch_trades(market))
@@ -240,7 +242,8 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
             )
         # skip if no fill
         if shares == 0.0 or spent_after == 0.0:
-            continue
+            print("no fill")
+            return None #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
         # parse outcome robustly
         outcome_raw = market.get("outcomePrices", ["0", "0"])
@@ -267,12 +270,13 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
             f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
         )
 
-        time.sleep(2)  # optional
-
     except Exception as e:
         print(f"[skip] {market.get('question','<no title>')}: {e}")
-
-    return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"], spent
+    #id, time trade taken, spent on trade
+    pending = [market["conditionId"], datetime.fromtimestamp(int(trades[0]["time"]), tz=timezone.utc), market["question"], shares, avg_, spent]
+    #id, time_of_result, result_of_trade, fills, shares, price, pl, 
+    result = [market["conditionId"], market["umaEndDate"], market["question"], shares, avg_, pnl, ]
+    return bank, spent, pending, result
 
 """
 run through rolling having return the two lists, one with when taken other with win con and time of win
