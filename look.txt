@@ -211,7 +211,7 @@ amount of bets:452 | total spent 23685.24 | batch P/L: 3838.46 | total P/L: 4576
 
 amount of bets:497 | total spent 25977.95 | batch P/L: 5281.48 | total P/L: 51046.71 | bank: 56046.71 | next offset: 11208 | timestamp2024-05-09T17:05:33.598358Z
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200 ignore under 10%   10747 - 15281
+offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200 ignore under 10%   10747 - 15281 99 blocks? 5000 in 428352.00 out
 
 amount of bets:36 | total spent 1806.32 | batch P/L: 4325.35 | total P/L: 4325.35 | bank: 9325.35 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
 
@@ -414,3 +414,9 @@ amount of bets:4521 | total spent 240594.13 | batch P/L: 1744.02 | total P/L: 42
 amount of bets:4570 | total spent 241813.76 | batch P/L: 2321.21 | total P/L: 423352.00 | bank: 428352.00 | next offset: 15281 | timestamp2024-08-29T16:17:52.632653Z
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200 allow under 10%
+
+amount of bets:36 | total spent 1806.32 | batch P/L: 18743.49 | total P/L: 18743.49 | bank: 23743.49 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:80 | total spent 5161.89 | batch P/L: 20437.51 | total P/L: 39180.99 | bank: 44180.99 | next offset: 10791 | timestamp2024-04-16T15:47:33.487624Z
+
+amount of bets:118 | total spent 7412.93 | batch P/L: 30872.33 | total P/L: 70053.32 | bank: 75053.32 | next offset: 10829 | timestamp2024-04-18T17:52:46.987586Z
