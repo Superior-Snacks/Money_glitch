@@ -332,10 +332,7 @@ def test2(
         try:
             # 2) trades (paginate if you have get_trades_all, else fallback)
             condition_id = m["conditionId"]
-            try:
-                trades = get_trades_all(condition_id)   # if you implemented pagination
-            except NameError:
-                trades = get_trade_for_market(m)        # your original single-call version
+            trades = get_trade_for_market(m)        # your original single-call version
 
             if not trades:
                 results.append([m["question"], ["?", "?"], (0, 0, 0), 0.0, pl_running])
