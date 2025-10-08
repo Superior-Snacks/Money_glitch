@@ -210,7 +210,7 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
 def timed_rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):
     """
     Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
-    Returns (pnl_sum, bank, next_offset).
+    makes a note of time placed and market finnish
     """
     pnl_sum = 0.0
     markets = filter_markets(fetch_markets(limit, offset))
