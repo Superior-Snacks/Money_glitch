@@ -242,9 +242,11 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
                     or normalize_time(market.get("closedTime"))
                     or normalize_time(market.get("endDate"))
                     or entry_t)
-        bank = open_position(bank, market, fills, spent_after, shares, entry_t, settle_t)
+        bank = open_position(
+            bank, market, fills, spent_after, shares, entry_t, settle_t, side_for_pos
+        )
         # mark the correct side on the stored position:
-        positions_by_id[market["conditionId"]]["side"] = side_for_pos
+        #positions_by_id[market["conditionId"]]["side"] = side_for_pos
 
         # (Optional) return “taken” and “result” records for your pending lists
         pending = {
@@ -281,33 +283,57 @@ when last bought is later than first winc con, then release proftit/loss and add
 now only add 1 to rolling amrket at a time, but request n keep alot of markets in a list and roll through with a while len x
 """
 def main():
-    #run_simple()
     bank = 5000.0
-    offset = 4811 + 5900 #pressent 21186
-    all_pl = 0.0
-    all_bets = 0
+    offset = 4811 + 5900
     spent = 0.0
-    pending = []
-    end = []
 
-    # stop when bank < $10 or when you decide to cap batches
-    for _ in range(100):  # up to 100 * 50 = 5000 markets
+    # global market index for outcome lookup across batches
+    global mk_by_id_global
+    mk_by_id_global = {}
+
+    for _ in range(100):
         time.sleep(1)
-        limit=100
+        limit = 100
         markets = filter_markets(fetch_markets(limit, offset))
-        mk_by_id = {m["conditionId"]: m for m in markets}
+        offset += len(markets)
 
-        def my_outcome_func(market_id):
-            mk = mk_by_id.get(market_id)
-            if not mk:  # fallback if missing
-                return "NO"
-            raw = mk.get("outcomePrices")
-            arr = json.loads(raw) if isinstance(raw, str) else raw
-            y, n = float(arr[0]), float(arr[1])
-            return "YES" if y > n else "NO"
+        # update global market dict
+        for m in markets:
+            mk_by_id_global[m["conditionId"]] = m
+
+        # 1) OPEN positions for this batch (locks capital; no P/L booked)
+        for market in markets:
+            bank, spent_delta, pending_rec, result_rec = timed_rolling_markets(
+                bank, check="no", market=market,
+                max_price_cap=0.4, fee_bps=600, slip_bps=200
+            )
+            spent += spent_delta
+
+        # 2) SETTLE anything whose settle_time <= now (or choose a historical cutoff)
         now = datetime.now(timezone.utc)
         bank, settled = settle_due_positions(bank, now, outcome_lookup=my_outcome_func)
-        print(bank, settled)
+        if settled:
+            for s in settled:
+                print(f"SETTLED: {s['question']} | won={s['won']} | pnl={s['pnl']:.2f} | bank={bank:.2f}")
+
+        if bank < 10.0:
+            print("Bank below $10; stopping.")
+            break
+
+
+mk_by_id_global = {}
+
+def my_outcome_func(market_id: str) -> str:
+    mk = mk_by_id_global.get(market_id)
+    if not mk:
+        return "NO"  # conservative fallback
+    raw = mk.get("outcomePrices")
+    arr = json.loads(raw) if isinstance(raw, str) else raw
+    if not arr or len(arr) < 2:
+        return "NO"
+    y, n = float(arr[0]), float(arr[1])
+    return "YES" if y > n else "NO"
+
 
 SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
 
