@@ -1,1 +1,2 @@
 bæta við time based liquidty locking for bank
+hafa lista af active bets með active tíma tali, og annan lista með hvenar þau bets loka
