@@ -308,9 +308,9 @@ def main():
             market=current,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200)
-
-        bisect.insort(pending, taken, key=lambda x: x["time0"])
-        bisect.insort(end, result, key=lambda y: y["time1"])
+            if taken:
+                bisect.insort(pending, taken, key=lambda x: x["time0"])
+                bisect.insort(end, result, key=lambda y: y["time1"])
 
 
 
