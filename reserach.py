@@ -310,7 +310,7 @@ def main():
             fee_bps=600, slip_bps=200)
 
         bisect.insort(pending, taken, key=lambda x: x["time0"])
-        bisect.insort(end, result, key=lambda x: x["time0"])
+        bisect.insort(end, result, key=lambda y: y["time1"])
 
 
 
