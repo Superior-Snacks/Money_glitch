@@ -1,1 +1,1 @@
-bæta við 
+bæta við time based liquidty locking for bank
