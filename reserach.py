@@ -213,7 +213,6 @@ def timed_rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None
     makes a note of time placed and market finnish
     """
     pnl_sum = 0.0
-    markets = filter_markets(fetch_markets(limit, offset))
     next_offset = offset + len(markets)
     spent = 0.0
 
@@ -301,6 +300,8 @@ def main():
     # stop when bank < $10 or when you decide to cap batches
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
+        limit=50
+        markets.append(filter_markets(fetch_markets(limit, offset)))
         pnl_batch, bank, offset, bets, createdAt, sp = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
             bank, check="no",
             limit=50, offset=offset,
