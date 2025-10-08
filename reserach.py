@@ -285,6 +285,7 @@ def timed_rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None
 """
 run through rolling having return the two lists, one with when taken other with win con and time of win
 when last bought is later than first winc con, then release proftit/loss and add +- to bank
+now only add 1 to rolling amrket at a time, but request n keep alot of markets in a list and roll through with a while len x
 """
 def main():
     bank = 5000.0
