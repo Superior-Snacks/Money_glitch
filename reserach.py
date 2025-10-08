@@ -304,9 +304,9 @@ def main():
         markets.append(filter_markets(fetch_markets(limit, offset)))
         while markets:
             current = markets.pop()
-        pnl_batch, bank, offset, bets, createdAt, sp = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
+            pnl_batch, bank, offset, bets, createdAt, sp = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
             bank, check="no",
-            limit=50, offset=offset,
+            market=current,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200
         )
