@@ -272,6 +272,7 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
 
     except Exception as e:
         print(f"[skip] {market.get('question','<no title>')}: {e}")
+        return bank, spent, None, None
     #id, time trade taken, spent on trade
     pending = {"id":market["conditionId"], "time0":datetime.fromtimestamp(int(trades[0]["time"]), tz=timezone.utc), "question":market["question"], 
                "shares":shares, "price":avg_, "spent":spent}
