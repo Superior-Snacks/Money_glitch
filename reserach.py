@@ -10,6 +10,7 @@ from urllib3.util.retry import Retry
 from dataclasses import dataclass
 import os
 import bisect
+import re
 
 # 1) One session for the whole script
 def make_session():
@@ -255,8 +256,8 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
             won = (no_p < yes_p)
 
         pnl = (shares - spent_after) if won else (-spent_after)
-        if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            pnl = 0
+        #if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #    pnl = 0
 
         # update account & totals
         bank += pnl
@@ -274,11 +275,13 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
         print(f"[skip] {market.get('question','<no title>')}: {e}")
         return bank, spent, None, None
     #id, time trade taken, spent on trade
-    pending = {"id":market["conditionId"], "time0":datetime.fromtimestamp(int(trades[0]["time"]), tz=timezone.utc), "question":market["question"], 
+    pending = {"id":market["conditionId"], "time0":datetime.fromtimestamp(int(fills[0]["time"]), tz=timezone.utc), "question":market["question"], 
                "shares":shares, "price":avg_, "spent":spent}
-    #id, time_of_result, result_of_trade, fills, shares, price, pl, 
-    result = {"id":market["conditionId"], "time1":market["umaEndDate"],"outcome":won, "question":market["question"], "shares":shares, "price":avg_, "pl":pnl}
     print(pending)
+    print(market["umaEndDate"])
+    end = parse_iso(market["umaEndDate"])
+    #id, time_of_result, result_of_trade, fills, shares, price, pl, 
+    result = {"id":market["conditionId"], "time1":end,"outcome":won, "question":market["question"], "shares":shares, "price":avg_, "pl":pnl}
     print(result)
     return bank, spent, pending, result
 
@@ -376,7 +379,7 @@ def fetch_markets(limit=20, offset=4811):
         "limit": limit,
         "offset": offset,
         "outcomes": ["YES", "NO"],
-        "sortBy": "creationTime"}
+        "sortBy": "startDate"}
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
@@ -399,6 +402,7 @@ def filter_markets(markets):
         if outcomes == ["Yes", "No"]:
             cleaned.append(mk)
     print(f"valid markets {len(cleaned)}")
+    cleaned = sorted(cleaned, key=lambda x: parse_iso(x["startDate"]))
     return cleaned
 
 def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
@@ -420,6 +424,54 @@ def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
         return payload
     except:
         return None
+    
+def normalize_time(value, default=None):
+    """
+    Converts various Polymarket-style date/time formats into a UTC datetime.
+
+    Accepts:
+      - ISO strings with or without 'Z'
+      - 'YYYY-MM-DD' (no time)
+      - timestamps (int, float, or numeric strings)
+      - None or invalid → returns `default` (or None)
+
+    Returns:
+      datetime object (UTC timezone)
+    """
+    if value is None or value == "":
+        return default
+
+    # numeric timestamp (epoch seconds)
+    if isinstance(value, (int, float)) or re.match(r"^\d{10,13}$", str(value)):
+        try:
+            ts = float(value)
+            if ts > 1e12:  # milliseconds
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+        except Exception:
+            return default
+
+    # string normalization
+    val = str(value).strip()
+
+    # Replace common ISO variants
+    val = val.replace("Z", "+00:00")  # Z → UTC
+    val = re.sub(r"\s+", "T", val)    # space → T
+
+    # Add missing time or timezone if needed
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", val):
+        val += "T00:00:00+00:00"
+
+    try:
+        dt = datetime.fromisoformat(val)
+        # ensure UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt
+    except Exception:
+        return default
 
 
 """
