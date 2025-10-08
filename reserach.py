@@ -214,8 +214,8 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
     """
     pnl_sum = 0.0
     spent = 0.0
-    pending = []
-    result = []
+    pending = {}
+    result = {}
 
     try:
         trades = normalize_trades(fetch_trades(market))
