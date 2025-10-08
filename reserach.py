@@ -180,8 +180,8 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
                 won = (no_p < yes_p)
 
             pnl = (shares - spent_after) if won else (-spent_after)
-            if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                pnl = 0
+            #if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #    pnl = 0
 
             # update account & totals
             bank += pnl
