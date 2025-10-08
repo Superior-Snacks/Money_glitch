@@ -282,7 +282,10 @@ def timed_rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None
 
     return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"], spent
 
-
+"""
+run through rolling having return the two lists, one with when taken other with win con and time of win
+when last bought is later than first winc con, then release proftit/loss and add +- to bank
+"""
 def main():
     bank = 5000.0
     offset = 4811 + 5900 #pressent 21186
