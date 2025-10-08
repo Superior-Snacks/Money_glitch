@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from dataclasses import dataclass
 import os
 import bisect
 import re
+import heapq
 
 # 1) One session for the whole script
 def make_session():
@@ -210,79 +210,70 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
 
 
 def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, slip_bps=200):
-    """
-    Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
-    makes a note of time placed and market finnish
-    """
     pnl_sum = 0.0
     spent = 0.0
-    pending = {}
-    result = {}
     try:
         trades = normalize_trades(fetch_trades(market))
         if not trades:
             return bank, spent, None, None
-        # sizing
-        if bank >= 100.0:
-            bet = 100.0
-        elif bank >= 10.0:
-            bet = float(bank)          # go all-in if small
-        else:
+
+        bet = 100.0 if bank >= 100.0 else (float(bank) if bank >= 10.0 else 0.0)
+        if bet <= 0.0:
             print("out of money")
             return bank, spent, None, None
 
         sim = SimMarket(trades, fee_bps=fee_bps, slip_bps=slip_bps)
         t_from = trades[0]["time"]
+
         if check == "no":
-            shares, spent_after, avg_, fills = sim.take_first_no(
-                t_from, dollars=bet, max_no_price=max_price_cap
-            )
-        elif check == "yes":
-            shares, spent_after, avg_, fills = sim.take_first_yes(
-                t_from, dollars=bet, max_yes_price=max_price_cap
-            )
-        # skip if no fill
+            shares, spent_after, avg_, fills = sim.take_first_no(t_from, dollars=bet, max_no_price=max_price_cap)
+            side_for_pos = "NO"
+        else:
+            shares, spent_after, avg_, fills = sim.take_first_yes(t_from, dollars=bet, max_yes_price=max_price_cap)
+            side_for_pos = "YES"
+
         if shares == 0.0 or spent_after == 0.0:
             print("no fill")
             return bank, spent, None, None
 
-        # parse outcome robustly
-        outcome_raw = market.get("outcomePrices", ["0", "0"])
-        outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
-        yes_p, no_p = float(outcome[0]), float(outcome[1])
-        if check == "no":
-            won = (no_p > yes_p)
-        elif check == "yes":
-            won = (no_p < yes_p)
+        # ---- LOCK CAPITAL (no P&L booking here) ----
+        entry_t = normalize_time(fills[0]["time"])
+        settle_t = (normalize_time(market.get("umaEndDate"))
+                    or normalize_time(market.get("closedTime"))
+                    or normalize_time(market.get("endDate"))
+                    or entry_t)
+        bank = open_position(bank, market, fills, spent_after, shares, entry_t, settle_t)
+        # mark the correct side on the stored position:
+        positions_by_id[market["conditionId"]]["side"] = side_for_pos
 
-        pnl = (shares - spent_after) if won else (-spent_after)
-        #if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #    pnl = 0
-
-        # update account & totals
-        bank += pnl
-        pnl_sum += pnl
-        spent += spent_after
+        # (Optional) return “taken” and “result” records for your pending lists
+        pending = {
+            "id": market["conditionId"],
+            "time0": entry_t,
+            "question": market["question"],
+            "shares": shares,
+            "price": avg_,
+            "spent": spent_after
+        }
+        result = {
+            "id": market["conditionId"],
+            "time1": settle_t,
+            "outcome": None,  # final outcome decided at settlement
+            "question": market["question"],
+            "shares": shares,
+            "price": avg_,
+            "pl": None
+        }
 
         print(market["question"])
-        print(
-            f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} "
-            f"| avg={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
-            f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
-        )
+        print(f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} | avg={avg_:.4f} | bank={bank:.2f}")
+
+        spent += spent_after
+        return bank, spent, pending, result
 
     except Exception as e:
         print(f"[skip] {market.get('question','<no title>')}: {e}")
         return bank, spent, None, None
-    #id, time trade taken, spent on trade
-    pending = {"id":market["conditionId"], "time0":normalize_time(fills[0]["time"]), "question":market["question"], 
-               "shares":shares, "price":avg_, "spent":spent}
-    print(pending)
-    end = normalize_time(market["umaEndDate"])
-    #id, time_of_result, result_of_trade, fills, shares, price, pl, 
-    result = {"id":market["conditionId"], "time1":end,"outcome":won, "question":market["question"], "shares":shares, "price":avg_, "pl":pnl}
-    print(result)
-    return bank, spent, pending, result
 
 """
 run through rolling having return the two lists, one with when taken other with win con and time of win
@@ -302,24 +293,95 @@ def main():
     # stop when bank < $10 or when you decide to cap batches
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
-        limit=50
+        limit=100
         markets = filter_markets(fetch_markets(limit, offset))
-        for market in markets:
-            bank, spent, taken, result = timed_rolling_markets(
-            bank, check="no",
-            market=market,
-            max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
-            fee_bps=600, slip_bps=200)
-            if taken:
-                bisect.insort(pending, taken, key=lambda x: x["time0"])
-                bisect.insort(end, result, key=lambda y: y["time1"])
-            
+        mk_by_id = {m["conditionId"]: m for m in markets}
 
+        def my_outcome_func(market_id):
+            mk = mk_by_id.get(market_id)
+            if not mk:  # fallback if missing
+                return "NO"
+            raw = mk.get("outcomePrices")
+            arr = json.loads(raw) if isinstance(raw, str) else raw
+            y, n = float(arr[0]), float(arr[1])
+            return "YES" if y > n else "NO"
+        now = datetime.now(timezone.utc)
+        bank, settled = settle_due_positions(bank, now, outcome_lookup=my_outcome_func)
+        print(bank, settled)
 
+SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
 
+# --- position store ---
+positions_by_id = {}         # id -> position dict
+settle_heap = []             # (time1, id) min-heap for next resolution
 
+def open_position(bank, market, fills, spent_after, shares, entry_time, est_settle_time, side):
+    """
+    Lock capital immediately. No P&L yet.
+    """
+    pid = market["conditionId"]
+    bank -= spent_after  # cash leaves the bank and is now locked
+    pos = {
+        "id": pid,
+        "question": market["question"],
+        "entry_time": entry_time,          # datetime (UTC)
+        "settle_time": est_settle_time,    # datetime (UTC)
+        "spent_after": float(spent_after), # includes your 6% or whatever fee model
+        "shares": float(shares),
+        "side": side,                      # or "YES"
+        "fills": fills,
+    }
+    positions_by_id[pid] = pos
+    heapq.heappush(settle_heap, (est_settle_time, pid))
+    return bank
 
+def settle_due_positions(bank, now_utc, outcome_lookup):
+    """
+    outcome_lookup(id) -> ('YES' or 'NO') or (yes_p, no_p)
+    Only settle positions whose settle_time <= now_utc.
+    Returns updated bank and a list of settlements with P&L.
+    """
+    settlements = []
+    while settle_heap and settle_heap[0][0] <= now_utc:
+        _, pid = heapq.heappop(settle_heap)
+        pos = positions_by_id.pop(pid, None)
+        if not pos:
+            continue
 
+        # decide winner
+        outcome = outcome_lookup(pid)  # e.g., returns ("YES","NO") or floats
+        if isinstance(outcome, tuple) and len(outcome) == 2 and all(isinstance(x, (int,float)) for x in outcome):
+            yes_p, no_p = map(float, outcome)
+            won = (no_p > yes_p) if pos["side"] == "NO" else (yes_p > no_p)
+        else:
+            # outcome like "YES"/"NO"
+            won = (outcome == pos["side"])
+
+        spent = pos["spent_after"]
+        if won:
+            proceeds = pos["shares"] * 1.0
+            proceeds_after = proceeds * (1.0 - SETTLE_FEE)
+            pnl = proceeds_after - spent
+            bank += proceeds_after
+        else:
+            proceeds_after = 0.0
+            pnl = -spent
+            # lost stake stays gone; bank already deducted at entry
+
+        settlements.append({
+            "id": pid, "question": pos["question"],
+            "won": won, "spent": spent, "proceeds": proceeds_after, "pnl": pnl,
+            "entry_time": pos["entry_time"], "settle_time": pos["settle_time"]
+        })
+    return bank, settlements
+
+def remove_by_id(lst, target_id):
+    """Remove dict with matching 'id' key from list (in place)."""
+    for i, item in enumerate(lst):
+        if item.get("id") == target_id:
+            del lst[i]
+            return True
+    return False
 
 
 
