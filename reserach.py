@@ -300,7 +300,7 @@ def main():
     # stop when bank < $10 or when you decide to cap batches
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
-        pnl_batch, bank, offset, bets, createdAt, sp = rolling_markets(
+        pnl_batch, bank, offset, bets, createdAt, sp = timed_rolling_markets(
             bank, check="no",
             limit=50, offset=offset,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
