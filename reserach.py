@@ -275,7 +275,7 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
     #id, time trade taken, spent on trade
     pending = [market["conditionId"], datetime.fromtimestamp(int(trades[0]["time"]), tz=timezone.utc), market["question"], shares, avg_, spent]
     #id, time_of_result, result_of_trade, fills, shares, price, pl, 
-    result = [market["conditionId"], market["umaEndDate"], market["question"], shares, avg_, pnl, ]
+    result.append([market["conditionId"], market["umaEndDate"], market["question"], shares, avg_, pnl])
     return bank, spent, pending, result
 
 """
