@@ -294,6 +294,7 @@ def main():
     all_pl = 0.0
     all_bets = 0
     spent = 0.0
+    markets = []
     pending = []
     end = []
 
