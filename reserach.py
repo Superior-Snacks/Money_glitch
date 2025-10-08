@@ -288,6 +288,25 @@ when last bought is later than first winc con, then release proftit/loss and add
 now only add 1 to rolling amrket at a time, but request n keep alot of markets in a list and roll through with a while len x
 """
 def main():
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    """ rolling market sqript
     bank = 5000.0
     offset = 4811 + 5900 #pressent 21186
     all_pl = 0.0
@@ -314,7 +333,7 @@ def main():
         write_to_file("look.txt", f"amount of bets:{all_bets} | total spent {spent:.2f} | batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | bank: {bank:.2f} | next offset: {offset} | timestamp{createdAt}")
 
         if bank < 10.0:
-            break
+            break"""
 
     """ plotting
     df = blocks_to_df(n)
