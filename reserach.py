@@ -9,6 +9,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass
 import os
+import bisect
 
 # 1) One session for the whole script
 def make_session():
@@ -302,14 +303,14 @@ def main():
         markets.append(filter_markets(fetch_markets(limit, offset)))
         while markets:
             current = markets.pop()
-            bank, spent, pending, result = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
+            bank, spent, taken, result = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
             bank, check="no",
             market=current,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200)
 
-        sorted(pending, key=lambda t: t["time0"])
-        sorted(end, key=lambda t: t["time1"])
+        bisect.insort(pending, taken, key=lambda x: x["time0"])
+        bisect.insort(end, result, key=lambda x: x["time0"])
 
 
 
