@@ -217,11 +217,10 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
     spent = 0.0
     pending = {}
     result = {}
-
     try:
         trades = normalize_trades(fetch_trades(market))
         if not trades:
-            return None #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            return bank, spent, None, None
         # sizing
         if bank >= 100.0:
             bet = 100.0
@@ -229,7 +228,7 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
             bet = float(bank)          # go all-in if small
         else:
             print("out of money")
-            return None #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            return bank, spent, None, None
 
         sim = SimMarket(trades, fee_bps=fee_bps, slip_bps=slip_bps)
         t_from = trades[0]["time"]
@@ -244,7 +243,7 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
         # skip if no fill
         if shares == 0.0 or spent_after == 0.0:
             print("no fill")
-            return None #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+            return bank, spent, None, None
 
         # parse outcome robustly
         outcome_raw = market.get("outcomePrices", ["0", "0"])
@@ -278,6 +277,8 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
                "shares":shares, "price":avg_, "spent":spent}
     #id, time_of_result, result_of_trade, fills, shares, price, pl, 
     result = {"id":market["conditionId"], "time1":market["umaEndDate"],"outcome":won, "question":market["question"], "shares":shares, "price":avg_, "pl":pnl}
+    print(pending)
+    print(result)
     return bank, spent, pending, result
 
 """
@@ -292,7 +293,6 @@ def main():
     all_pl = 0.0
     all_bets = 0
     spent = 0.0
-    markets = []
     pending = []
     end = []
 
@@ -300,17 +300,17 @@ def main():
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
         limit=50
-        markets.append(filter_markets(fetch_markets(limit, offset)))
-        while markets:
-            current = markets.pop()
-            bank, spent, taken, result = timed_rolling_markets(#change to return the two lists, one with all this stuff another just the trade taken
+        markets = filter_markets(fetch_markets(limit, offset))
+        for market in markets:
+            bank, spent, taken, result = timed_rolling_markets(
             bank, check="no",
-            market=current,
+            market=market,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200)
             if taken:
                 bisect.insort(pending, taken, key=lambda x: x["time0"])
                 bisect.insort(end, result, key=lambda y: y["time1"])
+            
 
 
 
