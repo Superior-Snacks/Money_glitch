@@ -308,9 +308,8 @@ def main():
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200)
 
-        if bank < 10.0:
-            break
-
+        sorted(pending, key=lambda t: t["time0"])
+        sorted(end, key=lambda t: t["time1"])
 
 
 
