@@ -413,4 +413,4 @@ amount of bets:4521 | total spent 240594.13 | batch P/L: 1744.02 | total P/L: 42
 
 amount of bets:4570 | total spent 241813.76 | batch P/L: 2321.21 | total P/L: 423352.00 | bank: 428352.00 | next offset: 15281 | timestamp2024-08-29T16:17:52.632653Z
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200 allow under 10%   10747 - 15281
+offset = 4811 + 5900 cap 0.4  fee_bps=600, slip_bps=200 allow under 10%
