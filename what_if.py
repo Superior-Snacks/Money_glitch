@@ -61,7 +61,7 @@ class SimMarket:
             avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
             blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
 
-            # optional price cap (skip too-expensive NO)
+            # price cap (skip too-expensive NO)
             if max_no_price is not None and p_no > max_no_price:
                 continue
 
@@ -480,33 +480,10 @@ def normalize_time(value, default=None):
         return default
 
 
-"""
-ignore low share high value trades, condence no and yes shares together by time block
-Taking YES: (outcome=="Yes" and side=="BUY") or (outcome=="No" and side=="SELL")
-Taking NO: (outcome=="No" and side=="BUY") or (outcome=="Yes" and side=="SELL")
-notional(YES) = shares * price
-notional(NO) = shares * (1 - price)
-
-Window: group consecutive trades within ≤ 10s of the first print.
-Same snapped price only; stop the block on any trade (any side) at a different snapped price.
-Build two streams: one for taking YES, one for taking NO.
-Store per block:
-{
-"time": t0,                # first fill time in block
-"price_yes": p_yes,        # snapped YES price in [0,1]
-"price_no":  1 - p_yes,
-"side": "TAKE_NO" | "TAKE_YES",
-"shares": cumulative_shares_in_block,
-"notional_yes": shares * p_yes   if TAKE_YES else 0,
-"notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
-}
-"""
 def normalize_trades(trades, time_block=10):
-    #print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return []
-    #print(trades[0].keys())
     trades = sorted(trades, key=lambda t: t["timestamp"])
     
     j = 0
@@ -516,7 +493,6 @@ def normalize_trades(trades, time_block=10):
     while i < len(trades):
         tr1 = trades[i]
         if not valid_trade(tr1):
-                #print("not valid?")
                 i += 1
                 continue
         p_yes = snap_price(tr1["price"], 0.01)
@@ -536,10 +512,8 @@ def normalize_trades(trades, time_block=10):
         while j < len(trades):
             tr = trades[j]
             if int(tr["timestamp"]) - time0 > time_block:
-                #print("broke time")
                 break
             if snap_price(tr["price"], 0.01) != p_yes:
-                #print("broke price")
                 break
             if not valid_trade(tr):
                 j += 1
@@ -636,21 +610,6 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
         return cost >= min_extreme_notional
     #valid
     return True
-
-def ls_print(li):
-    for i in li:
-        print(i)
-
-def write_to_file(filename, data):
-    # ensure parent folder exists
-    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
-
-    with open(filename, "a", encoding="utf-8") as file:
-        # if file already has content, add newline first
-        file.seek(0, os.SEEK_END)
-        if file.tell() > 0:
-            file.write("\n")
-        file.write(data + "\n")
 
 if __name__ == "__main__":
     main()
