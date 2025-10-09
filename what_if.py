@@ -12,7 +12,7 @@ import bisect
 import re
 import heapq
 
-# 1) One session for the whole script
+
 def make_session():
     s = requests.Session()
     retry = Retry(
@@ -187,7 +187,7 @@ def main():
     bank = 5000.0
     offset = 4811 + 5900
     spent = 0.0
-    desired_bet = 1000
+    desired_bet = 100
 
     global mk_by_id_global
     mk_by_id_global = {}
