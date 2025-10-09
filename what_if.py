@@ -182,7 +182,7 @@ def main():
     offset = 4811 + 5900
     spent = 0.0
     desired_bet = 100
-    side = "yes"
+    side = "NO"
 
     global mk_by_id_global
     mk_by_id_global = {}
@@ -233,13 +233,13 @@ def main():
                     print("Bank too low; stopping.")
                     return
 
-                if side == "no":
+                if side == "NO":
                     chosen_side = "NO"
                     sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
                     shares, spent_after, avg_, fills = sim.take_first_no(
                         entry_t, dollars=bet, max_no_price=0.4
                     )
-                elif side == "yes":
+                elif side == "YES":
                     chosen_side = "YES"
                     sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
                     shares, spent_after, avg_, fills = sim.take_first_yes(
@@ -570,6 +570,7 @@ def settle_due_positions(bank, now_utc, outcome_lookup):
 
         # >>> pass the side you actually took <<<
         fallback_side = pos.get("side", "NO")
+        print(fallback_side)
         outcome = outcome_lookup(pid, fallback_side)
 
         spent = pos["spent_after"]
