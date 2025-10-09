@@ -324,12 +324,14 @@ def set_first_trade(dt):
     if first_trade_dt is None or dt < first_trade_dt:
         first_trade_dt = dt
 
+
 def bump_last_settle(dt):
     global last_settle_dt
     if dt is None:
         return
     if last_settle_dt is None or dt > last_settle_dt:
         last_settle_dt = dt
+
 
 def fmt(dt):
     return dt.isoformat() if dt else "N/A"
@@ -508,9 +510,9 @@ def recompute_locked_from_positions():
     return sum(p["spent_after"] for p in positions_by_id.values())
 
 
-# 2) Safe GET with strict timeouts (connect, read)
 def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
     return SESSION.get(url, params=params, timeout=timeout)
+
 
 def fetch_markets(limit=20, offset=4811):
     params = {
@@ -693,33 +695,42 @@ def normalize_trades(trades, time_block=10):
         i = max(j, i+1) 
     return sorted(blocks, key=lambda b: b["time"])
 
+
 def clamp01(x, eps=1e-6):
     return min(1.0 - eps, max(eps, float(x)))
+
 
 def snap_price(p, tick=0.01):
     # snap to exchange tick, then round nicely
     return round(round(float(p) / tick) * tick, 2)
+
 
 def take_yes(trade):
     if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
         return True
     else:
         return False
+
+
 def take_no(trade):
     if (trade["outcome"].lower() == "yes" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "no" and trade["side"].lower() == "buy"):
         return True
     else:
         return False
 
+
 def notion_yes(trade):
     return float(trade["size"]) * float(trade["price"])
+
+
 def notion_no(trade):
     return float(trade["size"]) * (1 - float(trade["price"]))
 
-"""
-if trade is too small with too good odds
-"""
+
 def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.0):
+    """
+    if trade is too small with too good odds
+    """
     if not trade:
         return False
     
@@ -741,6 +752,7 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
         return cost >= min_extreme_notional
     #valid
     return True
+
 
 if __name__ == "__main__":
     main()
