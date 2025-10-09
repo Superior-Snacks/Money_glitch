@@ -10,6 +10,14 @@ from urllib3.util.retry import Retry
 from dataclasses import dataclass
 import os
 
+def fetch_markets():
+    """
+    fetch all active markets, for the use of their id's
+    """
+
+def save_to_file(file, data):
+    ...
+
 def main():
     ...
 
