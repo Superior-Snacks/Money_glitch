@@ -284,6 +284,7 @@ def main():
                 f"SUMMARY {datetime.now(timezone.utc).isoformat()} | "
                 f"avg_settle={avg_settle_sec:.0f}s | avg_open={avg_open:.2f} | "
                 f"first_trade={first_trade_dt} | last_settle={last_settle_dt}\n"
+                f"bank: {bank}\n"
             )
         raise
 
@@ -498,10 +499,6 @@ def settle_due_positions(bank, now_utc, outcome_lookup):
         }
         settlements.append(rec)
         settled_history.append(rec)
-
-        # keep last_settle_dt current
-        if last_settle_dt is None or pos["settle_time"] > last_settle_dt:
-            last_settle_dt = pos["settle_time"]
 
     return bank, settlements
 
