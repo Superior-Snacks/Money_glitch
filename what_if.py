@@ -182,7 +182,7 @@ def main():
     offset = 4811 + 5900
     spent = 0.0
     desired_bet = 100
-    side = "no"
+    side = "yes"
 
     global mk_by_id_global
     mk_by_id_global = {}
@@ -327,16 +327,82 @@ def prepare_market_entry(market):
     return entry_t, blocks
 
 
-def my_outcome_func(market_id: str) -> str:
+EPS = 1e-9
+_outcome_cache = {}  # conditionId -> "YES"/"NO"/"INVALID"/"CANCELED"/None
+
+def my_outcome_func(market_id: str, fallback_side: str) -> str:
+    """
+    Try to resolve outcome. If unknown, default to the *inverse* of fallback_side.
+    Returns one of: "YES", "NO", "INVALID", "CANCELED".
+    """
+    # cache hit?
+    if market_id in _outcome_cache and _outcome_cache[market_id] is not None:
+        return _outcome_cache[market_id]
+
+    # try current snapshot
     mk = mk_by_id_global.get(market_id)
+    resolved = _infer_resolution_from_market(mk) if mk else None
+
+    # if still unknown, refetch
+    if not resolved:
+        mk = fetch_market_by_condition_id(market_id)
+        resolved = _infer_resolution_from_market(mk)
+
+    # if still unknown, inverse of fallback
+    if not resolved:
+        resolved = "YES" if fallback_side.upper() == "NO" else "NO"
+
+    _outcome_cache[market_id] = resolved
+    return resolved
+
+
+def _infer_resolution_from_market(mk) -> str | None:
     if not mk:
-        return "NO"  # conservative fallback
-    raw = mk.get("outcomePrices")
-    arr = json.loads(raw) if isinstance(raw, str) else raw
-    if not arr or len(arr) < 2:
-        return "NO"
-    y, n = float(arr[0]), float(arr[1])
-    return "YES" if y > n else "NO"
+        return None
+
+    # explicit resolution fields first
+    for key in ("umaResolutionStatus", "resolvedOutcome", "resolution", "resolvedBy"):
+        val = str(mk.get(key, "")).strip().upper()
+        if val in {"YES", "NO", "INVALID", "CANCELED"}:
+            return val
+
+    arr = mk.get("umaResolutionStatuses") or []
+    if isinstance(arr, (list, tuple)):
+        for v in arr:
+            vv = str(v).strip().upper()
+            if vv in {"YES", "NO", "INVALID", "CANCELED"}:
+                return vv
+
+    # fallback to price split (not ideal but better than nothing)
+    prices = mk.get("outcomePrices")
+    try:
+        prices = json.loads(prices) if isinstance(prices, str) else prices
+        if isinstance(prices, (list, tuple)) and len(prices) >= 2:
+            y, n = float(prices[0]), float(prices[1])
+            if abs(y - n) <= EPS:
+                return "INVALID"  # or return None if you prefer to trigger fallback
+            return "YES" if y > n else "NO"
+    except Exception:
+        pass
+
+    return None
+
+
+def fetch_market_by_condition_id(condition_id: str) -> dict | None:
+    # Simple portable fallback (optimize later if you have an ID endpoint)
+    try:
+        r = SESSION.get(
+            BASE_GAMMA,
+            params={"limit": 200, "offset": 0, "outcomes": ["YES", "NO"], "sortBy": "startDate"},
+            timeout=20,
+        )
+        r.raise_for_status()
+        for mk in (r.json() or []):
+            if mk.get("conditionId") == condition_id:
+                return mk
+    except Exception:
+        pass
+    return None
 
 
 def sanity_check_locked():
@@ -487,46 +553,46 @@ def open_position(bank, market, fills, spent_after, shares, entry_time, est_sett
 
 
 def settle_due_positions(bank, now_utc, outcome_lookup):
-    """
-    outcome_lookup(id) -> ('YES' or 'NO') or (yes_p, no_p)
-    Only settle positions whose settle_time <= now_utc.
-    Returns updated bank and a list of settlements with P&L.
-    """
     global locked_now
 
     settlements = []
     while settle_heap and settle_heap[0][0] <= now_utc:
         _, pid = heapq.heappop(settle_heap)
+
+        # pop but keep the position (for fallback side)
         pos = positions_by_id.pop(pid, None)
         if not pos:
             continue
 
-        # This position is no longer locked after settlement
         locked_now -= pos["spent_after"]
         if locked_now < 0:
-            locked_now = 0.0  # safety
+            locked_now = 0.0
 
-        # decide winner
-        outcome = outcome_lookup(pid)
-        if isinstance(outcome, tuple) and len(outcome) == 2 and all(isinstance(x, (int, float)) for x in outcome):
-            yes_p, no_p = map(float, outcome)
-            won = (no_p > yes_p) if pos["side"] == "NO" else (yes_p > no_p)
-        else:
-            won = (outcome == pos["side"])
+        # >>> pass the side you actually took <<<
+        fallback_side = pos.get("side", "NO")
+        outcome = outcome_lookup(pid, fallback_side)
 
         spent = pos["spent_after"]
-        if won:
-            proceeds = pos["shares"] * 1.0
-            proceeds_after = proceeds * (1.0 - SETTLE_FEE)
-            pnl = proceeds_after - spent
+        if outcome in ("INVALID", "CANCELED"):
+            # treat as push: return stake (adjust to your venue rules)
+            proceeds_after = spent
+            pnl = 0.0
             bank += proceeds_after
         else:
-            proceeds_after = 0.0
-            pnl = -spent
+            won = (outcome == "NO") if fallback_side == "NO" else (outcome == "YES")
+            if won:
+                proceeds = pos["shares"] * 1.0
+                proceeds_after = proceeds * (1.0 - SETTLE_FEE)
+                pnl = proceeds_after - spent
+                bank += proceeds_after
+            else:
+                proceeds_after = 0.0
+                pnl = -spent
 
         rec = {
             "id": pid, "question": pos["question"],
-            "won": won, "spent": spent, "proceeds": proceeds_after, "pnl": pnl,
+            "won": (outcome == fallback_side),
+            "spent": spent, "proceeds": proceeds_after, "pnl": pnl,
             "entry_time": pos["entry_time"], "settle_time": pos["settle_time"]
         }
         settlements.append(rec)
@@ -757,7 +823,7 @@ def notion_no(trade):
     return float(trade["size"]) * (1 - float(trade["price"]))
 
 
-def valid_trade(trade, min_spend=2, extreme_price=0.05 ,min_extreme_notional=20.0):
+def valid_trade(trade, min_spend=2, extreme_price=0.05 ,min_extreme_notional=20.0, min_extreme_shares=50):
     """
     if trade is too small with too good odds
     """
@@ -779,8 +845,7 @@ def valid_trade(trade, min_spend=2, extreme_price=0.05 ,min_extreme_notional=20.
         return False
     # Extreme prices allowed only for big enough notional
     if price < extreme_price or price > 1.0 - extreme_price:
-        return cost >= min_extreme_notional
-    #valid
+        return cost >= min_extreme_notional and float(trade["size"]) >= min_extreme_shares
     return True
 
 
