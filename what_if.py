@@ -216,9 +216,10 @@ def main():
                 for i in settled:
                     print(f'SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}')
 
-                for i in settled:
+                #last trade settled
+                for i in settled: 
                     bump_last_settle(i["settle_time"])
-                    
+
                 # 2) skip if we already opened this market
                 pid = market["conditionId"]
                 if pid in positions_by_id:
