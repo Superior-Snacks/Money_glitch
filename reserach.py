@@ -319,7 +319,7 @@ def main():
     bank = 5000.0
     offset = 4811 + 5900
     spent = 0.0
-    desired_bet = 100
+    desired_bet = 1000
 
     global mk_by_id_global
     mk_by_id_global = {}
