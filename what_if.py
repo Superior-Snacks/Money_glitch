@@ -284,12 +284,14 @@ def my_outcome_func(market_id: str) -> str:
     y, n = float(arr[0]), float(arr[1])
     return "YES" if y > n else "NO"
 
+
 def sanity_check_locked():
     global locked_now
     s = sum(p["spent_after"] for p in positions_by_id.values())
     if abs(s - locked_now) > 1e-6:
         print(f"[WARN] locked_now drift: ledger={locked_now:.2f} vs recomputed={s:.2f}. Resetting to recomputed.")
         locked_now = s
+
 
 def open_position(bank, market, fills, spent_after, shares, entry_time, est_settle_time, side):
     """
@@ -321,6 +323,7 @@ def open_position(bank, market, fills, spent_after, shares, entry_time, est_sett
         peak_locked_time = entry_time
 
     return bank
+
 
 def settle_due_positions(bank, now_utc, outcome_lookup):
     """
