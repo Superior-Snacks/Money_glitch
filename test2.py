@@ -136,7 +136,8 @@ def go_through_it_all():
 
 
 def main():
-    test2()
+    while True:
+        test2()
     """    offset_trade = 4811 + 55999
     result = []
     pl = 0
