@@ -16,6 +16,7 @@ savea kaupið og potential winnings og allt info i kringum það í file, síða
 annars bíða þar til það er liquidity, hafa sér pending file, svo 1 klst fresti checka hvort markaðir hafa klárast.
 ef það eru mikið af markets þá byrja þannig ég hef efni á continuous trades á nýjum mörkuðum, (eldri markaðir ekki lokaðir eru oftast "settled")
 hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
+3 files, bought, pending, log(bottom shows p/l, active, done, bank, lockedup, etmifallsold)
 """
 
 def fetch_markets():
