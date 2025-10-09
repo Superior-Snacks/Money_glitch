@@ -273,6 +273,25 @@ def main():
 
             if bank < 10.0:
                 print("Bank below $10; stopping.")
+                avg_settle_sec = average_time_to_settle_seconds()
+                avg_open = average_open_markets()
+
+                print("\n--- STATS ---")
+                print(f"First trade time:  {first_trade_dt or 'N/A'}")
+                print(f"Last settled time: {last_settle_dt or 'N/A'}")
+                print(f"Avg time to settle: {format_duration(avg_settle_sec)} ({avg_settle_sec:.0f}s)")
+                print(f"Avg open markets (time-weighted): {avg_open:.2f}")
+                print(f"bank: {bank:.2f}\n")
+                print("------------------")
+
+                # (optional) append to file)
+                with open("run_summary.txt", "a", encoding="utf-8") as fh:
+                    fh.write(
+                        f"SUMMARY {datetime.now(timezone.utc).isoformat()} | "
+                        f"avg_settle={avg_settle_sec:.0f}s | avg_open={avg_open:.2f} | "
+                        f"first_trade={first_trade_dt} | last_settle={last_settle_dt}\n"
+                        f"bank: {bank}\n"
+                    )
                 break
 
     except KeyboardInterrupt:
@@ -284,7 +303,7 @@ def main():
         print(f"Last settled time: {last_settle_dt or 'N/A'}")
         print(f"Avg time to settle: {format_duration(avg_settle_sec)} ({avg_settle_sec:.0f}s)")
         print(f"Avg open markets (time-weighted): {avg_open:.2f}")
-        print(f"bank: {bank}\n")
+        print(f"bank: {bank:.2f}\n")
         print("------------------")
 
         # (optional) append to file)
