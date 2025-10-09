@@ -239,9 +239,6 @@ def main():
                 if shares == 0.0 or spent_after == 0.0:
                     continue
 
-                if not first_trade:
-                    first_trade = fills[0]["time"]
-
                 # 5) compute robust settle time
                 settle_t = (normalize_time(market.get("umaEndDate"))
                             or normalize_time(market.get("closedTime"))
