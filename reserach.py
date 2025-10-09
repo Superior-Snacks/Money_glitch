@@ -51,6 +51,7 @@ class SimMarket:
         shares = 0.0
         fills = []
         for b in self.blocks:
+            print(b)
             if b["side"] != "no" or int(b["time"]) < t_from_ts:
                 continue
             p_no = float(b["price_no"])
@@ -64,8 +65,8 @@ class SimMarket:
             if need <= 0:
                 break
 
-            take = min(need, available)      # notional taken from this block (pre fee)
-            add_shares = take / p_no
+            take = min(need, available_notional)
+            add_shares = block_shares * (take / available_notional)
 
             fills.append({
                 "time": b["time"],
@@ -735,22 +736,29 @@ def normalize_trades(trades, time_block=10):
             j += 1
 
         if side == "yes":
-            notional_yes = notional
-            notional_no = 0.0
+            price_yes = clamp01((notional or 0.0) / shares) if shares > 0 else 0.5
+            price_no  = clamp01(1.0 - price_yes)
+            notional_yes = shares * price_yes
+            notional_no  = 0.0
         elif side == "no":
-            notional_no = notional
-            notional_yes = 0.0
+                price_no  = clamp01((notional or 0.0) / shares) if shares > 0 else 0.5
+                price_yes = clamp01(1.0 - price_no)
+                notional_no  = shares * price_no
+                notional_yes = 0.0
         if shares > 0 and notional > 0:
-            blocks.append({"time":time0, 
-                           "side": side, 
-                           "price_yes":p_yes, 
-                           "price_no":p_no, 
-                           "shares":shares, 
-                           "notional_yes":notional_yes, 
-                           "notional_no":notional_no,
-                           "compressed": compressed})
+            blocks.append({"time": time0,
+                        "side": side,  # "yes" or "no"
+                        "price_yes": round(price_yes, 6),
+                        "price_no":  round(price_no, 6),
+                        "shares": shares,
+                        "notional_yes": round(notional_yes, 6),
+                        "notional_no":  round(notional_no, 6),
+                        "compressed": compressed})
         i = max(j, i+1) 
     return sorted(blocks, key=lambda b: b["time"])
+
+def clamp01(x, eps=1e-6):
+    return min(1.0 - eps, max(eps, float(x)))
 
 def snap_price(p, tick=0.01):
     # snap to exchange tick, then round nicely
