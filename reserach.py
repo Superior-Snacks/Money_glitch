@@ -319,6 +319,7 @@ def main():
     bank = 5000.0
     offset = 4811 + 5900
     spent = 0.0
+    desired_bet = 100
 
     global mk_by_id_global
     mk_by_id_global = {}
@@ -357,7 +358,7 @@ def main():
                 continue
 
             # 3) size bet
-            bet = 100.0 if bank >= 100.0 else (float(bank) if bank >= 10.0 else 0.0)
+            bet = desired_bet if bank >= desired_bet else (float(bank) if bank >= 10.0 else 0.0)
             if bet <= 0.0:
                 print("Bank too low; stopping.")
                 return
