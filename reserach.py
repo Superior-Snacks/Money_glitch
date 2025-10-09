@@ -245,6 +245,9 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
         bank = open_position(
             bank, market, fills, spent_after, shares, entry_t, settle_t, side_for_pos
         )
+        bank, _ = settle_due_positions(bank, entry_t, outcome_lookup=my_outcome_func)
+        bank = open_position(bank, market, fills, spent_after, shares, entry_t, settle_t, side_for_pos)
+
         # mark the correct side on the stored position:
         #positions_by_id[market["conditionId"]]["side"] = side_for_pos
 
@@ -287,7 +290,6 @@ def main():
     offset = 4811 + 5900
     spent = 0.0
 
-    # global market index for outcome lookup across batches
     global mk_by_id_global
     mk_by_id_global = {}
 
@@ -297,24 +299,41 @@ def main():
         markets = filter_markets(fetch_markets(limit, offset))
         offset += len(markets)
 
-        # update global market dict
+        # sort by entry proxy (createdAt/startDate) for a stable timeline
+        markets = sorted(
+            markets,
+            key=lambda m: normalize_time(m.get("createdAt")) or normalize_time(m.get("startDate"))
+        )
+
+        # index for outcomes across batches
         for m in markets:
             mk_by_id_global[m["conditionId"]] = m
 
-        # 1) OPEN positions for this batch (locks capital; no P/L booked)
         for market in markets:
-            bank, spent_delta, pending_rec, result_rec = timed_rolling_markets(
+            # --- peek the entry time you will use
+            # we need a trades preview; if that's too heavy, call timed_rolling_markets and let it compute
+            blocks = normalize_trades(fetch_trades(market))
+            if not blocks:
+                continue
+            entry_t = normalize_time(blocks[0]["time"])
+
+            # 1) Settle everything that should have resolved BEFORE this entry time
+            bank, settled = settle_due_positions(bank, entry_t, outcome_lookup=my_outcome_func)
+            # (print if you want)
+
+            # 2) Open the position at this market (locks capital)
+            bank, spent_delta, _, _ = timed_rolling_markets(
                 bank, check="no", market=market,
                 max_price_cap=0.4, fee_bps=600, slip_bps=200
             )
             spent += spent_delta
 
-        # 2) SETTLE anything whose settle_time <= now (or choose a historical cutoff)
-        now = datetime.now(timezone.utc)
-        bank, settled = settle_due_positions(bank, now, outcome_lookup=my_outcome_func)
-        if settled:
-            for s in settled:
-                print(f"SETTLED: {s['question']} | won={s['won']} | pnl={s['pnl']:.2f} | bank={bank:.2f}")
+            # 3) (Optional) print live lock stats
+            print(f"LOCKED NOW: ${locked_now:.2f} | PEAK LOCKED: ${peak_locked:.2f} at {peak_locked_time}")
+
+        # After batch, settle up to the last market's settle/entry time or 'now'
+        # For historical: settle to max known settle time if you want to fully finish the batch
+        # bank, settled_tail = settle_due_positions(bank, datetime.now(timezone.utc), my_outcome_func)
 
         if bank < 10.0:
             print("Bank below $10; stopping.")
