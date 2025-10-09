@@ -283,3 +283,84 @@ def sanity_check_locked():
     if abs(s - locked_now) > 1e-6:
         print(f"[WARN] locked_now drift: ledger={locked_now:.2f} vs recomputed={s:.2f}. Resetting to recomputed.")
         locked_now = s
+
+def open_position(bank, market, fills, spent_after, shares, entry_time, est_settle_time, side):
+    """
+    Lock capital immediately. No P&L yet.
+    """
+    global locked_now, peak_locked, peak_locked_time
+
+    pid = market["conditionId"]
+    bank -= spent_after  # cash leaves the bank and is now locked
+
+    pos = {
+        "id": pid,
+        "question": market["question"],
+        "entry_time": entry_time,          # datetime (UTC)
+        "settle_time": est_settle_time,    # datetime (UTC)
+        "spent_after": float(spent_after), # includes fees/slippage
+        "shares": float(shares),
+        "side": side,                      # "NO" or "YES"
+        "fills": fills,
+    }
+
+    positions_by_id[pid] = pos
+    heapq.heappush(settle_heap, (est_settle_time, pid))
+
+    # ---- locked capital accounting ----
+    locked_now += pos["spent_after"]
+    if locked_now > peak_locked:
+        peak_locked = locked_now
+        peak_locked_time = entry_time
+
+    return bank
+
+def settle_due_positions(bank, now_utc, outcome_lookup):
+    """
+    outcome_lookup(id) -> ('YES' or 'NO') or (yes_p, no_p)
+    Only settle positions whose settle_time <= now_utc.
+    Returns updated bank and a list of settlements with P&L.
+    """
+    global locked_now
+
+    settlements = []
+    while settle_heap and settle_heap[0][0] <= now_utc:
+        _, pid = heapq.heappop(settle_heap)
+        pos = positions_by_id.pop(pid, None)
+        if not pos:
+            continue
+
+        # This position is no longer locked after settlement
+        locked_now -= pos["spent_after"]
+        if locked_now < 0:
+            locked_now = 0.0  # safety
+
+        # decide winner
+        outcome = outcome_lookup(pid)
+        if isinstance(outcome, tuple) and len(outcome) == 2 and all(isinstance(x, (int, float)) for x in outcome):
+            yes_p, no_p = map(float, outcome)
+            won = (no_p > yes_p) if pos["side"] == "NO" else (yes_p > no_p)
+        else:
+            won = (outcome == pos["side"])
+
+        spent = pos["spent_after"]
+        if won:
+            proceeds = pos["shares"] * 1.0
+            proceeds_after = proceeds * (1.0 - SETTLE_FEE)
+            pnl = proceeds_after - spent
+            bank += proceeds_after
+        else:
+            proceeds_after = 0.0
+            pnl = -spent
+
+        settlements.append({
+            "id": pid, "question": pos["question"],
+            "won": won, "spent": spent, "proceeds": proceeds_after, "pnl": pnl,
+            "entry_time": pos["entry_time"], "settle_time": pos["settle_time"]
+        })
+    return bank, settlements
+
+
+def recompute_locked_from_positions():
+    # authoritative recompute if you ever get out of sync
+    return sum(p["spent_after"] for p in positions_by_id.values())
