@@ -238,6 +238,11 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
 
     return pnl_sum, bank, next_offset, len(markets), markets[0]["createdAt"], spent
 
+
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_HISTORY = "https://clob.polymarket.com/prices-history"
+BASE_TRADES = "http://data-api.polymarket.com/trades"
+BASE_BOOK = "https://clob.polymarket.com/book"
 def main():
     run_simple()
 
