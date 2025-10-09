@@ -167,8 +167,8 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 locked_now = 0.0              # current locked capital ($)
 peak_locked = 0.0             # highest locked capital ever reached
 peak_locked_time = None       # when the peak happened
-first_trade = None #date
-last_settle = None #date
+first_trade_dt = None      # earliest entry time we saw (UTC datetime)
+last_settle_dt = None
 mk_by_id_global = {}
 SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
 
@@ -205,6 +205,8 @@ def main():
                 entry_t = normalize_time(blocks[0]["time"])
                 entries.append((entry_t, m, blocks))
 
+                set_first_trade(entry_t) #collect earliest
+
             entries.sort(key=lambda x: x[0])
 
             for entry_t, market, blocks in entries:
@@ -214,7 +216,9 @@ def main():
                 for i in settled:
                     print(f'SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}')
 
-                #last_settle = sorted(settled, key=lambda c: c["settle_time"])   #sort(key=lambda x: x[0])
+                for i in settled:
+                    bump_last_settle(i["settle_time"])
+                    
                 # 2) skip if we already opened this market
                 pid = market["conditionId"]
                 if pid in positions_by_id:
