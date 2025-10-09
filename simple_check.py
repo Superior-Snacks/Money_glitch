@@ -269,3 +269,290 @@ def run_simple():
 
         if bank < 10.0:
             break
+
+# 2) Safe GET with strict timeouts (connect, read)
+def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
+    return SESSION.get(url, params=params, timeout=timeout)
+
+# 3) Paginated trades with a per-market time budget
+DATA_TRADES = "https://data-api.polymarket.com/trades"
+
+def fetch_markets(limit=20, offset=4811):
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "outcomes": ["YES", "NO"],
+        "sortBy": "startDate"}
+    r = requests.get(BASE_GAMMA, params=params, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    #print(payload[0].keys())
+    return payload
+
+def filter_markets(markets):
+    """
+    making sure to only check the weird bets
+    """
+    #print("filtering markets")
+    if not markets:
+        print("ERROR")
+        return None
+    cleaned = []
+    for mk in markets:
+        outcomes = mk["outcomes"]
+        if isinstance(outcomes, str):
+            outcomes = json.loads(outcomes)
+        try:
+            if outcomes == ["Yes", "No"] and mk["startDate"]:
+                cleaned.append(mk)
+        except:
+            #print("--------------------------------------------------------------------------------------------------------------------------")
+            print("ERROR NOT STARTDATE FOUND?")
+            #print("--------------------------------------------------------------------------------------------------------------------------")
+    print(f"valid markets {len(cleaned)}")
+    cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
+    return cleaned
+
+def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
+    """Pull full trade history with retries+timeouts and a hard time budget."""
+    cid = market_dict["conditionId"]
+    out = []
+    offset = 0
+    pages = 0
+    t0 = time.monotonic()
+    try:
+        resp = safe_get(
+            DATA_TRADES,
+            params={"market": cid, "sort": "asc", "limit": 100},
+            timeout=(5, 20)
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        #print(payload[0].keys())
+        return payload
+    except:
+        return None
+    
+def normalize_time(value, default=None):
+    """
+    Converts various Polymarket-style date/time formats into a UTC datetime.
+
+    Accepts:
+      - ISO strings with or without 'Z'
+      - 'YYYY-MM-DD' (no time)
+      - timestamps (int, float, or numeric strings)
+      - None or invalid → returns `default` (or None)
+
+    Returns:
+      datetime object (UTC timezone)
+    """
+    if value is None or value == "":
+        return default
+
+    # numeric timestamp (epoch seconds)
+    if isinstance(value, (int, float)) or re.match(r"^\d{10,13}$", str(value)):
+        try:
+            ts = float(value)
+            if ts > 1e12:  # milliseconds
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+        except Exception:
+            return default
+
+    # string normalization
+    val = str(value).strip()
+
+    # Replace common ISO variants
+    val = val.replace("Z", "+00:00")  # Z → UTC
+    val = re.sub(r"\s+", "T", val)    # space → T
+
+    # Add missing time or timezone if needed
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", val):
+        val += "T00:00:00+00:00"
+
+    try:
+        dt = datetime.fromisoformat(val)
+        # ensure UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt
+    except Exception:
+        return default
+
+
+"""
+ignore low share high value trades, condence no and yes shares together by time block
+Taking YES: (outcome=="Yes" and side=="BUY") or (outcome=="No" and side=="SELL")
+Taking NO: (outcome=="No" and side=="BUY") or (outcome=="Yes" and side=="SELL")
+notional(YES) = shares * price
+notional(NO) = shares * (1 - price)
+
+Window: group consecutive trades within ≤ 10s of the first print.
+Same snapped price only; stop the block on any trade (any side) at a different snapped price.
+Build two streams: one for taking YES, one for taking NO.
+Store per block:
+{
+"time": t0,                # first fill time in block
+"price_yes": p_yes,        # snapped YES price in [0,1]
+"price_no":  1 - p_yes,
+"side": "TAKE_NO" | "TAKE_YES",
+"shares": cumulative_shares_in_block,
+"notional_yes": shares * p_yes   if TAKE_YES else 0,
+"notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
+}
+"""
+def normalize_trades(trades, time_block=10):
+    #print("new market")
+    if not trades:
+        print("ERROR NO TRADES AVAILABLE")
+        return []
+    #print(trades[0].keys())
+    trades = sorted(trades, key=lambda t: t["timestamp"])
+    
+    j = 0
+    i = 0
+    side = None
+    blocks = []
+    while i < len(trades):
+        tr1 = trades[i]
+        if not valid_trade(tr1):
+                #print("not valid?")
+                i += 1
+                continue
+        p_yes = snap_price(tr1["price"], 0.01)
+        p_no = round(1 - p_yes, 2)
+        time0 = tr1["timestamp"]
+        if take_yes(tr1):
+             side = "yes"
+        elif take_no(tr1):
+            side = "no"
+        else:
+            side = None
+
+        notional = 0.0
+        shares = 0.0
+        compressed = 0
+        j = i    
+        while j < len(trades):
+            tr = trades[j]
+            if int(tr["timestamp"]) - time0 > time_block:
+                #print("broke time")
+                break
+            if snap_price(tr["price"], 0.01) != p_yes:
+                #print("broke price")
+                break
+            if not valid_trade(tr):
+                j += 1
+                continue
+            if side == "yes":
+                if not take_yes(tr):
+                    break
+                if not valid_trade(tr):
+                    j += 1
+                    continue
+                shares += float(tr["size"])
+                notional += notion_yes(tr)
+                compressed += 1
+                
+            elif side == "no":
+                if not take_no(tr):
+                    break
+                if not valid_trade(tr):
+                    j +=1
+                    continue
+                shares += float(tr["size"])
+                notional += notion_no(tr)
+                compressed += 1
+
+            j += 1
+
+        if side == "yes":
+            price_yes = clamp01((notional or 0.0) / shares) if shares > 0 else 0.5
+            price_no  = clamp01(1.0 - price_yes)
+            notional_yes = shares * price_yes
+            notional_no  = 0.0
+        elif side == "no":
+                price_no  = clamp01((notional or 0.0) / shares) if shares > 0 else 0.5
+                price_yes = clamp01(1.0 - price_no)
+                notional_no  = shares * price_no
+                notional_yes = 0.0
+        if shares > 0 and notional > 0:
+            blocks.append({"time": time0,
+                        "side": side,  # "yes" or "no"
+                        "price_yes": round(price_yes, 6),
+                        "price_no":  round(price_no, 6),
+                        "shares": shares,
+                        "notional_yes": round(notional_yes, 6),
+                        "notional_no":  round(notional_no, 6),
+                        "compressed": compressed})
+        i = max(j, i+1) 
+    return sorted(blocks, key=lambda b: b["time"])
+
+def clamp01(x, eps=1e-6):
+    return min(1.0 - eps, max(eps, float(x)))
+
+def snap_price(p, tick=0.01):
+    # snap to exchange tick, then round nicely
+    return round(round(float(p) / tick) * tick, 2)
+
+def take_yes(trade):
+    if (trade["outcome"].lower() =="no" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "yes" and trade["side"].lower() == "buy"):
+        return True
+    else:
+        return False
+def take_no(trade):
+    if (trade["outcome"].lower() == "yes" and trade["side"].lower() == "sell") or (trade["outcome"].lower() == "no" and trade["side"].lower() == "buy"):
+        return True
+    else:
+        return False
+
+def notion_yes(trade):
+    return float(trade["size"]) * float(trade["price"])
+def notion_no(trade):
+    return float(trade["size"]) * (1 - float(trade["price"]))
+
+"""
+if trade is too small with too good odds
+"""
+def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.0):
+    if not trade:
+        return False
+    
+    price = float(trade["price"])
+    size = float(trade["size"])
+    outcome = str(trade.get("outcome","")).strip().lower()
+
+    if outcome == "yes":
+        cost = price * size
+    elif outcome == "no":
+        cost = (1 - price) * size
+    else:
+        return False
+
+    if cost < min_spend:
+        return False
+    # Extreme prices allowed only for big enough notional
+    if price < extreme_price or price > 1.0 - extreme_price:
+        return cost >= min_extreme_notional
+    #valid
+    return True
+
+def ls_print(li):
+    for i in li:
+        print(i)
+
+def write_to_file(filename, data):
+    # ensure parent folder exists
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+
+    with open(filename, "a", encoding="utf-8") as file:
+        # if file already has content, add newline first
+        file.seek(0, os.SEEK_END)
+        if file.tell() > 0:
+            file.write("\n")
+        file.write(data + "\n")
+
+if __name__ == "__main__":
+    main()
