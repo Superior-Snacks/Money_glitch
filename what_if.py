@@ -261,7 +261,10 @@ def main():
             # optional: settle up to the last entry time of the batch
             if entries:
                 last_entry = entries[-1][0]
-                bank, _ = settle_due_positions(bank, last_entry, outcome_lookup=my_outcome_func)
+                bank, settled_tail = settle_due_positions(bank, last_entry, outcome_lookup=my_outcome_func)
+                
+            for i in settled_tail:
+                bump_last_settle(i["settle_time"])
 
             if bank < 10.0:
                 print("Bank below $10; stopping.")
