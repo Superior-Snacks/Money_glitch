@@ -112,28 +112,38 @@ class SimMarket:
         spent_pre = 0.0
         shares = 0.0
         fills = []
+
         for b in self.blocks:
-            if b["side"] != "no" or int(b["time"]) < t_from_ts:
+            # time + side filter
+            if b.get("side") != "yes" or int(b.get("time", 0)) < t_from_ts:
                 continue
-            p_yes = float(b["price_yes"])
+
+            p_yes = float(b.get("price_yes", 0.0))
+            p_no  = float(b.get("price_no", 0.0))
+            avail = float(b.get("notional_yes", 0.0))  # <-- YES notional
+            blk_sh = float(b.get("shares", 0.0))
+
+            # price cap should be on YES price here
             if max_yes_price is not None and p_yes > max_yes_price:
                 continue
-            available = float(b.get("notional_yes", 0.0))
-            if available <= 0:
+
+            # guards
+            if avail <= 0.0 or blk_sh <= 0.0:
                 continue
 
             need = dollars - spent_pre
-            if need <= 0:
+            if need <= 0.0:
                 break
 
-            take = min(need, available)
-            add_shares = take / p_yes
+            take = min(need, avail)       # $ notional taken from this YES block
+            ratio = take / avail
+            add_shares = blk_sh * ratio
 
             fills.append({
                 "time": b["time"],
-                "side": "yes",
+                "side": "yes",            # <-- correct side label
                 "price_yes": p_yes,
-                "price_no": float(b["price_no"]),
+                "price_no":  p_no,
                 "take_notional_pre_fee": take,
                 "take_shares": add_shares,
                 "block": b,
@@ -150,7 +160,6 @@ class SimMarket:
 
         spent_after = spent_pre * (1.0 + self.fee + self.slip)
         avg_yes = spent_after / shares
-        print(shares, spent_after, avg_yes, fills)
         return shares, spent_after, avg_yes, fills
 
 def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_bps=600, slip_bps=200):

@@ -2,7 +2,6 @@ import json
 import time
 import requests
 from datetime import datetime, timezone
-import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import re
@@ -99,7 +98,7 @@ class SimMarket:
         return shares, spent_after, avg_no, fills
 
     def take_first_yes(self, t_from, dollars=100.0, max_yes_price=None):
-        # normalize t_from to epoch seconds
+    # normalize t_from to epoch seconds
         if isinstance(t_from, datetime):
             t_from_ts = int(t_from.replace(tzinfo=timezone.utc).timestamp())
         else:
@@ -114,16 +113,16 @@ class SimMarket:
             if b.get("side") != "yes" or int(b.get("time", 0)) < t_from_ts:
                 continue
 
-            p_no  = float(b.get("price_no", 0.0))
             p_yes = float(b.get("price_yes", 0.0))
-            avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
-            blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
+            p_no  = float(b.get("price_no", 0.0))
+            avail = float(b.get("notional_yes", 0.0))  # <-- YES notional
+            blk_sh = float(b.get("shares", 0.0))
 
-            # optional price cap (skip too-expensive NO)
-            if max_yes_price is not None and p_no > max_yes_price:
+            # price cap should be on YES price here
+            if max_yes_price is not None and p_yes > max_yes_price:
                 continue
 
-            # robust guards
+            # guards
             if avail <= 0.0 or blk_sh <= 0.0:
                 continue
 
@@ -131,16 +130,15 @@ class SimMarket:
             if need <= 0.0:
                 break
 
-            # proportional allocation: no division by p_no
-            take = min(need, avail)                # $ notional we take from this block
-            ratio = take / avail                   # fraction of block taken
-            add_shares = blk_sh * ratio            # shares corresponding to that fraction
+            take = min(need, avail)       # $ notional taken from this YES block
+            ratio = take / avail
+            add_shares = blk_sh * ratio
 
             fills.append({
                 "time": b["time"],
-                "side": "no",
-                "price_no": p_no,
+                "side": "yes",            # <-- correct side label
                 "price_yes": p_yes,
+                "price_no":  p_no,
                 "take_notional_pre_fee": take,
                 "take_shares": add_shares,
                 "block": b,
@@ -157,13 +155,11 @@ class SimMarket:
 
         spent_after = spent_pre * (1.0 + self.fee + self.slip)
         avg_yes = spent_after / shares
-        print(shares, spent_after, avg_yes, fills)
         return shares, spent_after, avg_yes, fills
     
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
-BASE_TRADES = "http://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
     
