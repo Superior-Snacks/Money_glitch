@@ -655,3 +655,6 @@ def write_to_file(filename, data):
         if file.tell() > 0:
             file.write("\n")
         file.write(data + "\n")
+
+if __name__ == "__main__":
+    main()
