@@ -329,7 +329,10 @@ def main():
             spent += spent_delta
 
             # 3) (Optional) print live lock stats
+            if settled:
+                print(f"SETTLED {settled}")
             print(f"LOCKED NOW: ${locked_now:.2f} | PEAK LOCKED: ${peak_locked:.2f} at {peak_locked_time}")
+
 
         # After batch, settle up to the last market's settle/entry time or 'now'
         # For historical: settle to max known settle time if you want to fully finish the batch
@@ -521,9 +524,14 @@ def filter_markets(markets):
         outcomes = mk["outcomes"]
         if isinstance(outcomes, str):
             outcomes = json.loads(outcomes)
-        if outcomes == ["Yes", "No"]:
-            cleaned.append(mk)
-    print(f"valid markets {len(cleaned)}")
+        try:
+            if outcomes == ["Yes", "No"] and mk["startDate"]:
+                cleaned.append(mk)
+        except:
+            print("--------------------------------------------------------------------------------------------------------------------------")
+            print("ERROR NOT STARTDATE FOUND?")
+            print("--------------------------------------------------------------------------------------------------------------------------")
+        print(f"valid markets {len(cleaned)}")
     cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
     return cleaned
 
