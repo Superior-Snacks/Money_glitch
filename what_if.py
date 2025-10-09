@@ -257,3 +257,29 @@ def main():
         if bank < 10.0:
             print("Bank below $10; stopping.")
             break
+
+
+def prepare_market_entry(market):
+    blocks = normalize_trades(fetch_trades(market))
+    if not blocks:
+        return None
+    entry_t = normalize_time(blocks[0]["time"])
+    return entry_t, blocks
+
+def my_outcome_func(market_id: str) -> str:
+    mk = mk_by_id_global.get(market_id)
+    if not mk:
+        return "NO"  # conservative fallback
+    raw = mk.get("outcomePrices")
+    arr = json.loads(raw) if isinstance(raw, str) else raw
+    if not arr or len(arr) < 2:
+        return "NO"
+    y, n = float(arr[0]), float(arr[1])
+    return "YES" if y > n else "NO"
+
+def sanity_check_locked():
+    global locked_now
+    s = sum(p["spent_after"] for p in positions_by_id.values())
+    if abs(s - locked_now) > 1e-6:
+        print(f"[WARN] locked_now drift: ledger={locked_now:.2f} vs recomputed={s:.2f}. Resetting to recomputed.")
+        locked_now = s
