@@ -15,6 +15,9 @@ def fetch_markets():
     fetch all active markets, for the use of their id's
     """
 
+def fetch_book(market_id):
+    ...
+
 def save_to_file(file, data):
     ...
 
