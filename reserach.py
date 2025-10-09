@@ -50,32 +50,41 @@ class SimMarket:
         spent_pre = 0.0
         shares = 0.0
         fills = []
+
         for b in self.blocks:
-            print(b)
-            if b["side"] != "no" or int(b["time"]) < t_from_ts:
+            # time + side filter
+            if b.get("side") != "no" or int(b.get("time", 0)) < t_from_ts:
                 continue
-            p_no = float(b["price_no"])
+
+            p_no  = float(b.get("price_no", 0.0))
+            p_yes = float(b.get("price_yes", 0.0))
+            avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
+            blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
+
+            # optional price cap (skip too-expensive NO)
             if max_no_price is not None and p_no > max_no_price:
                 continue
-            available = float(b.get("notional_no", 0.0))
-            if available <= 0:
+
+            # robust guards
+            if avail <= 0.0 or blk_sh <= 0.0:
                 continue
 
             need = dollars - spent_pre
-            if need <= 0:
+            if need <= 0.0:
                 break
 
-            take = min(need, available_notional)
-            add_shares = block_shares * (take / available_notional)
+            # proportional allocation: no division by p_no
+            take = min(need, avail)                # $ notional we take from this block
+            ratio = take / avail                   # fraction of block taken
+            add_shares = blk_sh * ratio            # shares corresponding to that fraction
 
             fills.append({
                 "time": b["time"],
                 "side": "no",
                 "price_no": p_no,
-                "price_yes": float(b["price_yes"]),
+                "price_yes": p_yes,
                 "take_notional_pre_fee": take,
                 "take_shares": add_shares,
-                # keep a snapshot of the source block if you want
                 "block": b,
             })
 
@@ -88,7 +97,7 @@ class SimMarket:
         if shares == 0.0:
             return 0.0, 0.0, 0.0, []   # no fill
 
-        # apply trading frictions once on the *total* notional
+        # apply frictions once on total notional
         spent_after = spent_pre * (1.0 + self.fee + self.slip)
         avg_no = spent_after / shares
         return shares, spent_after, avg_no, fills
