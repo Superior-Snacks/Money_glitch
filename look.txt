@@ -498,3 +498,9 @@ amount of bets:1807 | total spent 105790.31 | batch P/L: 12791.84 | total P/L: 1
 amount of bets:1856 | total spent 107966.03 | batch P/L: 18789.02 | total P/L: 1043404.61 | bank: 1048404.61 | next offset: 12567 | timestamp2024-07-01T15:24:30.667451Z
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+amount of bets:36 | total spent 2005.92 | batch P/L: 4121.31 | total P/L: 4121.31 | bank: 9121.31 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:80 | total spent 5561.88 | batch P/L: 8385.30 | total P/L: 12506.61 | bank: 17506.61 | next offset: 10791 | timestamp2024-04-16T16:11:35.568124Z
+
+amount of bets:118 | total spent 7952.40 | batch P/L: 3282.98 | total P/L: 15789.59 | bank: 20789.59 | next offset: 10829 | timestamp2024-04-18T18:20:53.791869Z

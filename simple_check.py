@@ -2,16 +2,10 @@ import json
 import time
 import requests
 from datetime import datetime, timezone
-import pandas as pd
-import matplotlib.pyplot as plt
-import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import os
-import bisect
 import re
-import heapq
-
 # 1) One session for the whole script
 def make_session():
     s = requests.Session()
@@ -241,8 +235,9 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
-BASE_TRADES = "http://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
+DATA_TRADES = "https://data-api.polymarket.com/trades"
+
 def main():
     run_simple()
 
@@ -252,8 +247,6 @@ def run_simple():
     all_pl = 0.0
     all_bets = 0
     spent = 0.0
-    pending = []
-    end = []
 
     # stop when bank < $10 or when you decide to cap batches
     for _ in range(100):  # up to 100 * 50 = 5000 markets
@@ -275,12 +268,10 @@ def run_simple():
         if bank < 10.0:
             break
 
-# 2) Safe GET with strict timeouts (connect, read)
+
 def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
     return SESSION.get(url, params=params, timeout=timeout)
 
-# 3) Paginated trades with a per-market time budget
-DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 def fetch_markets(limit=20, offset=4811):
     params = {
@@ -291,14 +282,12 @@ def fetch_markets(limit=20, offset=4811):
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    #print(payload[0].keys())
     return payload
 
 def filter_markets(markets):
     """
     making sure to only check the weird bets
     """
-    #print("filtering markets")
     if not markets:
         print("ERROR")
         return None
@@ -311,20 +300,14 @@ def filter_markets(markets):
             if outcomes == ["Yes", "No"] and mk["startDate"]:
                 cleaned.append(mk)
         except:
-            #print("--------------------------------------------------------------------------------------------------------------------------")
-            print("ERROR NOT STARTDATE FOUND?")
-            #print("--------------------------------------------------------------------------------------------------------------------------")
+            continue
     print(f"valid markets {len(cleaned)}")
     cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
     return cleaned
 
-def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
+def fetch_trades(market_dict):
     """Pull full trade history with retries+timeouts and a hard time budget."""
     cid = market_dict["conditionId"]
-    out = []
-    offset = 0
-    pages = 0
-    t0 = time.monotonic()
     try:
         resp = safe_get(
             DATA_TRADES,
@@ -333,7 +316,6 @@ def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
         )
         resp.raise_for_status()
         payload = resp.json()
-        #print(payload[0].keys())
         return payload
     except:
         return None
@@ -387,33 +369,10 @@ def normalize_time(value, default=None):
         return default
 
 
-"""
-ignore low share high value trades, condence no and yes shares together by time block
-Taking YES: (outcome=="Yes" and side=="BUY") or (outcome=="No" and side=="SELL")
-Taking NO: (outcome=="No" and side=="BUY") or (outcome=="Yes" and side=="SELL")
-notional(YES) = shares * price
-notional(NO) = shares * (1 - price)
-
-Window: group consecutive trades within ≤ 10s of the first print.
-Same snapped price only; stop the block on any trade (any side) at a different snapped price.
-Build two streams: one for taking YES, one for taking NO.
-Store per block:
-{
-"time": t0,                # first fill time in block
-"price_yes": p_yes,        # snapped YES price in [0,1]
-"price_no":  1 - p_yes,
-"side": "TAKE_NO" | "TAKE_YES",
-"shares": cumulative_shares_in_block,
-"notional_yes": shares * p_yes   if TAKE_YES else 0,
-"notional_no":  shares * (1-p_yes) if TAKE_NO else 0,
-}
-"""
 def normalize_trades(trades, time_block=10):
-    #print("new market")
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return []
-    #print(trades[0].keys())
     trades = sorted(trades, key=lambda t: t["timestamp"])
     
     j = 0
@@ -423,7 +382,6 @@ def normalize_trades(trades, time_block=10):
     while i < len(trades):
         tr1 = trades[i]
         if not valid_trade(tr1):
-                #print("not valid?")
                 i += 1
                 continue
         p_yes = snap_price(tr1["price"], 0.01)
@@ -443,10 +401,8 @@ def normalize_trades(trades, time_block=10):
         while j < len(trades):
             tr = trades[j]
             if int(tr["timestamp"]) - time0 > time_block:
-                #print("broke time")
                 break
             if snap_price(tr["price"], 0.01) != p_yes:
-                #print("broke price")
                 break
             if not valid_trade(tr):
                 j += 1
@@ -518,6 +474,7 @@ def notion_yes(trade):
 def notion_no(trade):
     return float(trade["size"]) * (1 - float(trade["price"]))
 
+
 """
 if trade is too small with too good odds
 """
@@ -544,9 +501,11 @@ def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.
     #valid
     return True
 
+
 def ls_print(li):
     for i in li:
         print(i)
+
 
 def write_to_file(filename, data):
     # ensure parent folder exists
@@ -558,6 +517,7 @@ def write_to_file(filename, data):
         if file.tell() > 0:
             file.write("\n")
         file.write(data + "\n")
+
 
 if __name__ == "__main__":
     main()
