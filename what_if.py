@@ -418,10 +418,7 @@ def filter_markets(markets):
 def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
     """Pull 100 first trades"""
     cid = market_dict["conditionId"]
-    out = []
-    offset = 0
-    pages = 0
-    t0 = time.monotonic()
+    time.sleep(1)
     try:
         resp = safe_get(
             DATA_TRADES,
@@ -430,7 +427,6 @@ def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
         )
         resp.raise_for_status()
         payload = resp.json()
-        #print(payload[0].keys())
         return payload
     except:
         return None
