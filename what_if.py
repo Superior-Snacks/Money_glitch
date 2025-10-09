@@ -185,81 +185,96 @@ def main():
     global mk_by_id_global
     mk_by_id_global = {}
 
-    for _ in range(100):
-        time.sleep(1)
-        limit = 100
-        markets = filter_markets(fetch_markets(limit, offset))
-        offset += len(markets)
+    try:
+        for _ in range(100):
+            time.sleep(1)
+            limit = 100
+            markets = filter_markets(fetch_markets(limit, offset))
+            offset += len(markets)
 
-        # make outcomes visible across ALL batches
-        for m in markets:
-            mk_by_id_global[m["conditionId"]] = m
+            # make outcomes visible across ALL batches
+            for m in markets:
+                mk_by_id_global[m["conditionId"]] = m
 
-        # prepare entries once, sort by actual first trade time
-        entries = []
-        for m in markets:
-            blocks = normalize_trades(fetch_trades(m))
-            if not blocks:
-                continue
-            entry_t = normalize_time(blocks[0]["time"])
-            entries.append((entry_t, m, blocks))
+            # prepare entries once, sort by actual first trade time
+            entries = []
+            for m in markets:
+                blocks = normalize_trades(fetch_trades(m))
+                if not blocks:
+                    continue
+                entry_t = normalize_time(blocks[0]["time"])
+                entries.append((entry_t, m, blocks))
 
-        entries.sort(key=lambda x: x[0])
+            entries.sort(key=lambda x: x[0])
 
-        for entry_t, market, blocks in entries:
-            # 1) settle everything due up to this entry time
-            bank, settled = settle_due_positions(bank, entry_t, outcome_lookup=my_outcome_func)
-            # (optional) pretty-print settlements here
-            for i in settled:
-                print(f'SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}')
+            for entry_t, market, blocks in entries:
+                # 1) settle everything due up to this entry time
+                bank, settled = settle_due_positions(bank, entry_t, outcome_lookup=my_outcome_func)
+                # (optional) pretty-print settlements here
+                for i in settled:
+                    print(f'SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}')
 
-            #last_settle = sorted(settled, key=lambda c: c["settle_time"])   #sort(key=lambda x: x[0])
-            # 2) skip if we already opened this market
-            pid = market["conditionId"]
-            if pid in positions_by_id:
-                continue
+                #last_settle = sorted(settled, key=lambda c: c["settle_time"])   #sort(key=lambda x: x[0])
+                # 2) skip if we already opened this market
+                pid = market["conditionId"]
+                if pid in positions_by_id:
+                    continue
 
-            # 3) size bet
-            bet = desired_bet if bank >= desired_bet else (float(bank) if bank >= 10.0 else 0.0)
-            if bet <= 0.0:
-                print("Bank too low; stopping.")
-                return
+                # 3) size bet
+                bet = desired_bet if bank >= desired_bet else (float(bank) if bank >= 10.0 else 0.0)
+                if bet <= 0.0:
+                    print("Bank too low; stopping.")
+                    return
 
-            # 4) simulate fills directly with these blocks (no second fetch)
-            sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
-            shares, spent_after, avg_, fills = sim.take_first_no(
-                entry_t, dollars=bet, max_no_price=0.4
+                # 4) simulate fills directly with these blocks (no second fetch)
+                sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
+                shares, spent_after, avg_, fills = sim.take_first_no(
+                    entry_t, dollars=bet, max_no_price=0.4
+                )
+                if shares == 0.0 or spent_after == 0.0:
+                    continue
+
+                if not first_trade:
+                    first_trade = fills[0]["time"]
+
+                # 5) compute robust settle time
+                settle_t = (normalize_time(market.get("umaEndDate"))
+                            or normalize_time(market.get("closedTime"))
+                            or normalize_time(market.get("endDate"))
+                            or entry_t)
+
+                # 6) open exactly once
+                bank = open_position(
+                    bank, market, fills, spent_after, shares, entry_t, settle_t, side="NO"
+                )
+                spent += spent_after
+
+                print(market["question"])
+                print(f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} | avg={avg_:.4f} | bank={bank:.2f}")
+                print(f"LOCKED NOW: ${locked_now:.2f} | PEAK LOCKED: ${peak_locked:.2f} at {peak_locked_time}")
+            
+            # optional: settle up to the last entry time of the batch
+            if entries:
+                last_entry = entries[-1][0]
+                bank, _ = settle_due_positions(bank, last_entry, outcome_lookup=my_outcome_func)
+
+            if bank < 10.0:
+                print("Bank below $10; stopping.")
+                break
+
+    except KeyboardInterrupt:
+        print("\n--- INTERRUPTED ---")
+        print(f"First trade time:  {fmt(first_trade_dt)}")
+        print(f"Last settled time: {fmt(last_settle_dt)}")
+        print(f"Locked now: ${locked_now:.2f} | Peak locked: ${peak_locked:.2f} at {peak_locked_time}")
+        # optional: persist to file
+        with open("run_summary.txt", "a", encoding="utf-8") as fh:
+            fh.write(
+                f"STOP {datetime.now(timezone.utc).isoformat()} | "
+                f"first_trade={fmt(first_trade_dt)} | last_settle={fmt(last_settle_dt)} | "
+                f"locked_now={locked_now:.2f} | peak_locked={peak_locked:.2f} @ {peak_locked_time}\n"
             )
-            if shares == 0.0 or spent_after == 0.0:
-                continue
-
-            if not first_trade:
-                first_trade = fills[0]["time"]
-
-            # 5) compute robust settle time
-            settle_t = (normalize_time(market.get("umaEndDate"))
-                        or normalize_time(market.get("closedTime"))
-                        or normalize_time(market.get("endDate"))
-                        or entry_t)
-
-            # 6) open exactly once
-            bank = open_position(
-                bank, market, fills, spent_after, shares, entry_t, settle_t, side="NO"
-            )
-            spent += spent_after
-
-            print(market["question"])
-            print(f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} | avg={avg_:.4f} | bank={bank:.2f}")
-            print(f"LOCKED NOW: ${locked_now:.2f} | PEAK LOCKED: ${peak_locked:.2f} at {peak_locked_time}")
-        
-        # optional: settle up to the last entry time of the batch
-        if entries:
-            last_entry = entries[-1][0]
-            bank, _ = settle_due_positions(bank, last_entry, outcome_lookup=my_outcome_func)
-
-        if bank < 10.0:
-            print("Bank below $10; stopping.")
-            break
+        raise  # if you want the program to actually exit with KeyboardInterrupt
 
 
 def prepare_market_entry(market):
@@ -288,6 +303,24 @@ def sanity_check_locked():
     if abs(s - locked_now) > 1e-6:
         print(f"[WARN] locked_now drift: ledger={locked_now:.2f} vs recomputed={s:.2f}. Resetting to recomputed.")
         locked_now = s
+
+
+def set_first_trade(dt):
+    global first_trade_dt
+    if dt is None:
+        return
+    if first_trade_dt is None or dt < first_trade_dt:
+        first_trade_dt = dt
+
+def bump_last_settle(dt):
+    global last_settle_dt
+    if dt is None:
+        return
+    if last_settle_dt is None or dt > last_settle_dt:
+        last_settle_dt = dt
+
+def fmt(dt):
+    return dt.isoformat() if dt else "N/A"
 
 
 def open_position(bank, market, fills, spent_after, shares, entry_time, est_settle_time, side):
