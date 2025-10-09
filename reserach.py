@@ -318,6 +318,8 @@ def main():
             # 1) settle everything due up to this entry time
             bank, settled = settle_due_positions(bank, entry_t, outcome_lookup=my_outcome_func)
             # (optional) pretty-print settlements here
+            for i in settled:
+                print(f'SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}')
 
             # 2) skip if we already opened this market
             pid = market["conditionId"]
