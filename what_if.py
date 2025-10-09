@@ -188,7 +188,7 @@ def main():
     mk_by_id_global = {}
 
     try:
-        for _ in range(100):
+        while True:
             time.sleep(1)
             limit = 100
             markets = filter_markets(fetch_markets(limit, offset))
@@ -234,13 +234,15 @@ def main():
                     return
 
                 if side == "no":
+                    chosen_side = "NO"
                     sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
                     shares, spent_after, avg_, fills = sim.take_first_no(
                         entry_t, dollars=bet, max_no_price=0.4
                     )
                 elif side == "yes":
+                    chosen_side = "YES"
                     sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
-                    shares, spent_after, avg_, fills = sim.take_first_no(
+                    shares, spent_after, avg_, fills = sim.take_first_yes(
                         entry_t, dollars=bet, max_yes_price=0.4
                     )
 
@@ -255,7 +257,7 @@ def main():
 
                 # 6) open exactly once
                 bank = open_position(
-                    bank, market, fills, spent_after, shares, entry_t, settle_t, side="NO"
+                    bank, market, fills, spent_after, shares, entry_t, settle_t, side=chosen_side
                 )
                 spent += spent_after
 
@@ -755,7 +757,7 @@ def notion_no(trade):
     return float(trade["size"]) * (1 - float(trade["price"]))
 
 
-def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.0):
+def valid_trade(trade, min_spend=2, extreme_price=0.05 ,min_extreme_notional=20.0):
     """
     if trade is too small with too good odds
     """

@@ -252,7 +252,7 @@ def run_simple():
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
         pnl_batch, bank, offset, bets, createdAt, sp = rolling_markets(
-            bank, check="no",
+            bank, check="yes",
             limit=50, offset=offset,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200
@@ -478,7 +478,7 @@ def notion_no(trade):
 """
 if trade is too small with too good odds
 """
-def valid_trade(trade, min_spend=2, extreme_price=0.01 ,min_extreme_notional=20.0):
+def valid_trade(trade, min_spend=2, extreme_price=0.05 ,min_extreme_notional=20.0):
     if not trade:
         return False
     
