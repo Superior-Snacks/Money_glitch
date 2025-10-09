@@ -320,7 +320,10 @@ def main():
             print("Bank below $10; stopping.")
             break
 
-
+# --- locked-capital tracking ---
+locked_now = 0.0              # current locked capital ($)
+peak_locked = 0.0             # highest locked capital ever reached
+peak_locked_time = None       # when the peak happened
 mk_by_id_global = {}
 
 def my_outcome_func(market_id: str) -> str:
@@ -401,13 +404,10 @@ def settle_due_positions(bank, now_utc, outcome_lookup):
         })
     return bank, settlements
 
-def remove_by_id(lst, target_id):
-    """Remove dict with matching 'id' key from list (in place)."""
-    for i, item in enumerate(lst):
-        if item.get("id") == target_id:
-            del lst[i]
-            return True
-    return False
+
+def recompute_locked_from_positions():
+    # authoritative recompute if you ever get out of sync
+    return sum(p["spent_after"] for p in positions_by_id.values())
 
 
 
