@@ -299,45 +299,65 @@ def main():
         markets = filter_markets(fetch_markets(limit, offset))
         offset += len(markets)
 
-        # sort by entry proxy (createdAt/startDate) for a stable timeline
-        markets = sorted(
-            markets,
-            key=lambda m: normalize_time(m.get("createdAt")) or normalize_time(m.get("startDate"))
-        )
-
-        # index for outcomes across batches
+        # make outcomes visible across ALL batches
         for m in markets:
             mk_by_id_global[m["conditionId"]] = m
 
-        for market in markets:
-            # --- peek the entry time you will use
-            # we need a trades preview; if that's too heavy, call timed_rolling_markets and let it compute
-            blocks = normalize_trades(fetch_trades(market))
+        # prepare entries once, sort by actual first trade time
+        entries = []
+        for m in markets:
+            blocks = normalize_trades(fetch_trades(m))
             if not blocks:
                 continue
             entry_t = normalize_time(blocks[0]["time"])
+            entries.append((entry_t, m, blocks))
 
-            # 1) Settle everything that should have resolved BEFORE this entry time
+        entries.sort(key=lambda x: x[0])
+
+        for entry_t, market, blocks in entries:
+            # 1) settle everything due up to this entry time
             bank, settled = settle_due_positions(bank, entry_t, outcome_lookup=my_outcome_func)
-            # (print if you want)
+            # (optional) pretty-print settlements here
 
-            # 2) Open the position at this market (locks capital)
-            bank, spent_delta, _, _ = timed_rolling_markets(
-                bank, check="no", market=market,
-                max_price_cap=0.4, fee_bps=600, slip_bps=200
+            # 2) skip if we already opened this market
+            pid = market["conditionId"]
+            if pid in positions_by_id:
+                continue
+
+            # 3) size bet
+            bet = 100.0 if bank >= 100.0 else (float(bank) if bank >= 10.0 else 0.0)
+            if bet <= 0.0:
+                print("Bank too low; stopping.")
+                return
+
+            # 4) simulate fills directly with these blocks (no second fetch)
+            sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
+            shares, spent_after, avg_, fills = sim.take_first_no(
+                entry_t, dollars=bet, max_no_price=0.4
             )
-            spent += spent_delta
+            if shares == 0.0 or spent_after == 0.0:
+                continue
 
-            # 3) (Optional) print live lock stats
-            if settled:
-                for i in settled:
-                    print(f"SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}")
+            # 5) compute robust settle time
+            settle_t = (normalize_time(market.get("umaEndDate"))
+                        or normalize_time(market.get("closedTime"))
+                        or normalize_time(market.get("endDate"))
+                        or entry_t)
+
+            # 6) open exactly once
+            bank = open_position(
+                bank, market, fills, spent_after, shares, entry_t, settle_t, side="NO"
+            )
+            spent += spent_after
+
+            print(market["question"])
+            print(f"fills={len(fills)} | shares={shares:.2f} | spent(after)={spent_after:.2f} | avg={avg_:.4f} | bank={bank:.2f}")
             print(f"LOCKED NOW: ${locked_now:.2f} | PEAK LOCKED: ${peak_locked:.2f} at {peak_locked_time}")
-
-
-        # After batch, settle up to the last market's settle/entry time or 'now'
-        # For historical: settle to max known settle time if you want to fully finish the batch
-        # bank, settled_tail = settle_due_positions(bank, datetime.now(timezone.utc), my_outcome_func)
+        
+        # optional: settle up to the last entry time of the batch
+        if entries:
+            last_entry = entries[-1][0]
+            bank, _ = settle_due_positions(bank, last_entry, outcome_lookup=my_outcome_func)
 
         if bank < 10.0:
             print("Bank below $10; stopping.")
@@ -349,6 +369,13 @@ peak_locked = 0.0             # highest locked capital ever reached
 peak_locked_time = None       # when the peak happened
 mk_by_id_global = {}
 
+def prepare_market_entry(market):
+    blocks = normalize_trades(fetch_trades(market))
+    if not blocks:
+        return None
+    entry_t = normalize_time(blocks[0]["time"])
+    return entry_t, blocks
+
 def my_outcome_func(market_id: str) -> str:
     mk = mk_by_id_global.get(market_id)
     if not mk:
@@ -359,6 +386,13 @@ def my_outcome_func(market_id: str) -> str:
         return "NO"
     y, n = float(arr[0]), float(arr[1])
     return "YES" if y > n else "NO"
+
+def sanity_check_locked():
+    s = sum(p["spent_after"] for p in positions_by_id.values())
+    if abs(s - locked_now) > 1e-6:
+        print(f"[WARN] locked_now drift: ledger={locked_now:.2f} vs recomputed={s:.2f}. Resetting to recomputed.")
+        global locked_now
+        locked_now = s
 
 
 SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
