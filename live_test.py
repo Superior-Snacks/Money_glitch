@@ -11,6 +11,11 @@ from dataclasses import dataclass
 import os
 
 """
+just start slow on new markets
+trding current open not neccisarry, but not bad to check
+"""
+
+"""
 fyrst sækja alla active markaði, síðan fara yfir book hjáhverjum og einum og sim hvort/hversu mikið er keypt,
 savea kaupið og potential winnings og allt info i kringum það í file, síðan á 10 min fresti kanski 1 min sækja alla nýja markaði og ef það er liquidity kaupa,
 annars bíða þar til það er liquidity, hafa sér pending file, svo 1 klst fresti checka hvort markaðir hafa klárast.
