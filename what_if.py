@@ -243,7 +243,7 @@ def main():
                     shares, spent_after, avg_, fills = sim.take_first_no(
                         entry_t, dollars=bet, max_yes_price=0.4
                     )
-                    
+
                 if shares == 0.0 or spent_after == 0.0:
                     continue
 
@@ -284,6 +284,8 @@ def main():
         print(f"Last settled time: {last_settle_dt or 'N/A'}")
         print(f"Avg time to settle: {format_duration(avg_settle_sec)} ({avg_settle_sec:.0f}s)")
         print(f"Avg open markets (time-weighted): {avg_open:.2f}")
+        print(f"bank: {bank}\n")
+        print("------------------")
 
         # (optional) append to file)
         with open("run_summary.txt", "a", encoding="utf-8") as fh:
