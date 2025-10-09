@@ -164,6 +164,12 @@ class SimMarket:
         print(shares, spent_after, avg_yes, fills)
         return shares, spent_after, avg_yes, fills
     
+
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_HISTORY = "https://clob.polymarket.com/prices-history"
+BASE_TRADES = "http://data-api.polymarket.com/trades"
+BASE_BOOK = "https://clob.polymarket.com/book"
+    
 # --- locked-capital tracking ---
 locked_now = 0.0              # current locked capital ($)
 peak_locked = 0.0             # highest locked capital ever reached
@@ -365,11 +371,6 @@ def recompute_locked_from_positions():
     # authoritative recompute if you ever get out of sync
     return sum(p["spent_after"] for p in positions_by_id.values())
 
-
-BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
-BASE_HISTORY = "https://clob.polymarket.com/prices-history"
-BASE_TRADES = "http://data-api.polymarket.com/trades"
-BASE_BOOK = "https://clob.polymarket.com/book"
 
 # 2) Safe GET with strict timeouts (connect, read)
 def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
