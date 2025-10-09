@@ -331,7 +331,7 @@ def main():
             # 3) (Optional) print live lock stats
             if settled:
                 for i in settled:
-                    print(f"SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]}")
+                    print(f"SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}")
             print(f"LOCKED NOW: ${locked_now:.2f} | PEAK LOCKED: ${peak_locked:.2f} at {peak_locked_time}")
 
 
