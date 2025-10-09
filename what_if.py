@@ -273,6 +273,7 @@ def prepare_market_entry(market):
     entry_t = normalize_time(blocks[0]["time"])
     return entry_t, blocks
 
+
 def my_outcome_func(market_id: str) -> str:
     mk = mk_by_id_global.get(market_id)
     if not mk:
