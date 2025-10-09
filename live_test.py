@@ -9,3 +9,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass
 import os
+
+def main():
+    ...
+
+
+if __name__ == "__main__":
+    main()
