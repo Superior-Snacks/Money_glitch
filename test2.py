@@ -301,7 +301,7 @@ def test2(
     offset=4811 + 40000,
     limit=50,
     target_no_usd=100.0,
-    fee_bps=100,              # 1% taker fee; set 0 to ignore
+    fee_bps=600,              # 1% taker fee; set 0 to ignore
     window_s=5,               # block window (seconds)
     min_trade_notional=5.0,   # ignore dust (< $5 NO notional)
     min_price_no=0.02,        # ignore NO prices < 2% unless enough notional in-window
