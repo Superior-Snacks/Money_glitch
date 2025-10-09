@@ -169,6 +169,7 @@ peak_locked = 0.0             # highest locked capital ever reached
 peak_locked_time = None       # when the peak happened
 first_trade_dt = None      # earliest entry time we saw (UTC datetime)
 last_settle_dt = None
+settled_history = []
 mk_by_id_global = {}
 SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
 
@@ -268,18 +269,23 @@ def main():
                 break
 
     except KeyboardInterrupt:
-        print("\n--- INTERRUPTED ---")
-        print(f"First trade time:  {fmt(first_trade_dt)}")
-        print(f"Last settled time: {fmt(last_settle_dt)}")
-        print(f"Locked now: ${locked_now:.2f} | Peak locked: ${peak_locked:.2f} at {peak_locked_time}")
-        # optional: persist to file
+        avg_settle_sec = average_time_to_settle_seconds()
+        avg_open = average_open_markets()
+
+        print("\n--- STATS ---")
+        print(f"First trade time:  {first_trade_dt or 'N/A'}")
+        print(f"Last settled time: {last_settle_dt or 'N/A'}")
+        print(f"Avg time to settle: {format_duration(avg_settle_sec)} ({avg_settle_sec:.0f}s)")
+        print(f"Avg open markets (time-weighted): {avg_open:.2f}")
+
+        # (optional) append to file)
         with open("run_summary.txt", "a", encoding="utf-8") as fh:
             fh.write(
-                f"STOP {datetime.now(timezone.utc).isoformat()} | "
-                f"first_trade={fmt(first_trade_dt)} | last_settle={fmt(last_settle_dt)} | "
-                f"locked_now={locked_now:.2f} | peak_locked={peak_locked:.2f} @ {peak_locked_time}\n"
+                f"SUMMARY {datetime.now(timezone.utc).isoformat()} | "
+                f"avg_settle={avg_settle_sec:.0f}s | avg_open={avg_open:.2f} | "
+                f"first_trade={first_trade_dt} | last_settle={last_settle_dt}\n"
             )
-        raise  # if you want the program to actually exit with KeyboardInterrupt
+        raise
 
 
 def prepare_market_entry(market):
@@ -326,6 +332,93 @@ def bump_last_settle(dt):
 
 def fmt(dt):
     return dt.isoformat() if dt else "N/A"
+
+
+def average_time_to_settle_seconds():
+    """Mean (settle_time - entry_time) over actually settled positions."""
+    if not settled_history:
+        return 0.0
+    total = 0.0
+    n = 0
+    for s in settled_history:
+        et, st = s.get("entry_time"), s.get("settle_time")
+        if isinstance(et, datetime) and isinstance(st, datetime):
+            total += (st - et).total_seconds()
+            n += 1
+    return (total / n) if n else 0.0
+
+
+def format_duration(seconds: float) -> str:
+    """Nice human readout."""
+    sec = int(round(seconds))
+    days, rem = divmod(sec, 86400)
+    hrs, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    parts = []
+    if days: parts.append(f"{days}d")
+    if hrs:  parts.append(f"{hrs}h")
+    if mins: parts.append(f"{mins}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
+
+
+def average_open_markets(end_time: datetime | None = None) -> float:
+    """
+    Time-weighted average concurrent open positions over [t0, end_time].
+    Includes both settled positions (from settled_history) and currently-open ones (positions_by_id).
+    """
+    # collect open events (entries) and close events (settles)
+    open_events = []
+    close_events = []
+
+    # from settled (closed) positions
+    for s in settled_history:
+        if isinstance(s.get("entry_time"), datetime):
+            open_events.append(s["entry_time"])
+        if isinstance(s.get("settle_time"), datetime):
+            close_events.append(s["settle_time"])
+
+    # from currently-open positions
+    for p in positions_by_id.values():
+        if isinstance(p.get("entry_time"), datetime):
+            open_events.append(p["entry_time"])
+        # no close yet; they remain open to end_time
+
+    if not open_events:
+        return 0.0
+
+    # analysis window
+    t0 = min(open_events)
+    if end_time is None:
+        end_time = last_settle_dt or datetime.now(timezone.utc)
+    if end_time <= t0:
+        return 0.0
+
+    # build event list: (+1 at entry), (-1 at settle)
+    events = []
+    for t in open_events:
+        events.append((t, +1))
+    for t in close_events:
+        events.append((t, -1))
+
+    # plus a sentinel to close the integration window
+    events.append((end_time, 0))
+
+    # sweep
+    events.sort(key=lambda x: x[0])
+    cur_t = t0
+    cur_open = 0
+    weighted_sum = 0.0
+
+    for t, delta in events:
+        if t > cur_t:
+            dt = (t - cur_t).total_seconds()
+            weighted_sum += cur_open * dt
+            cur_t = t
+        cur_open += delta  # apply delta at this timestamp
+
+    total_time = (end_time - t0).total_seconds()
+    return weighted_sum / total_time if total_time > 0 else 0.0
 
 
 def open_position(bank, market, fills, spent_after, shares, entry_time, est_settle_time, side):
@@ -398,11 +491,18 @@ def settle_due_positions(bank, now_utc, outcome_lookup):
             proceeds_after = 0.0
             pnl = -spent
 
-        settlements.append({
+        rec = {
             "id": pid, "question": pos["question"],
             "won": won, "spent": spent, "proceeds": proceeds_after, "pnl": pnl,
             "entry_time": pos["entry_time"], "settle_time": pos["settle_time"]
-        })
+        }
+        settlements.append(rec)
+        settled_history.append(rec)
+
+        # keep last_settle_dt current
+        if last_settle_dt is None or pos["settle_time"] > last_settle_dt:
+            last_settle_dt = pos["settle_time"]
+
     return bank, settlements
 
 
