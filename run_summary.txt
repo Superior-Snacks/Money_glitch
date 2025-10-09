@@ -20,3 +20,7 @@ SUMMARY 2025-10-09T16:11:13.044359+00:00 | avg_settle=0s | avg_open=0.00 | first
 bank: 5000.0
 SUMMARY 2025-10-09T16:13:39.336019+00:00 | avg_settle=1576932s | avg_open=5.45 | first_trade=2024-04-16 08:16:16+00:00 | last_settle=2024-11-06 16:28:58+00:00
 bank: 46487.07800241715
+SUMMARY 2025-10-09T16:15:32.315005+00:00 | avg_settle=1576932s | avg_open=5.45 | first_trade=2024-04-16 08:16:16+00:00 | last_settle=2024-11-06 16:28:58+00:00
+bank: 46487.07800241715
+SUMMARY 2025-10-09T16:15:35.886166+00:00 | avg_settle=0s | avg_open=0.00 | first_trade=None | last_settle=None
+bank: 5000.0

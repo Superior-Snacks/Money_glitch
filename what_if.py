@@ -570,7 +570,6 @@ def settle_due_positions(bank, now_utc, outcome_lookup):
 
         # >>> pass the side you actually took <<<
         fallback_side = pos.get("side", "NO")
-        print(fallback_side)
         outcome = outcome_lookup(pid, fallback_side)
 
         spent = pos["spent_after"]
