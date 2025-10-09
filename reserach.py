@@ -508,14 +508,14 @@ def fetch_markets(limit=20, offset=4811):
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    print(payload[0].keys())
+    #print(payload[0].keys())
     return payload
 
 def filter_markets(markets):
     """
     making sure to only check the weird bets
     """
-    print("filtering markets")
+    #print("filtering markets")
     if not markets:
         print("ERROR")
         return None
