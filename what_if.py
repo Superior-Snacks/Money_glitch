@@ -388,16 +388,14 @@ def fetch_markets(limit=20, offset=4811):
     r = requests.get(BASE_GAMMA, params=params, timeout=30)
     r.raise_for_status()
     payload = r.json()
-    #print(payload[0].keys())
     return payload
+
 
 def filter_markets(markets):
     """
     making sure to only check the weird bets
     """
-    #print("filtering markets")
     if not markets:
-        print("ERROR")
         return None
     cleaned = []
     for mk in markets:
@@ -408,14 +406,13 @@ def filter_markets(markets):
             if outcomes == ["Yes", "No"] and mk["startDate"]:
                 cleaned.append(mk)
         except:
-            #print("--------------------------------------------------------------------------------------------------------------------------")
-            print("ERROR NOT STARTDATE FOUND?")
-            #print("--------------------------------------------------------------------------------------------------------------------------")
+            continue
     print(f"valid markets {len(cleaned)}")
     cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
     return cleaned
 
-def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
+
+def fetch_trades(market_dict):
     """Pull 100 first trades"""
     cid = market_dict["conditionId"]
     time.sleep(1)
@@ -430,7 +427,8 @@ def fetch_trades(market_dict, page=500, max_pages=200, per_market_budget_s=45):
         return payload
     except:
         return None
-    
+
+
 def normalize_time(value, default=None):
     """
     Converts various Polymarket-style date/time formats into a UTC datetime.
