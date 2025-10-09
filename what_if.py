@@ -182,6 +182,7 @@ def main():
     offset = 4811 + 5900
     spent = 0.0
     desired_bet = 100
+    side = "no"
 
     global mk_by_id_global
     mk_by_id_global = {}
@@ -232,11 +233,17 @@ def main():
                     print("Bank too low; stopping.")
                     return
 
-                # 4) simulate fills directly with these blocks (no second fetch)
-                sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
-                shares, spent_after, avg_, fills = sim.take_first_no(
-                    entry_t, dollars=bet, max_no_price=0.4
-                )
+                if side == "no":
+                    sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
+                    shares, spent_after, avg_, fills = sim.take_first_no(
+                        entry_t, dollars=bet, max_no_price=0.4
+                    )
+                elif side == "yes":
+                    sim = SimMarket(blocks, fee_bps=600, slip_bps=200)
+                    shares, spent_after, avg_, fills = sim.take_first_no(
+                        entry_t, dollars=bet, max_yes_price=0.4
+                    )
+                    
                 if shares == 0.0 or spent_after == 0.0:
                     continue
 
