@@ -348,20 +348,31 @@ def open_position(bank, market, fills, spent_after, shares, entry_time, est_sett
     """
     Lock capital immediately. No P&L yet.
     """
+    global locked_now, peak_locked, peak_locked_time
+
     pid = market["conditionId"]
     bank -= spent_after  # cash leaves the bank and is now locked
+
     pos = {
         "id": pid,
         "question": market["question"],
         "entry_time": entry_time,          # datetime (UTC)
         "settle_time": est_settle_time,    # datetime (UTC)
-        "spent_after": float(spent_after), # includes your 6% or whatever fee model
+        "spent_after": float(spent_after), # includes fees/slippage
         "shares": float(shares),
-        "side": side,                      # or "YES"
+        "side": side,                      # "NO" or "YES"
         "fills": fills,
     }
+
     positions_by_id[pid] = pos
     heapq.heappush(settle_heap, (est_settle_time, pid))
+
+    # ---- locked capital accounting ----
+    locked_now += pos["spent_after"]
+    if locked_now > peak_locked:
+        peak_locked = locked_now
+        peak_locked_time = entry_time
+
     return bank
 
 def settle_due_positions(bank, now_utc, outcome_lookup):
