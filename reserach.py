@@ -306,6 +306,8 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
 locked_now = 0.0              # current locked capital ($)
 peak_locked = 0.0             # highest locked capital ever reached
 peak_locked_time = None       # when the peak happened
+first_trade = None
+last_settle = None
 mk_by_id_global = {}
 SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
 
