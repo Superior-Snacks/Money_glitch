@@ -280,11 +280,19 @@ def timed_rolling_markets(bank, check, market, max_price_cap=None, fee_bps=600, 
         print(f"[skip] {market.get('question','<no title>')}: {e}")
         return bank, spent, None, None
 
-"""
-run through rolling having return the two lists, one with when taken other with win con and time of win
-when last bought is later than first winc con, then release proftit/loss and add +- to bank
-now only add 1 to rolling amrket at a time, but request n keep alot of markets in a list and roll through with a while len x
-"""
+
+
+# --- locked-capital tracking ---
+locked_now = 0.0              # current locked capital ($)
+peak_locked = 0.0             # highest locked capital ever reached
+peak_locked_time = None       # when the peak happened
+mk_by_id_global = {}
+SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
+
+# --- position store ---
+positions_by_id = {}         # id -> position dict
+settle_heap = []             # (time1, id) min-heap for next resolution
+
 def main():
     bank = 5000.0
     offset = 4811 + 5900
@@ -365,11 +373,6 @@ def main():
             print("Bank below $10; stopping.")
             break
 
-# --- locked-capital tracking ---
-locked_now = 0.0              # current locked capital ($)
-peak_locked = 0.0             # highest locked capital ever reached
-peak_locked_time = None       # when the peak happened
-mk_by_id_global = {}
 
 def prepare_market_entry(market):
     blocks = normalize_trades(fetch_trades(market))
@@ -396,12 +399,6 @@ def sanity_check_locked():
         global locked_now
         locked_now = s
 
-
-SETTLE_FEE = 0.01  # 1% on winnings (only when you win)
-
-# --- position store ---
-positions_by_id = {}         # id -> position dict
-settle_heap = []             # (time1, id) min-heap for next resolution
 
 def open_position(bank, market, fills, spent_after, shares, entry_time, est_settle_time, side):
     """
