@@ -41,12 +41,17 @@ class SimMarket:
         self.slip = slip_bps/10000.0
 
     def take_first_no(self, t_from, dollars=100.0, max_no_price=None):
-        spent_pre = 0.0     # pre-fee notional spent on NO
-        shares = 0.0
-        fills = []          # list of dicts
+        # normalize t_from to epoch seconds
+        if isinstance(t_from, datetime):
+            t_from_ts = int(t_from.replace(tzinfo=timezone.utc).timestamp())
+        else:
+            t_from_ts = int(t_from)
 
+        spent_pre = 0.0
+        shares = 0.0
+        fills = []
         for b in self.blocks:
-            if b["side"] != "no" or b["time"] < t_from:
+            if b["side"] != "no" or int(b["time"]) < t_from_ts:
                 continue
             p_no = float(b["price_no"])
             if max_no_price is not None and p_no > max_no_price:
@@ -88,12 +93,17 @@ class SimMarket:
         return shares, spent_after, avg_no, fills
 
     def take_first_yes(self, t_from, dollars=100.0, max_yes_price=None):
+        # normalize t_from to epoch seconds
+        if isinstance(t_from, datetime):
+            t_from_ts = int(t_from.replace(tzinfo=timezone.utc).timestamp())
+        else:
+            t_from_ts = int(t_from)
+
         spent_pre = 0.0
         shares = 0.0
         fills = []
-
         for b in self.blocks:
-            if b["side"] != "yes" or b["time"] < t_from:
+            if b["side"] != "no" or int(b["time"]) < t_from_ts:
                 continue
             p_yes = float(b["price_yes"])
             if max_yes_price is not None and p_yes > max_yes_price:
@@ -393,10 +403,10 @@ def my_outcome_func(market_id: str) -> str:
     return "YES" if y > n else "NO"
 
 def sanity_check_locked():
+    global locked_now
     s = sum(p["spent_after"] for p in positions_by_id.values())
     if abs(s - locked_now) > 1e-6:
         print(f"[WARN] locked_now drift: ledger={locked_now:.2f} vs recomputed={s:.2f}. Resetting to recomputed.")
-        global locked_now
         locked_now = s
 
 
