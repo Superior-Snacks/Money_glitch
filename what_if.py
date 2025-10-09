@@ -112,28 +112,39 @@ class SimMarket:
         spent_pre = 0.0
         shares = 0.0
         fills = []
+
         for b in self.blocks:
-            if b["side"] != "no" or int(b["time"]) < t_from_ts:
+            # time + side filter
+            if b.get("side") != "yes" or int(b.get("time", 0)) < t_from_ts:
                 continue
-            p_yes = float(b["price_yes"])
-            if max_yes_price is not None and p_yes > max_yes_price:
+
+            p_no  = float(b.get("price_no", 0.0))
+            p_yes = float(b.get("price_yes", 0.0))
+            avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
+            blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
+
+            # optional price cap (skip too-expensive NO)
+            if max_yes_price is not None and p_no > max_yes_price:
                 continue
-            available = float(b.get("notional_yes", 0.0))
-            if available <= 0:
+
+            # robust guards
+            if avail <= 0.0 or blk_sh <= 0.0:
                 continue
 
             need = dollars - spent_pre
-            if need <= 0:
+            if need <= 0.0:
                 break
 
-            take = min(need, available)
-            add_shares = take / p_yes
+            # proportional allocation: no division by p_no
+            take = min(need, avail)                # $ notional we take from this block
+            ratio = take / avail                   # fraction of block taken
+            add_shares = blk_sh * ratio            # shares corresponding to that fraction
 
             fills.append({
                 "time": b["time"],
-                "side": "yes",
+                "side": "no",
+                "price_no": p_no,
                 "price_yes": p_yes,
-                "price_no": float(b["price_no"]),
                 "take_notional_pre_fee": take,
                 "take_shares": add_shares,
                 "block": b,
