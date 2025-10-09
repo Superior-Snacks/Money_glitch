@@ -213,6 +213,7 @@ def main():
             for i in settled:
                 print(f'SETTLED ${i["proceeds"]:.2f} | {i["entry_time"]} || {i["settle_time"]} || {i["question"]}')
 
+            #last_settle = sorted(settled, key=lambda c: c["settle_time"])   #sort(key=lambda x: x[0])
             # 2) skip if we already opened this market
             pid = market["conditionId"]
             if pid in positions_by_id:
