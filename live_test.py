@@ -456,16 +456,16 @@ def main():
                 fetch_book_fn=fetch_book,
                 open_position_fn=open_position_fn,
                 bet_size_fn=bet_size_fn,
-                max_checks_per_tick=50,   # tune: 25–100 depending on rate limits
+                max_checks_per_tick=150,        # bump if your machine/API can handle
+                min_probe_when_idle=40,         # ensure progress even when nothing due
+                probe_strategy="oldest"         # or "random"
             )
             log_run_snapshot(bank, total_trades_taken)
 
             if opened == 0 and checked == 0:
-                # nothing due right now → short nap
-                time.sleep(mgr.poll_every)   # e.g., 3–5s
+                time.sleep(mgr.poll_every)      # nothing to do → short nap (3s)
             else:
-                # we just did work; tiny breather to be polite
-                time.sleep(0.25)
+                time.sleep(0.15)                # we worked → tiny breather
     except KeyboardInterrupt:
         print("\nStopped.")
         log_run_snapshot(bank, total_trades_taken)
