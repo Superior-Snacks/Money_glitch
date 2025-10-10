@@ -40,6 +40,7 @@ def main():
         print(f"{i["question"]}")
     print(len(markets))
     print(len(open_markets))
+    print(len(new_markets))
     #print(f)
 
 
@@ -200,7 +201,6 @@ def fech_file(filename):
         for line in file:
             result.append(line)
     return result
-
 
 def save_to_file(filename, data):
     # ensure parent folder exists
