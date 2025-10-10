@@ -29,6 +29,11 @@ def fetch_markets():
     fetch all active markets, for the use of their id's
     """
 
+def filter_markets():
+    """
+    filter markets by date and type
+    """
+
 def fetch_book(market_id):
     """
     fetch book for a single market
