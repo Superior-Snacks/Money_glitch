@@ -42,6 +42,24 @@ BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
 
+def make_session():
+    s = requests.Session()
+    retry = Retry(
+        total=5,
+        connect=5,
+        read=5,
+        backoff_factor=0.5,  # 0.5, 1.0, 2.0, ...
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=("GET", "POST"),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    s.headers.update({"User-Agent": "research-bot/1.0"})
+    return s
+SESSION = make_session()
+
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
@@ -362,24 +380,6 @@ def main():
             time.sleep(mgr.poll_every)
     except KeyboardInterrupt:
         print("\nStopped.")
-
-def make_session():
-    s = requests.Session()
-    retry = Retry(
-        total=5,
-        connect=5,
-        read=5,
-        backoff_factor=0.5,  # 0.5, 1.0, 2.0, ...
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=("GET", "POST"),
-        raise_on_status=False,
-    )
-    adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
-    s.mount("https://", adapter)
-    s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "research-bot/1.0"})
-    return s
-SESSION = make_session()
 
 
 from datetime import datetime, timedelta, timezone
