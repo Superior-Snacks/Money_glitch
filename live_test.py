@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from dataclasses import dataclass
 import os
+import bisect
 import re
+import heapq
 
 """
 just start slow on new markets
@@ -31,22 +32,71 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
-    ...
+    m = fetch_markets()
+    f = filter_markets(m)
+    print(f)
 
 
-def fetch_markets(limit=20):
+def make_session():
+    s = requests.Session()
+    retry = Retry(
+        total=5,
+        connect=5,
+        read=5,
+        backoff_factor=0.5,  # 0.5, 1.0, 2.0, ...
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=("GET", "POST"),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    s.headers.update({"User-Agent": "research-bot/1.0"})
+    return s
+SESSION = make_session()
+
+
+def fetch_markets(limit=20, verbose=True, sleep_between=1.0):
     """
-    fetch all active markets, for the use of their id's
+    Pulls all currently open Polymarket markets (YES/NO type).
+    Returns a list of market dicts.
     """
-    params = {
-        "limit": limit,
-        "outcomes": ["YES", "NO"],
-        "sortBy": "startDate",
-        "orderBy": "dec"}
-    r = requests.get(BASE_GAMMA, params=params, timeout=30)
-    r.raise_for_status()
-    payload = r.json()
-    return payload
+    url = BASE_GAMMA
+    all_markets = []
+    offset = 0
+
+    while True:
+        params = {
+            "limit": limit,
+            "offset": offset,
+            "closed": False,              # <- critical: open only
+            "outcomes": ["YES", "NO"],
+            "sortBy": "startDate",
+            "order": "asc"
+        }
+
+        try:
+            resp = SESSION.get(url, params=params, timeout=20)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            print(f"[WARN] Gamma fetch failed at offset {offset}: {e}")
+            break
+
+        if not data:
+            break
+
+        all_markets.extend(data)
+        if verbose:
+            print(f"Fetched {len(data)} markets (offset {offset})")
+
+        if len(data) < limit:
+            break  # no more pages
+        offset += limit
+        time.sleep(sleep_between)
+
+    print(f"✅ Total open markets fetched: {len(all_markets)}")
+    return all_markets
 
 def filter_markets(markets):
     """
