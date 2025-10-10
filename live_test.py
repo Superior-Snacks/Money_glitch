@@ -320,7 +320,7 @@ peak_locked_time = None
 first_trade_dt = None
 last_settle_dt = None
 def main():
-    bank = 5000.0
+    bank = 5000000.0
     desired_bet = 100.0
     total_trades_taken = 0  # <-- define here
 
