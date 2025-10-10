@@ -32,8 +32,8 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
-    open_markets = fetch_all_open_markets(sleep_between=0.3, verbose=True)
-    print(f"Ready to process {len(open_markets)} markets")
+    open_markets = fetch_all_open_yesno_markets(limit=100, sleep_between=0.3, verbose=True)
+    print(len(open_markets))
     for i in open_markets:
         print(f"{i["question"]} || {i["startdate"]}")
     #print(f)
@@ -58,48 +58,58 @@ def make_session():
 SESSION = make_session()
 
 
-def fetch_all_open_markets(limit=100, sleep_between=0.25, verbose=True):
-    """
-    Fetch all markets, then filter locally to open YES/NO markets.
-    Avoids server-side filters that can cause 422.
-    """
-    url = BASE_GAMMA
-    all_markets, offset = [], 0
+def fetch_markets_page(offset=0, limit=100, order_field="startDate", ascending=True):
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "order": order_field,        # e.g., "startDate" or "createdAt"
+        "ascending": str(ascending).lower(),  # "true" | "false"
+        # optional server-side filter examples:
+        # "closed": False,
+        # "start_date_min": "2024-01-01T00:00:00Z",
+        # "start_date_max": "2025-01-01T00:00:00Z",
+    }
+    r = SESSION.get(BASE_GAMMA, params=params, timeout=20)
+    r.raise_for_status()
+    return r.json()
 
+def fetch_all_open_yesno(limit=100, order_field="startDate", ascending=True, sleep_between=0.25):
+    all_rows, offset = [], 0
     while True:
-        params = {
-            "limit": limit,
-            "offset": offset,
-            "sortBy": "startDate",   # keep order stable for you
-            "order": "asc",
-            # deliberately NOT sending: closed, outcomes
-        }
         try:
-            resp = SESSION.get(url, params=params, timeout=20)
-            resp.raise_for_status()
-            batch = resp.json()
+            page = fetch_markets_page(offset=offset, limit=limit, order_field=order_field, ascending=ascending)
         except requests.HTTPError as e:
-            # if we hit a 422 or anything transient, stop gracefully
-            if verbose:
-                print(f"[WARN] Gamma fetch failed at offset {offset}: {e}")
-            break
-        except Exception as e:
-            if verbose:
-                print(f"[WARN] Gamma fetch error at offset {offset}: {e}")
-            break
+            print(f"[WARN] Gamma fetch failed at offset {offset} with {order_field=}, {ascending=}: {e}")
+            # gentle fallback: drop ordering if server complains
+            r = SESSION.get(BASE_GAMMA, params={"limit": limit, "offset": offset}, timeout=20)
+            r.raise_for_status()
+            page = r.json()
 
-        if not batch:
+        if not page:
             break
 
-        all_markets.extend(batch)
-        if verbose:
-            print(f"Fetched {len(batch)} markets (offset {offset})")
-
-        if len(batch) < limit:
+        all_rows.extend(page)
+        if len(page) < limit:
             break
         offset += limit
         if sleep_between:
             time.sleep(sleep_between)
+
+    # client-side filter: open & exact Yes/No
+    def is_yesno_open(m):
+        outs = m.get("outcomes")
+        if isinstance(outs, str):
+            try:
+                outs = json.loads(outs)
+            except Exception:
+                outs = None
+        is_open = (m.get("closed") is False) or (m.get("acceptingOrders") is True) or (m.get("active") is True)
+        return outs == ["Yes", "No"] and is_open
+
+    cleaned = [m for m in all_rows if is_yesno_open(m)]
+    # ensure deterministic order locally too
+    cleaned.sort(key=lambda m: m.get("startDate") or m.get("createdAt") or "")
+    return cleaned
 
 def filter_markets(markets):
     """
@@ -147,7 +157,7 @@ def save_to_file(filename, data):
         if file.tell() > 0:
             file.write("\n")
         file.write(data + "\n")
-        
+
 def normalize_time(value, default=None):
     """
     Converts various Polymarket-style date/time formats into a UTC datetime.
