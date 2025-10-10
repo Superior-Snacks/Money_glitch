@@ -174,8 +174,8 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
                 continue
             print(datetime.fromtimestamp(int(trades[0]["time"]), tz=timezone.utc))
             # sizing
-            if bank >= 100.0:
-                bet = 100.0
+            if bank >= 20.0:
+                bet = 10.0
             elif bank >= 10.0:
                 bet = float(bank)          # go all-in if small
             else:

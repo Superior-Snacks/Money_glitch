@@ -32,10 +32,12 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
-    open_markets = fetch_all_open_yesno_markets(limit=100, sleep_between=0.3, verbose=True)
+    open_markets = fetch_open_yesno_fast()
+    markets = [m for m in open_markets if is_actively_tradable(m)]
+    for i in markets:
+        print(f"{i["question"]}")
+    print(len(markets))
     print(len(open_markets))
-    for i in open_markets:
-        print(f"{i["question"]} || {i["startdate"]}")
     #print(f)
 
 
@@ -58,58 +60,89 @@ def make_session():
 SESSION = make_session()
 
 
-def fetch_markets_page(offset=0, limit=100, order_field="startDate", ascending=True):
+from datetime import datetime, timedelta, timezone
+
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+
+def fetch_open_yesno_fast(limit=250, max_pages=20, days_back=90,
+                          require_clob=True, min_liquidity=None, min_volume=None,
+                          session=SESSION, verbose=True):
+    """
+    Quickly fetch currently tradable Yes/No markets without walking full history.
+    """
     params = {
         "limit": limit,
-        "offset": offset,
-        "order": order_field,        # e.g., "startDate" or "createdAt"
-        "ascending": str(ascending).lower(),  # "true" | "false"
-        # optional server-side filter examples:
-        # "closed": False,
-        # "start_date_min": "2024-01-01T00:00:00Z",
-        # "start_date_max": "2025-01-01T00:00:00Z",
+        "order": "startDate",           # stable ordering so offset works
+        "ascending": False,             # newest first
+        "closed": False,                # only open
     }
-    r = SESSION.get(BASE_GAMMA, params=params, timeout=20)
-    r.raise_for_status()
-    return r.json()
+    # time window (reduce dataset)
+    if days_back:
+        params["start_date_min"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+    if require_clob:
+        params["enableOrderBook"] = True
+    if min_liquidity is not None:
+        params["liquidity_num_min"] = float(min_liquidity)
+    if min_volume is not None:
+        params["volume_num_min"] = float(min_volume)
 
-def fetch_all_open_yesno(limit=100, order_field="startDate", ascending=True, sleep_between=0.25):
-    all_rows, offset = [], 0
-    while True:
+    all_rows, seen_ids = [], set()
+    offset, pages = 0, 0
+
+    while pages < max_pages:
+        q = dict(params, offset=offset)
         try:
-            page = fetch_markets_page(offset=offset, limit=limit, order_field=order_field, ascending=ascending)
-        except requests.HTTPError as e:
-            print(f"[WARN] Gamma fetch failed at offset {offset} with {order_field=}, {ascending=}: {e}")
-            # gentle fallback: drop ordering if server complains
-            r = SESSION.get(BASE_GAMMA, params={"limit": limit, "offset": offset}, timeout=20)
+            r = session.get(BASE_GAMMA, params=q, timeout=20)
             r.raise_for_status()
-            page = r.json()
+        except Exception as e:
+            if verbose: print(f"[WARN] fetch failed at offset {offset} with {q}: {e}")
+            break
 
+        page = r.json() or []
         if not page:
+            if verbose: print("[INFO] empty page; done.")
             break
 
-        all_rows.extend(page)
+        # filter to exactly Yes/No
+        added = 0
+        for m in page:
+            outs = m.get("outcomes")
+            if isinstance(outs, str):
+                try: outs = json.loads(outs)
+                except Exception: outs = None
+            if outs == ["Yes","No"]:
+                mid = m.get("id")
+                if mid not in seen_ids:
+                    all_rows.append(m)
+                    seen_ids.add(mid)
+                    added += 1
+
+        if verbose:
+            print(f"[PAGE {pages}] got {len(page)} raw, added {added} new, total {len(all_rows)}")
+
         if len(page) < limit:
+            if verbose: print("[INFO] last page (short).")
             break
+
+        pages += 1
         offset += limit
-        if sleep_between:
-            time.sleep(sleep_between)
 
-    # client-side filter: open & exact Yes/No
-    def is_yesno_open(m):
-        outs = m.get("outcomes")
-        if isinstance(outs, str):
-            try:
-                outs = json.loads(outs)
-            except Exception:
-                outs = None
-        is_open = (m.get("closed") is False) or (m.get("acceptingOrders") is True) or (m.get("active") is True)
-        return outs == ["Yes", "No"] and is_open
+    # sort locally for your pipeline
+    all_rows.sort(key=lambda m: m.get("startDate") or m.get("createdAt") or "")
+    if verbose:
+        print(f"✅ Total open Yes/No markets: {len(all_rows)}")
+    return all_rows
 
-    cleaned = [m for m in all_rows if is_yesno_open(m)]
-    # ensure deterministic order locally too
-    cleaned.sort(key=lambda m: m.get("startDate") or m.get("createdAt") or "")
-    return cleaned
+def is_actively_tradable(m):
+    # CLOB-enabled, has token IDs, and has a visible quote
+    if not m.get("enableOrderBook"):
+        return False
+    toks = m.get("clobTokenIds") or []
+    if isinstance(toks, str):
+        try: toks = json.loads(toks)
+        except: toks = []
+    has_quote = (m.get("bestBid") is not None) or (m.get("bestAsk") is not None)
+    return bool(toks) and has_quote
 
 def filter_markets(markets):
     """
