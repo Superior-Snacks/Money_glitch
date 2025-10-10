@@ -23,11 +23,24 @@ ef það eru mikið af markets þá byrja þannig ég hef efni á continuous tra
 hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
 3 files, bought, pending, log(bottom shows p/l, active, done, bank, lockedup, etmifallsold)
 """
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_HISTORY = "https://clob.polymarket.com/prices-history"
+BASE_BOOK = "https://clob.polymarket.com/book"
+DATA_TRADES = "https://data-api.polymarket.com/trades"
 
-def fetch_markets():
+def fetch_markets(limit=20):
     """
     fetch all active markets, for the use of their id's
     """
+    params = {
+        "limit": limit,
+        "outcomes": ["YES", "NO"],
+        "sortBy": "startDate",
+        "orderBy": "dec"}
+    r = requests.get(BASE_GAMMA, params=params, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    return payload
 
 def filter_markets():
     """
