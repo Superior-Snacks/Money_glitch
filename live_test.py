@@ -168,10 +168,20 @@ class WatchlistManager:
             return takeable, best_price, shares
         return 0.0, best_price, shares
 
-    def step(self, now_ts: int, fetch_book_fn, open_position_fn, bet_size_fn, max_checks_per_tick=50):
+    def step(self,
+             now_ts: int,
+             fetch_book_fn,
+             open_position_fn,
+             bet_size_fn,
+             max_checks_per_tick: int = 100,
+             min_probe_when_idle: int = 25,       # <— new
+             probe_strategy: str = "oldest"):     # "oldest" | "random"
         opened = 0
         checked = 0
-        for cid in self.due_ids(now_ts):
+
+        # 1) normal due pass
+        due = self.due_ids(now_ts)
+        for cid in due:
             if checked >= max_checks_per_tick:
                 break
             st = self.watch.get(cid)
@@ -189,11 +199,49 @@ class WatchlistManager:
                         self.watch.pop(cid, None)
                         opened += 1
                         continue
+                # no entry → backoff
                 st["fails"] += 1
                 st["next_check"] = now_ts + self._backoff(st["fails"])
             except Exception:
                 st["fails"] += 1
                 st["next_check"] = now_ts + self._backoff(st["fails"])
+
+        # 2) idle probe if nothing was due (prevents long sleeps)
+        if checked == 0 and min_probe_when_idle > 0 and self.watch:
+            # pick some not-entered items regardless of next_check
+            pool = [cid for cid in self.watch.keys() if cid not in self.entered]
+            if probe_strategy == "random":
+                random.shuffle(pool)
+            else:
+                # oldest by next_check first
+                pool.sort(key=lambda cid: self.watch[cid]["next_check"])
+            to_probe = pool[:min_probe_when_idle]
+
+            for cid in to_probe:
+                if checked >= max_checks_per_tick:
+                    break
+                st = self.watch.get(cid)
+                if not st: 
+                    continue
+                checked += 1
+                try:
+                    book = fetch_book_fn(st["no_token"])
+                    st["last_quote"] = book
+                    takeable, best_ask, shares = self._valid_no_from_book(book)
+                    if takeable > 0:
+                        dollars = bet_size_fn(takeable)
+                        if open_position_fn(cid, st["m"], "NO", dollars, best_ask, book):
+                            self.entered.add(cid)
+                            self.watch.pop(cid, None)
+                            opened += 1
+                            continue
+                    # even on probe, apply a gentle backoff
+                    st["fails"] = max(1, st["fails"])   # ensure > 0
+                    st["next_check"] = now_ts + self._backoff(st["fails"])
+                except Exception:
+                    st["fails"] = max(1, st["fails"])
+                    st["next_check"] = now_ts + self._backoff(st["fails"])
+
         return opened, checked
 
 # --------------------------------------------------------------------
