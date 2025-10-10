@@ -32,9 +32,11 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
-    m = fetch_markets()
-    f = filter_markets(m)
-    print(f)
+    open_markets = fetch_all_open_markets(sleep_between=0.3, verbose=True)
+    print(f"Ready to process {len(open_markets)} markets")
+    for i in open_markets:
+        print(f"{i["question"]} || {i["startdate"]}")
+    #print(f)
 
 
 def make_session():
@@ -56,47 +58,48 @@ def make_session():
 SESSION = make_session()
 
 
-def fetch_markets(limit=20, verbose=True, sleep_between=1.0):
+def fetch_all_open_markets(limit=100, sleep_between=0.25, verbose=True):
     """
-    Pulls all currently open Polymarket markets (YES/NO type).
-    Returns a list of market dicts.
+    Fetch all markets, then filter locally to open YES/NO markets.
+    Avoids server-side filters that can cause 422.
     """
     url = BASE_GAMMA
-    all_markets = []
-    offset = 0
+    all_markets, offset = [], 0
 
     while True:
         params = {
             "limit": limit,
             "offset": offset,
-            "closed": False,              # <- critical: open only
-            "outcomes": ["YES", "NO"],
-            "sortBy": "startDate",
-            "order": "asc"
+            "sortBy": "startDate",   # keep order stable for you
+            "order": "asc",
+            # deliberately NOT sending: closed, outcomes
         }
-
         try:
             resp = SESSION.get(url, params=params, timeout=20)
             resp.raise_for_status()
-            data = resp.json()
+            batch = resp.json()
+        except requests.HTTPError as e:
+            # if we hit a 422 or anything transient, stop gracefully
+            if verbose:
+                print(f"[WARN] Gamma fetch failed at offset {offset}: {e}")
+            break
         except Exception as e:
-            print(f"[WARN] Gamma fetch failed at offset {offset}: {e}")
+            if verbose:
+                print(f"[WARN] Gamma fetch error at offset {offset}: {e}")
             break
 
-        if not data:
+        if not batch:
             break
 
-        all_markets.extend(data)
+        all_markets.extend(batch)
         if verbose:
-            print(f"Fetched {len(data)} markets (offset {offset})")
+            print(f"Fetched {len(batch)} markets (offset {offset})")
 
-        if len(data) < limit:
-            break  # no more pages
+        if len(batch) < limit:
+            break
         offset += limit
-        time.sleep(sleep_between)
-
-    print(f"✅ Total open markets fetched: {len(all_markets)}")
-    return all_markets
+        if sleep_between:
+            time.sleep(sleep_between)
 
 def filter_markets(markets):
     """
@@ -134,9 +137,17 @@ def decide_book(bookvalue):
     """
 
 
-def save_to_file(file, data):
-    ...
+def save_to_file(filename, data):
+    # ensure parent folder exists
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
 
+    with open(filename, "a", encoding="utf-8") as file:
+        # if file already has content, add newline first
+        file.seek(0, os.SEEK_END)
+        if file.tell() > 0:
+            file.write("\n")
+        file.write(data + "\n")
+        
 def normalize_time(value, default=None):
     """
     Converts various Polymarket-style date/time formats into a UTC datetime.
