@@ -28,6 +28,11 @@ BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
 
+
+def main():
+    ...
+    
+
 def fetch_markets(limit=20):
     """
     fetch all active markets, for the use of their id's
@@ -42,10 +47,25 @@ def fetch_markets(limit=20):
     payload = r.json()
     return payload
 
-def filter_markets():
+def filter_markets(markets):
     """
     filter markets by date and type
     """
+    if not markets:
+        return None
+    cleaned = []
+    for mk in markets:
+        outcomes = mk["outcomes"]
+        if isinstance(outcomes, str):
+            outcomes = json.loads(outcomes)
+        try:
+            if outcomes == ["Yes", "No"] and mk["startDate"]:
+                cleaned.append(mk)
+        except:
+            continue
+    print(f"valid markets {len(cleaned)}")
+    cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
+    return cleaned
 
 def fetch_book(market_id):
     """
@@ -66,9 +86,53 @@ def decide_book(bookvalue):
 def save_to_file(file, data):
     ...
 
-def main():
-    ...
+def normalize_time(value, default=None):
+    """
+    Converts various Polymarket-style date/time formats into a UTC datetime.
 
+    Accepts:
+      - ISO strings with or without 'Z'
+      - 'YYYY-MM-DD' (no time)
+      - timestamps (int, float, or numeric strings)
+      - None or invalid → returns `default` (or None)
+
+    Returns:
+      datetime object (UTC timezone)
+    """
+    if value is None or value == "":
+        return default
+
+    # numeric timestamp (epoch seconds)
+    if isinstance(value, (int, float)) or re.match(r"^\d{10,13}$", str(value)):
+        try:
+            ts = float(value)
+            if ts > 1e12:  # milliseconds
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+        except Exception:
+            return default
+
+    # string normalization
+    val = str(value).strip()
+
+    # Replace common ISO variants
+    val = val.replace("Z", "+00:00")  # Z → UTC
+    val = re.sub(r"\s+", "T", val)    # space → T
+
+    # Add missing time or timezone if needed
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", val):
+        val += "T00:00:00+00:00"
+
+    try:
+        dt = datetime.fromisoformat(val)
+        # ensure UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt
+    except Exception:
+        return default
 
 if __name__ == "__main__":
     main()
