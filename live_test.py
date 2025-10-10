@@ -331,10 +331,16 @@ def main():
     mgr = WatchlistManager(
         max_no_price=0.40,
         min_notional=50.0,
-        fee_bps=600, slip_bps=200,
-        dust_price=0.02, dust_min_notional=20.0,
-        poll_every=60, backoff_base=120, backoff_max=1800
-    )
+        fee_bps=600, 
+        slip_bps=200,
+        dust_price=0.02, 
+        dust_min_notional=20.0,
+        poll_every=3,          # was 60 → keep loop snappy
+        backoff_first=6,       # small first miss
+        backoff_base=12,       # mild exponential
+        backoff_max=120,       # cap at 2 minutes
+        jitter=3
+        )
     mgr.seed_from_gamma(markets)
 
     fee = mgr.fee
