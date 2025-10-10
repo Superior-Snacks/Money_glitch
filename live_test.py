@@ -181,7 +181,7 @@ class WatchlistManager:
             s = float(a["size"])
             ep = self._effective_price(p)
             vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s}")
-            if ep > self.max_no_price:
+            if p > self.max_no_price:
                 reasons.append(f"cap_break at {p:.4f} (eff {ep:.4f} > cap {self.max_no_price:.4f})")
                 break
             # notional for NO = p * shares
@@ -275,6 +275,9 @@ class WatchlistManager:
                 vprint(f"    [ERR] {e} → fails={st['fails']} next_check=+{next_in}s")
 
         return opened, checked
+    
+def cap_for_raw(raw, fee_bps, slip_bps):
+    return raw * (1 + fee_bps/10000 + slip_bps/10000)
 
 # --------------------------------------------------------------------
 # Fast open-market fetch you already had (kept here for completeness)
@@ -413,7 +416,7 @@ def main():
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=0.40,
+        max_no_price=cap_for_raw(0.60, 600, 200),
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
