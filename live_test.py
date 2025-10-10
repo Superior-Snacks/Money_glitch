@@ -9,6 +9,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass
 import os
+import re
 
 """
 just start slow on new markets
@@ -31,7 +32,7 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 def main():
     ...
-    
+
 
 def fetch_markets(limit=20):
     """
