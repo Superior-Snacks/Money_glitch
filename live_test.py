@@ -407,7 +407,7 @@ def main():
     total_trades_taken = 0
 
     # 1️⃣ Fetch initial 3 days of markets
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=60, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
