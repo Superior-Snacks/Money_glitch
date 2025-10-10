@@ -32,16 +32,7 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
-    file_bank = fetch_old("old_markets.txt")
-    open_markets = fetch_open_yesno_fast()
-    markets = [m for m in open_markets if is_actively_tradable(m)]
-    new_markets = [n for n in markets if n not in file_bank]
-    for i in markets:
-        print(f"{i["question"]}")
-    print(len(markets))
-    print(len(open_markets))
-    print(len(new_markets))
-    #print(f)
+    new_markets()
 
 
 def make_session():
@@ -147,25 +138,20 @@ def is_actively_tradable(m):
     has_quote = (m.get("bestBid") is not None) or (m.get("bestAsk") is not None)
     return bool(toks) and has_quote
 
-def filter_markets(markets):
-    """
-    filter markets by date and type
-    """
-    if not markets:
-        return None
-    cleaned = []
-    for mk in markets:
-        outcomes = mk["outcomes"]
-        if isinstance(outcomes, str):
-            outcomes = json.loads(outcomes)
-        try:
-            if outcomes == ["Yes", "No"] and mk["startDate"]:
-                cleaned.append(mk)
-        except:
-            continue
-    print(f"valid markets {len(cleaned)}")
-    cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
-    return cleaned
+#last 13
+def new_markets():
+    old_markets = load_markets_from_jsonl("old_live_markets.jsonl")
+    old_id = []
+    for id in old_markets:
+        old_id.append(id["id"])
+    open_markets = fetch_open_yesno_fast()
+    markets = [m for m in open_markets if is_actively_tradable(m)]
+    new_markets = [n for n in markets if n["id"] not in old_id]
+    for i in new_markets:
+        print(f"{i["question"]}")
+    print(len(markets))
+    print(len(open_markets))
+    print(len(new_markets))
 
 def fetch_book(market_id):
     """
@@ -202,7 +188,57 @@ def fech_file(filename):
             result.append(line)
     return result
 
-def save_to_file(filename, data):
+def append_markets_to_file(filename, data, key_field="id"):
+    """
+    Append markets to a .jsonl file, skipping duplicates based on `key_field`.
+    Each line is one JSON object.
+    """
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+
+    # --- load existing keys to skip duplicates ---
+    existing_keys = set()
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    if key_field in record:
+                        existing_keys.add(record[key_field])
+                except json.JSONDecodeError:
+                    continue
+
+    # --- append only new items ---
+    added = 0
+    with open(filename, "a", encoding="utf-8") as f:
+        for market in data:
+            key = market.get(key_field)
+            if not key or key in existing_keys:
+                continue  # skip duplicates or invalid
+            f.write(json.dumps(market, ensure_ascii=False) + "\n")
+            existing_keys.add(key)
+            added += 1
+
+    print(f"✅ Added {added} new markets (skipped {len(data)-added} duplicates) to {filename}")
+
+def load_markets_from_jsonl(filename):
+    markets = []
+    if not os.path.exists(filename):
+        return markets
+    with open(filename, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                markets.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return markets
+
+def save_line_to_file(filename, data):
     # ensure parent folder exists
     os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
 
