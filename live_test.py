@@ -35,6 +35,7 @@ def main():
     file_bank = fech_file("tbd.txt")
     open_markets = fetch_open_yesno_fast()
     markets = [m for m in open_markets if is_actively_tradable(m)]
+    new_markets = [n for n in markets if n not in file_bank]
     for i in markets:
         print(f"{i["question"]}")
     print(len(markets))
