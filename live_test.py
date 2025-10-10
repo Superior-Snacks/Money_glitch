@@ -147,11 +147,7 @@ def new_markets():
     open_markets = fetch_open_yesno_fast()
     markets = [m for m in open_markets if is_actively_tradable(m)]
     new_markets = [n for n in markets if n["id"] not in old_id]
-    for i in new_markets:
-        print(f"{i["question"]}")
-    print(len(markets))
-    print(len(open_markets))
-    print(len(new_markets))
+    return new_markets
 
 def fetch_book(market_id):
     """
