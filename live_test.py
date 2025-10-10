@@ -12,19 +12,6 @@ import bisect
 import re
 import heapq
 
-"""
-just start slow on new markets
-trding current open not neccisarry, but not bad to check
-"""
-
-"""
-fyrst sækja alla active markaði, síðan fara yfir book hjáhverjum og einum og sim hvort/hversu mikið er keypt,
-savea kaupið og potential winnings og allt info i kringum það í file, síðan á 10 min fresti kanski 1 min sækja alla nýja markaði og ef það er liquidity kaupa,
-annars bíða þar til það er liquidity, hafa sér pending file, svo 1 klst fresti checka hvort markaðir hafa klárast.
-ef það eru mikið af markets þá byrja þannig ég hef efni á continuous trades á nýjum mörkuðum, (eldri markaðir ekki lokaðir eru oftast "settled")
-hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
-3 files, bought, pending, log(bottom shows p/l, active, done, bank, lockedup, etmifallsold)
-"""
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
@@ -316,37 +303,43 @@ def simulate_take_from_asks(book: dict, dollars: float, fee: float, slip: float,
 # --------------------------------------------------------------------
 # MAIN: run the watcher
 # --------------------------------------------------------------------
+
+# ---- simple open-position ledger (for logging potential value) ----
+positions_by_id = {}   # id -> {"shares": float, "side": "NO"/"YES"}
+SETTLE_FEE = 0.01      # 1% winner fee
+locked_now = 0.0
+peak_locked = 0.0
+peak_locked_time = None
+first_trade_dt = None
+last_settle_dt = None
 def main():
-    # bankroll & config
     bank = 5000.0
     desired_bet = 100.0
+    total_trades_taken = 0  # <-- define here
 
-    # 1) fetch open Yes/No markets quickly
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=60, verbose=True)
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
-    # 2) seed watchlist
     mgr = WatchlistManager(
-        max_no_price=0.40,    # cap on NO effective price
-        min_notional=50.0,    # need at least this $ at/under cap
+        max_no_price=0.40,
+        min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
         poll_every=60, backoff_base=120, backoff_max=1800
     )
     mgr.seed_from_gamma(markets)
 
-    # helpers that close over our bank
     fee = mgr.fee
     slip = mgr.slip
     price_cap = mgr.max_no_price
 
     def bet_size_fn(takeable_notional):
-        # spend up to desired_bet but not more than takeable notional
         return float(min(desired_bet, takeable_notional))
 
     def open_position_fn(cid, market, side, dollars, best_ask, book):
-        nonlocal bank
+        nonlocal bank, total_trades_taken  # <-- move to top
+
         if side != "NO":
             return False
         if dollars <= 0 or bank < dollars:
@@ -358,13 +351,42 @@ def main():
         if shares <= 0:
             return False
 
-        # lock capital (simple: just subtract now; you can integrate your full position store)
+        # lock capital & record basic position for logging
         bank -= spent_after
+
+        # update locked metrics
+        global locked_now, peak_locked, peak_locked_time, first_trade_dt
+        locked_now += spent_after
+        now_dt = datetime.now(timezone.utc)
+        if first_trade_dt is None:
+            first_trade_dt = now_dt
+        if locked_now > peak_locked:
+            peak_locked = locked_now
+            peak_locked_time = now_dt
+
+        # store shares for potential-value reporting
+        positions_by_id[cid] = {
+            "shares": shares,
+            "side": side
+        }
+
         print(f"\n✅ ENTER {side} | {market.get('question')}")
         print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f}")
+
+        # record trade log
+        toks = market.get("clobTokenIds")
+        if isinstance(toks, str):
+            try: toks = json.loads(toks)
+            except: toks = []
+        no_token_id = (toks or [None, None])[1]
+
+        log_open_trade(market, "NO", no_token_id, book_used=book,
+                    spent_after=spent_after, shares=shares,
+                    avg_price_eff=avg_price, bank_after_open=bank)
+
+        total_trades_taken += 1  # (only once)
         return True
 
-    # 3) poll loop (Ctrl+C to stop)
     try:
         while True:
             now_ts = int(time.time())
@@ -374,24 +396,85 @@ def main():
                 open_position_fn=open_position_fn,
                 bet_size_fn=bet_size_fn
             )
-            # here you could also call your settle_due_positions(..., now, ...) if you integrate live settlement
+
+            # periodic snapshot (every loop, or guard to every N seconds)
+            log_run_snapshot(bank, total_trades_taken)
+
             if opened == 0:
-                print(".", end="", flush=True)  # quiet heartbeat
+                print(".", end="", flush=True)
             time.sleep(mgr.poll_every)
+
     except KeyboardInterrupt:
         print("\nStopped.")
+        log_run_snapshot(bank, total_trades_taken)
+
+LOG_DIR = "logs"
+TRADE_LOG = os.path.join(LOG_DIR, "trades_taken.jsonl")   # one line per trade
+RUN_SNAP  = os.path.join(LOG_DIR, "run_snapshots.jsonl")  # optional periodic snapshots
+
+def _ensure_logdir():
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+def append_jsonl(filename: str, record: dict):
+    _ensure_logdir()
+    with open(filename, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+
+def compute_potential_value_if_all_win():
+    total = 0.0
+    for pos in positions_by_id.values():
+        total += float(pos["shares"]) * (1.0 - SETTLE_FEE)
+    return total
+
+def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_price_eff, bank_after_open):
+    """
+    Persist a single line for the trade you just took.
+    """
+    rec = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "market_id": market.get("conditionId"),
+        "market_slug": market.get("slug"),
+        "question": market.get("question"),
+        "side": side,                        # "NO" or "YES"
+        "token_id": token_id,
+        "spent_after": round(float(spent_after), 6),
+        "shares": round(float(shares), 6),
+        "avg_price_eff": round(float(avg_price_eff), 6),  # effective avg (after fees/slip used to decide)
+        "book_best_bid": (book_used.get("bids") or [{}])[0].get("price") if book_used else None,
+        "book_best_ask": (book_used.get("asks") or [{}])[0].get("price") if book_used else None,
+        "locked_now": round(float(locked_now), 6),
+        "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
+        "bank_after_open": round(float(bank_after_open), 6),
+    }
+    append_jsonl(TRADE_LOG, rec)
+
+def log_run_snapshot(bank, total_trades_count: int):
+    snap = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "bank": round(float(bank), 6),
+        "locked_now": round(float(locked_now), 6),
+        "open_positions": len(positions_by_id),
+        "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
+        "total_trades_taken": int(total_trades_count),
+        "peak_locked": round(float(peak_locked), 6),
+        "peak_locked_time": peak_locked_time.isoformat() if peak_locked_time else None,
+        "first_trade_time": first_trade_dt.isoformat() if first_trade_dt else None,
+        "last_settle_time": last_settle_dt.isoformat() if last_settle_dt else None,
+    }
+    append_jsonl(RUN_SNAP, snap)
+
+if __name__ == "__main__":
+    main()
+
+"""
 
 
-from datetime import datetime, timedelta, timezone
-
-BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+#last 13
 
 def fetch_open_yesno_fast(limit=250, max_pages=20, days_back=90,
                           require_clob=True, min_liquidity=None, min_volume=None,
                           session=SESSION, verbose=True):
-    """
     Quickly fetch currently tradable Yes/No markets without walking full history.
-    """
     params = {
         "limit": limit,
         "order": "startDate",           # stable ordering so offset works
@@ -465,8 +548,6 @@ def is_actively_tradable(m):
         except: toks = []
     has_quote = (m.get("bestBid") is not None) or (m.get("bestAsk") is not None)
     return bool(toks) and has_quote
-
-#last 13
 def new_markets():
     old_markets = load_markets_from_jsonl("old_live_markets.jsonl")
     old_id = []
@@ -476,50 +557,6 @@ def new_markets():
     markets = [m for m in open_markets if is_actively_tradable(m)]
     new_markets = [n for n in markets if n["id"] not in old_id]
     return new_markets
-
-
-def interpret_book(market):
-    toks = market.get("clobTokenIds")
-    if isinstance(toks, str):
-        toks = json.loads(toks)
-
-    token = toks[0]  # first token (usually YES)
-    book = fetch_book(token)
-
-    best_bid = book["bids"][0]["price"] if book["bids"] else None
-    best_ask = book["asks"][0]["price"] if book["asks"] else None
-
-    print(f"\n📊 {market['question']}")
-    print(f"Best bid: {best_bid}")
-    print(f"Best ask: {best_ask}")
-    print(f"Spread:   {round((float(best_ask) - float(best_bid)), 3) if best_bid and best_ask else 'N/A'}")
-    print(f"Depth:    {len(book['bids'])} bids / {len(book['asks'])} asks")
-
-
-def fetch_book(token_id, depth=10):
-    """
-    fetch book for a single market
-    """
-    url = f"{BASE_BOOK}?token_id={token_id}"
-    r = requests.get(url, timeout=10)
-    r.raise_for_status()
-    book = r.json()
-    
-    # optional: trim to depth
-    book["bids"] = book.get("bids", [])[:depth]
-    book["asks"] = book.get("asks", [])[:depth]
-    print(book)
-    return book
-
-def value_book(book):
-    """
-    calculate how much value can be taken
-    """
-
-def decide_book(bookvalue):
-    """
-    given value book, decide 
-    """
 
 def fetch_old(filename):
     result = []
@@ -542,10 +579,8 @@ def fech_file(filename):
     return result
 
 def append_markets_to_file(filename, data, key_field="id"):
-    """
     Append markets to a .jsonl file, skipping duplicates based on `key_field`.
     Each line is one JSON object.
-    """
     os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
 
     # --- load existing keys to skip duplicates ---
@@ -603,7 +638,6 @@ def save_line_to_file(filename, data):
         file.write(data + "\n")
 
 def normalize_time(value, default=None):
-    """
     Converts various Polymarket-style date/time formats into a UTC datetime.
 
     Accepts:
@@ -614,7 +648,6 @@ def normalize_time(value, default=None):
 
     Returns:
       datetime object (UTC timezone)
-    """
     if value is None or value == "":
         return default
 
@@ -650,5 +683,52 @@ def normalize_time(value, default=None):
     except Exception:
         return default
 
-if __name__ == "__main__":
-    main()
+
+def interpret_book(market):
+    toks = market.get("clobTokenIds")
+    if isinstance(toks, str):
+        toks = json.loads(toks)
+
+    token = toks[0]  # first token (usually YES)
+    book = fetch_book(token)
+
+    best_bid = book["bids"][0]["price"] if book["bids"] else None
+    best_ask = book["asks"][0]["price"] if book["asks"] else None
+
+    print(f"\n📊 {market['question']}")
+    print(f"Best bid: {best_bid}")
+    print(f"Best ask: {best_ask}")
+    print(f"Spread:   {round((float(best_ask) - float(best_bid)), 3) if best_bid and best_ask else 'N/A'}")
+    print(f"Depth:    {len(book['bids'])} bids / {len(book['asks'])} asks")
+
+
+def fetch_book(token_id, depth=10):
+    url = f"{BASE_BOOK}?token_id={token_id}"
+    r = requests.get(url, timeout=10)
+    r.raise_for_status()
+    book = r.json()
+    
+    # optional: trim to depth
+    book["bids"] = book.get("bids", [])[:depth]
+    book["asks"] = book.get("asks", [])[:depth]
+    print(book)
+    return book
+
+
+"""
+
+
+"""
+just start slow on new markets
+trding current open not neccisarry, but not bad to check
+"""
+
+"""
+fyrst sækja alla active markaði, síðan fara yfir book hjáhverjum og einum og sim hvort/hversu mikið er keypt,
+savea kaupið og potential winnings og allt info i kringum það í file, síðan á 10 min fresti kanski 1 min sækja alla nýja markaði og ef það er liquidity kaupa,
+annars bíða þar til það er liquidity, hafa sér pending file, svo 1 klst fresti checka hvort markaðir hafa klárast.
+ef það eru mikið af markets þá byrja þannig ég hef efni á continuous trades á nýjum mörkuðum, (eldri markaðir ekki lokaðir eru oftast "settled")
+hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
+3 files, bought, pending, log(bottom shows p/l, active, done, bank, lockedup, etmifallsold)
+"""
+
