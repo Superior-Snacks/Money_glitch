@@ -29,10 +29,18 @@ BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
+BASE_BOOK = "https://clob.polymarket.com/book"
 
 
 def main():
-    new_markets()
+    #get newest markets
+    new = new_markets()
+    print(len(new))
+    #evalueate single market
+    val = mr(new[0])
+    print(val)
+    #if value gives 
+
 
 
 def make_session():
@@ -149,10 +157,39 @@ def new_markets():
     new_markets = [n for n in markets if n["id"] not in old_id]
     return new_markets
 
-def fetch_book(market_id):
+
+def mr(market):
+    toks = market.get("clobTokenIds")
+    if isinstance(toks, str):
+        toks = json.loads(toks)
+
+    token = toks[0]  # first token (usually YES)
+    book = fetch_book(token)
+
+    best_bid = book["bids"][0]["price"] if book["bids"] else None
+    best_ask = book["asks"][0]["price"] if book["asks"] else None
+
+    print(f"\n📊 {market['question']}")
+    print(f"Best bid: {best_bid}")
+    print(f"Best ask: {best_ask}")
+    print(f"Spread:   {round((float(best_ask) - float(best_bid)), 3) if best_bid and best_ask else 'N/A'}")
+    print(f"Depth:    {len(book['bids'])} bids / {len(book['asks'])} asks")
+
+
+def fetch_book(token_id, depth=10):
     """
     fetch book for a single market
     """
+    url = f"{BASE_BOOK}?token_id={token_id}"
+    r = requests.get(url, timeout=10)
+    r.raise_for_status()
+    book = r.json()
+    
+    # optional: trim to depth
+    book["bids"] = book.get("bids", [])[:depth]
+    book["asks"] = book.get("asks", [])[:depth]
+    print(book)
+    return book
 
 def value_book(book):
     """
