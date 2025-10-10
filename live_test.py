@@ -32,6 +32,7 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
+    file_bank = fech_file("tbd.txt")
     open_markets = fetch_open_yesno_fast()
     markets = [m for m in open_markets if is_actively_tradable(m)]
     for i in markets:
@@ -188,7 +189,6 @@ def fech_file(filename):
         for line in file:
             result.append(line)
     return result
-
 
 
 def save_to_file(filename, data):
