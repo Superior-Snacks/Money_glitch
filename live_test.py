@@ -367,43 +367,38 @@ peak_locked = 0.0
 peak_locked_time = None
 first_trade_dt = None
 last_settle_dt = None
+REFRESH_SEED_EVERY = 300  # 5 minutes
+last_seed = 0
 def main():
-    bank = 5000000.0
+    bank = 5_000_000.0
     desired_bet = 100.0
-    total_trades_taken = 0  # <-- define here
+    total_trades_taken = 0
 
+    # 1️⃣ Fetch initial 3 days of markets
     open_markets = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
+    # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
         max_no_price=0.40,
         min_notional=50.0,
-        fee_bps=600, 
-        slip_bps=200,
-        dust_price=0.02, 
-        dust_min_notional=20.0,
-        poll_every=3,          # was 60 → keep loop snappy
-        backoff_first=6,       # small first miss
-        backoff_base=12,       # mild exponential
-        backoff_max=120,       # cap at 2 minutes
-        jitter=3
-        )
+        fee_bps=600, slip_bps=200,
+        dust_price=0.02, dust_min_notional=20.0,
+        poll_every=3, backoff_first=6, backoff_base=12,
+        backoff_max=120, jitter=3
+    )
     mgr.seed_from_gamma(markets)
 
-    fee = mgr.fee
-    slip = mgr.slip
-    price_cap = mgr.max_no_price
+    # --- trade sizing and fill simulation ---
+    fee, slip, price_cap = mgr.fee, mgr.slip, mgr.max_no_price
 
     def bet_size_fn(takeable_notional):
         return float(min(desired_bet, takeable_notional))
 
     def open_position_fn(cid, market, side, dollars, best_ask, book):
-        nonlocal bank, total_trades_taken  # <-- move to top
-
-        if side != "NO":
-            return False
-        if dollars <= 0 or bank < dollars:
+        nonlocal bank, total_trades_taken
+        if side != "NO" or dollars <= 0 or bank < dollars:
             return False
 
         spent_after, shares, avg_price = simulate_take_from_asks(
@@ -412,29 +407,12 @@ def main():
         if shares <= 0:
             return False
 
-        # lock capital & record basic position for logging
         bank -= spent_after
+        positions_by_id[cid] = {"shares": shares, "side": side}
 
-        # update locked metrics
-        global locked_now, peak_locked, peak_locked_time, first_trade_dt
-        locked_now += spent_after
-        now_dt = datetime.now(timezone.utc)
-        if first_trade_dt is None:
-            first_trade_dt = now_dt
-        if locked_now > peak_locked:
-            peak_locked = locked_now
-            peak_locked_time = now_dt
+        print(f"\n✅ ENTER NO | {market.get('question')}")
+        print(f"   spent={spent_after:.2f} | shares={shares:.2f} | avg={avg_price:.4f} | bank={bank:.2f}")
 
-        # store shares for potential-value reporting
-        positions_by_id[cid] = {
-            "shares": shares,
-            "side": side
-        }
-
-        print(f"\n✅ ENTER {side} | {market.get('question')}")
-        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f}")
-
-        # record trade log
         toks = market.get("clobTokenIds")
         if isinstance(toks, str):
             try: toks = json.loads(toks)
@@ -442,32 +420,50 @@ def main():
         no_token_id = (toks or [None, None])[1]
 
         log_open_trade(market, "NO", no_token_id, book_used=book,
-                    spent_after=spent_after, shares=shares,
-                    avg_price_eff=avg_price, bank_after_open=bank)
-
-        total_trades_taken += 1  # (only once)
+                       spent_after=spent_after, shares=shares,
+                       avg_price_eff=avg_price, bank_after_open=bank)
+        total_trades_taken += 1
         return True
+
+    # 3️⃣ Main loop — reseeds & polls continuously
+    REFRESH_SEED_EVERY = 300  # 5 min
+    last_seed = 0
 
     try:
         while True:
             now_ts = int(time.time())
+
+            # ⏳ refresh markets every few minutes
+            if now_ts - last_seed >= REFRESH_SEED_EVERY:
+                try:
+                    fresh = fetch_open_yesno_fast(limit=250, max_pages=2, days_back=3, verbose=False)
+                    tradable = [m for m in fresh if is_actively_tradable(m)]
+                    mgr.seed_from_gamma(tradable)
+                    print(f"[REFRESH] Added {len(tradable)} tradable markets to watchlist.")
+                except Exception as e:
+                    print(f"[WARN reseed] {e}")
+                last_seed = now_ts
+
+            # 🔁 check books & take NOs
             opened, checked = mgr.step(
                 now_ts,
                 fetch_book_fn=fetch_book,
                 open_position_fn=open_position_fn,
                 bet_size_fn=bet_size_fn,
-                max_checks_per_tick=150,        # bump if your machine/API can handle
-                min_probe_when_idle=40,         # ensure progress even when nothing due
-                probe_strategy="oldest"         # or "random"
+                max_checks_per_tick=100,
+                min_probe_when_idle=40,
+                probe_strategy="oldest",
             )
+
             log_run_snapshot(bank, total_trades_taken)
 
             if opened == 0 and checked == 0:
-                time.sleep(mgr.poll_every)      # nothing to do → short nap (3s)
+                time.sleep(mgr.poll_every)   # nothing due → small rest
             else:
-                time.sleep(0.15)                # we worked → tiny breather
+                time.sleep(0.2)              # slight pause between batches
+
     except KeyboardInterrupt:
-        print("\nStopped.")
+        print("\nStopped by user.")
         log_run_snapshot(bank, total_trades_taken)
 
 LOG_DIR = "logs"
