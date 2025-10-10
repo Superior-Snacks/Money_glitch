@@ -11,6 +11,7 @@ import os
 import bisect
 import re
 import heapq
+import random, time
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -97,7 +98,11 @@ class WatchlistManager:
         self.watch = {}       # conditionId -> {m, no_token, next_check, fails, last_quote}
         self.entered = set()  # conditionIds already entered
 
+        self.backoff_first = backoff_first
+        self.jitter = jitter
+
     def seed_from_gamma(self, markets: list[dict]):
+        now = int(time.time())
         for m in markets:
             cid = m.get("conditionId")
             if not cid or cid in self.watch or cid in self.entered:
@@ -106,18 +111,24 @@ class WatchlistManager:
             if not no_token:
                 continue
             self.watch[cid] = {
-                "m": m,
-                "no_token": no_token,
-                "next_check": 0,
-                "fails": 0,
-                "last_quote": None,
-            }
+            "m": m,
+            "no_token": no_token,
+            "next_check": now + random.randint(0, 2),  # small spread
+            "fails": 0,
+            "last_quote": None,
+        }
 
     def due_ids(self, now_ts: int):
         return [cid for cid, st in self.watch.items() if st["next_check"] <= now_ts and cid not in self.entered]
 
     def _backoff(self, fails: int) -> int:
-        return min(self.backoff_base * (2 ** fails), self.backoff_max)
+        if fails <= 1:
+            base = self.backoff_first  # e.g., 5s for first miss
+        else:
+            base = min(self.backoff_base * (2 ** (fails - 1)), self.backoff_max)
+        # small random jitter to de-sync
+        import random
+        return max(1, base + random.randint(0, self.jitter))
 
     def _effective_price(self, p: float) -> float:
         return p * (1.0 + self.fee + self.slip)
@@ -155,39 +166,33 @@ class WatchlistManager:
             return takeable, best_price, shares
         return 0.0, best_price, shares
 
-    def step(self, now_ts: int, fetch_book_fn, open_position_fn, bet_size_fn):
-        """
-        Poll due markets once; open positions if valid NO opportunity found.
-        - fetch_book_fn(token_id) -> book
-        - open_position_fn(cid, market, side, dollars, best_ask, book) -> bool (opened?)
-        - bet_size_fn(takeable_notional) -> dollars_to_spend
-        """
+    def step(self, now_ts: int, fetch_book_fn, open_position_fn, bet_size_fn, max_checks_per_tick=50):
         opened = 0
+        checked = 0
         for cid in self.due_ids(now_ts):
+            if checked >= max_checks_per_tick:
+                break
             st = self.watch.get(cid)
-            if not st:
+            if not st: 
                 continue
+            checked += 1
             try:
                 book = fetch_book_fn(st["no_token"])
                 st["last_quote"] = book
                 takeable, best_ask, shares = self._valid_no_from_book(book)
                 if takeable > 0:
                     dollars = bet_size_fn(takeable)
-                    ok = open_position_fn(cid, st["m"], "NO", dollars, best_ask, book)
-                    if ok:
+                    if open_position_fn(cid, st["m"], "NO", dollars, best_ask, book):
                         self.entered.add(cid)
                         self.watch.pop(cid, None)
                         opened += 1
-                        continue  # next market
-
-                # not valid → backoff
+                        continue
                 st["fails"] += 1
                 st["next_check"] = now_ts + self._backoff(st["fails"])
-
             except Exception:
                 st["fails"] += 1
                 st["next_check"] = now_ts + self._backoff(st["fails"])
-        return opened
+        return opened, checked
 
 # --------------------------------------------------------------------
 # Fast open-market fetch you already had (kept here for completeness)
@@ -390,20 +395,21 @@ def main():
     try:
         while True:
             now_ts = int(time.time())
-            opened = mgr.step(
+            opened, checked = mgr.step(
                 now_ts,
                 fetch_book_fn=fetch_book,
                 open_position_fn=open_position_fn,
-                bet_size_fn=bet_size_fn
+                bet_size_fn=bet_size_fn,
+                max_checks_per_tick=50,   # tune: 25–100 depending on rate limits
             )
-
-            # periodic snapshot (every loop, or guard to every N seconds)
             log_run_snapshot(bank, total_trades_taken)
 
-            if opened == 0:
-                print(".", end="", flush=True)
-            time.sleep(mgr.poll_every)
-
+            if opened == 0 and checked == 0:
+                # nothing due right now → short nap
+                time.sleep(mgr.poll_every)   # e.g., 3–5s
+            else:
+                # we just did work; tiny breather to be polite
+                time.sleep(0.25)
     except KeyboardInterrupt:
         print("\nStopped.")
         log_run_snapshot(bank, total_trades_taken)
