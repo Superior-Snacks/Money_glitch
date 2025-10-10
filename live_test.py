@@ -84,7 +84,11 @@ class WatchlistManager:
                  min_notional=50.0,
                  fee_bps=600, slip_bps=200,
                  dust_price=0.02, dust_min_notional=20.0,
-                 poll_every=60, backoff_base=120, backoff_max=3600):
+                 poll_every=5,
+                 backoff_first=5,      # <── added
+                 backoff_base=15,      # <── shorter default base
+                 backoff_max=600,      # <── shorter max cap
+                 jitter=3):            # <── added small random offset
         self.max_no_price = max_no_price
         self.min_notional = min_notional
         self.fee = fee_bps / 10_000.0
@@ -92,14 +96,13 @@ class WatchlistManager:
         self.dust_price = dust_price
         self.dust_min_notional = dust_min_notional
         self.poll_every = poll_every
+        self.backoff_first = backoff_first
         self.backoff_base = backoff_base
         self.backoff_max = backoff_max
+        self.jitter = jitter
 
         self.watch = {}       # conditionId -> {m, no_token, next_check, fails, last_quote}
         self.entered = set()  # conditionIds already entered
-
-        self.backoff_first = backoff_first
-        self.jitter = jitter
 
     def seed_from_gamma(self, markets: list[dict]):
         now = int(time.time())
@@ -111,23 +114,22 @@ class WatchlistManager:
             if not no_token:
                 continue
             self.watch[cid] = {
-            "m": m,
-            "no_token": no_token,
-            "next_check": now + random.randint(0, 2),  # small spread
-            "fails": 0,
-            "last_quote": None,
-        }
+                "m": m,
+                "no_token": no_token,
+                "next_check": now + random.randint(0, 2),  # small spread for staggered checks
+                "fails": 0,
+                "last_quote": None,
+            }
 
     def due_ids(self, now_ts: int):
-        return [cid for cid, st in self.watch.items() if st["next_check"] <= now_ts and cid not in self.entered]
+        return [cid for cid, st in self.watch.items()
+                if st["next_check"] <= now_ts and cid not in self.entered]
 
     def _backoff(self, fails: int) -> int:
         if fails <= 1:
-            base = self.backoff_first  # e.g., 5s for first miss
+            base = self.backoff_first
         else:
             base = min(self.backoff_base * (2 ** (fails - 1)), self.backoff_max)
-        # small random jitter to de-sync
-        import random
         return max(1, base + random.randint(0, self.jitter))
 
     def _effective_price(self, p: float) -> float:
