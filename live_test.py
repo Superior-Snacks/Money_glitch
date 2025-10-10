@@ -32,7 +32,7 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 
 
 def main():
-    file_bank = fech_file("tbd.txt")
+    file_bank = fetch_old("tbd.txt")
     open_markets = fetch_open_yesno_fast()
     markets = [m for m in open_markets if is_actively_tradable(m)]
     new_markets = [n for n in markets if n not in file_bank]
@@ -180,6 +180,16 @@ def decide_book(bookvalue):
     """
     given value book, decide 
     """
+
+def fetch_old(filename):
+    result = []
+    # ensure parent folder exists
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+    with open(filename, "r", encoding="utf-8") as file:
+        # if file already has content, add newline first
+        for line in file:
+            result.append(line["id"])
+    return result
 
 def fech_file(filename):
     result = []
