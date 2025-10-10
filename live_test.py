@@ -61,13 +61,14 @@ def fetch_book(token_id: str, depth: int = 10, session=SESSION):
     book["asks"] = (book.get("asks") or [])[:depth]
     return book
 
-def get_no_token_id(market, session=SESSION):
+def get_no_token_id(market: dict) -> str | None:
     outs = market.get("outcomes")
     if isinstance(outs, str):
         try:
             outs = json.loads(outs)
         except Exception:
             outs = None
+
     toks = market.get("clobTokenIds") or []
     if isinstance(toks, str):
         try:
@@ -78,20 +79,24 @@ def get_no_token_id(market, session=SESSION):
     if not outs or len(outs) != 2 or len(toks) != 2:
         return None
 
-    yes_tok, no_tok = toks[0], toks[1]
+    # Normalize outcome names
+    o0 = str(outs[0]).strip().lower()
+    o1 = str(outs[1]).strip().lower()
 
-    # sanity-check which token has higher average price
-    try:
-        b0 = fetch_book(yes_tok, depth=1)
-        b1 = fetch_book(no_tok,  depth=1)
-        a0 = b0.get("asks", [{}])[0].get("price")
-        a1 = b1.get("asks", [{}])[0].get("price")
-        if a0 is None or a1 is None:
-            return no_tok  # fallback
-        # the cheaper one is likely YES; we want NO
-        return no_tok if a0 < a1 else yes_tok
-    except Exception:
-        return no_tok
+    # exact Yes/No ordering
+    if (o0, o1) == ("yes", "no"):
+        return toks[1]
+    if (o0, o1) == ("no", "yes"):
+        return toks[0]
+
+    # If they’re synonyms/casey, fall back to matching the word "no"
+    if "no" in o0 and "yes" in o1:
+        return toks[0]
+    if "yes" in o0 and "no" in o1:
+        return toks[1]
+
+    # Last-resort fallback: assume second token is NO (often true)
+    return toks[1]
 
 # --------------------------------------------------------------------
 # Watchlist Manager
@@ -567,6 +572,40 @@ def log_run_snapshot(bank, total_trades_count: int):
         "last_settle_time": last_settle_dt.isoformat() if last_settle_dt else None,
     }
     append_jsonl(RUN_SNAP_BASE, snap)
+
+def debug_show_books_for_market(market):
+    toks = market.get("clobTokenIds")
+    outs = market.get("outcomes")
+    if isinstance(toks, str):
+        try: toks = json.loads(toks)
+        except: pass
+    if isinstance(outs, str):
+        try: outs = json.loads(outs)
+        except: pass
+
+    yes_token = None
+    no_token  = None
+    if isinstance(outs, list) and isinstance(toks, list) and len(outs) == 2 and len(toks) == 2:
+        o0, o1 = str(outs[0]).lower(), str(outs[1]).lower()
+        if (o0, o1) == ("yes", "no"):
+            yes_token, no_token = toks[0], toks[1]
+        elif (o0, o1) == ("no", "yes"):
+            yes_token, no_token = toks[1], toks[0]
+    # fallback if not matched
+    yes_token = yes_token or toks[0]
+    no_token  = no_token  or toks[1]
+
+    yb = fetch_book(yes_token, depth=3)
+    nb = fetch_book(no_token,  depth=3)
+
+    def top(b): 
+        a = (b.get("asks") or [])
+        return a[0]["price"] if a else None
+
+    print(f"\n[DEBUG BOOKS] {market.get('question')}")
+    print(f" outcomes={outs}")
+    print(f" YES token={yes_token} best_ask={top(yb)}")
+    print(f"  NO token={no_token}  best_ask={top(nb)}")
 
 if __name__ == "__main__":
     main()
