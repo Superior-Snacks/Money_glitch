@@ -78,17 +78,22 @@ def get_no_token_id(market: dict) -> str | None:
 # --------------------------------------------------------------------
 # Watchlist Manager
 # --------------------------------------------------------------------
+VERBOSE = True
+def vprint(*a, **k):
+    if VERBOSE:
+        print(*a, **k)
+
 class WatchlistManager:
     def __init__(self,
                  max_no_price=0.40,
                  min_notional=50.0,
                  fee_bps=600, slip_bps=200,
                  dust_price=0.02, dust_min_notional=20.0,
-                 poll_every=5,
-                 backoff_first=5,      # <── added
-                 backoff_base=15,      # <── shorter default base
-                 backoff_max=600,      # <── shorter max cap
-                 jitter=3):            # <── added small random offset
+                 poll_every=3,            # more aggressive for debugging
+                 backoff_first=4,
+                 backoff_base=8,
+                 backoff_max=120,
+                 jitter=2):
         self.max_no_price = max_no_price
         self.min_notional = min_notional
         self.fee = fee_bps / 10_000.0
@@ -106,6 +111,7 @@ class WatchlistManager:
 
     def seed_from_gamma(self, markets: list[dict]):
         now = int(time.time())
+        added = 0
         for m in markets:
             cid = m.get("conditionId")
             if not cid or cid in self.watch or cid in self.entered:
@@ -116,10 +122,12 @@ class WatchlistManager:
             self.watch[cid] = {
                 "m": m,
                 "no_token": no_token,
-                "next_check": now + random.randint(0, 2),  # small spread for staggered checks
+                "next_check": now + random.randint(0, 2),  # stagger a bit
                 "fails": 0,
                 "last_quote": None,
             }
+            added += 1
+        vprint(f"[SEED] added {added} markets (watch size now {len(self.watch)})")
 
     def due_ids(self, now_ts: int):
         return [cid for cid, st in self.watch.items()
@@ -138,109 +146,115 @@ class WatchlistManager:
     def _valid_no_from_book(self, book: dict):
         """
         Walk asks from best up until our effective price cap.
-        Return (takeable_notional, best_ask_price, shares_at_cap).
+        Return (takeable_notional, best_ask_price, shares_at_cap, reasons[])
         """
         asks = book.get("asks") or []
+        reasons = []
         if not asks:
-            return 0.0, None, 0.0
+            reasons.append("no_asks")
+            return 0.0, None, 0.0, reasons
 
         takeable = 0.0
         shares = 0.0
         best_price = float(asks[0]["price"])
 
-        for a in asks:
+        for idx, a in enumerate(asks[:10]):
             p = float(a["price"])
             s = float(a["size"])
-            if self._effective_price(p) > self.max_no_price:
+            ep = self._effective_price(p)
+            vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s}")
+            if ep > self.max_no_price:
+                reasons.append(f"cap_break at {p:.4f} (eff {ep:.4f} > cap {self.max_no_price:.4f})")
                 break
             # notional for NO = p * shares
             takeable += p * s
-            shares += s
+            shares   += s
 
         if takeable <= 0:
-            return 0.0, best_price, 0.0
+            reasons.append("no_takeable_under_cap")
+            return 0.0, best_price, 0.0, reasons
 
         # “cheap dust” guard
         if best_price <= self.dust_price and takeable < self.dust_min_notional:
-            return 0.0, best_price, shares
+            reasons.append(f"cheap_dust best={best_price:.4f} takeable={takeable:.2f} < {self.dust_min_notional}")
+            return 0.0, best_price, shares, reasons
 
         if takeable >= self.min_notional:
-            return takeable, best_price, shares
-        return 0.0, best_price, shares
+            return takeable, best_price, shares, reasons
+
+        reasons.append(f"below_min_notional takeable={takeable:.2f} < {self.min_notional}")
+        return 0.0, best_price, shares, reasons
 
     def step(self,
              now_ts: int,
              fetch_book_fn,
              open_position_fn,
              bet_size_fn,
-             max_checks_per_tick: int = 100,
-             min_probe_when_idle: int = 25,       # <— new
-             probe_strategy: str = "oldest"):     # "oldest" | "random"
+             max_checks_per_tick=100,
+             min_probe_when_idle=40,
+             probe_strategy="newest"):
+        """
+        Returns (opened_count, checked_count).
+        - If too few are due, we proactively probe a few more (min_probe_when_idle)
+          so you can chew through a 3-day backlog quickly.
+        """
+        due = self.due_ids(now_ts)
+        # If backlog is large but not many due, force-probe a slice:
+        if len(due) < min_probe_when_idle:
+            # pick some IDs deterministically
+            all_ids = list(self.watch.keys())
+            # strategy: "newest" or "oldest" by startDate
+            if probe_strategy in ("newest", "oldest"):
+                def sd(cid):
+                    m = self.watch[cid]["m"]
+                    return (m.get("startDate") or m.get("createdAt") or "")
+                all_ids.sort(key=sd, reverse=(probe_strategy == "newest"))
+            probe_ids = [cid for cid in all_ids if cid not in self.entered][:min_probe_when_idle]
+            # mark them due “now”
+            for cid in probe_ids:
+                self.watch[cid]["next_check"] = now_ts
+            due = self.due_ids(now_ts)
+
         opened = 0
         checked = 0
-
-        # 1) normal due pass
-        due = self.due_ids(now_ts)
-        for cid in due:
-            if checked >= max_checks_per_tick:
-                break
+        vprint(f"[STEP] due={len(due)} watch={len(self.watch)} entered={len(self.entered)}")
+        for cid in due[:max_checks_per_tick]:
             st = self.watch.get(cid)
-            if not st: 
+            if not st:
                 continue
             checked += 1
+            m = st["m"]
+            vprint(f" -> checking {cid} | {m.get('question')[:80]}")
+
             try:
                 book = fetch_book_fn(st["no_token"])
                 st["last_quote"] = book
-                takeable, best_ask, shares = self._valid_no_from_book(book)
+                takeable, best_ask, shares, reasons = self._valid_no_from_book(book)
+                vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares:.2f}")
+
                 if takeable > 0:
                     dollars = bet_size_fn(takeable)
-                    if open_position_fn(cid, st["m"], "NO", dollars, best_ask, book):
+                    vprint(f"    TRY OPEN NO for ${dollars:.2f} (<= takeable)")
+                    if open_position_fn(cid, m, "NO", dollars, best_ask, book):
                         self.entered.add(cid)
                         self.watch.pop(cid, None)
                         opened += 1
+                        vprint("    ✅ OPENED; removed from watch")
                         continue
-                # no entry → backoff
-                st["fails"] += 1
-                st["next_check"] = now_ts + self._backoff(st["fails"])
-            except Exception:
-                st["fails"] += 1
-                st["next_check"] = now_ts + self._backoff(st["fails"])
+                    else:
+                        vprint("    ❌ open_position_fn returned False")
 
-        # 2) idle probe if nothing was due (prevents long sleeps)
-        if checked == 0 and min_probe_when_idle > 0 and self.watch:
-            # pick some not-entered items regardless of next_check
-            pool = [cid for cid in self.watch.keys() if cid not in self.entered]
-            if probe_strategy == "random":
-                random.shuffle(pool)
-            else:
-                # oldest by next_check first
-                pool.sort(key=lambda cid: self.watch[cid]["next_check"])
-            to_probe = pool[:min_probe_when_idle]
+                # not valid / failed open → backoff
+                st["fails"] += 1
+                next_in = self._backoff(st["fails"])
+                st["next_check"] = now_ts + next_in
+                vprint(f"    SKIP (reasons={reasons}) → fails={st['fails']} next_check=+{next_in}s")
 
-            for cid in to_probe:
-                if checked >= max_checks_per_tick:
-                    break
-                st = self.watch.get(cid)
-                if not st: 
-                    continue
-                checked += 1
-                try:
-                    book = fetch_book_fn(st["no_token"])
-                    st["last_quote"] = book
-                    takeable, best_ask, shares = self._valid_no_from_book(book)
-                    if takeable > 0:
-                        dollars = bet_size_fn(takeable)
-                        if open_position_fn(cid, st["m"], "NO", dollars, best_ask, book):
-                            self.entered.add(cid)
-                            self.watch.pop(cid, None)
-                            opened += 1
-                            continue
-                    # even on probe, apply a gentle backoff
-                    st["fails"] = max(1, st["fails"])   # ensure > 0
-                    st["next_check"] = now_ts + self._backoff(st["fails"])
-                except Exception:
-                    st["fails"] = max(1, st["fails"])
-                    st["next_check"] = now_ts + self._backoff(st["fails"])
+            except Exception as e:
+                st["fails"] += 1
+                next_in = self._backoff(st["fails"])
+                st["next_check"] = now_ts + next_in
+                vprint(f"    [ERR] {e} → fails={st['fails']} next_check=+{next_in}s")
 
         return opened, checked
 
@@ -398,20 +412,26 @@ def main():
 
     def open_position_fn(cid, market, side, dollars, best_ask, book):
         nonlocal bank, total_trades_taken
+
+        vprint(f"    open_position_fn: side={side} dollars={dollars:.2f} bank={bank:.2f} best_ask={best_ask}")
         if side != "NO" or dollars <= 0 or bank < dollars:
+            vprint("    open_position_fn: rejected (side/budget)")
             return False
 
         spent_after, shares, avg_price = simulate_take_from_asks(
             book, dollars, fee=fee, slip=slip, price_cap=price_cap
         )
+        vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
+
         if shares <= 0:
+            vprint("    open_position_fn: no shares (book changed?)")
             return False
 
         bank -= spent_after
         positions_by_id[cid] = {"shares": shares, "side": side}
 
         print(f"\n✅ ENTER NO | {market.get('question')}")
-        print(f"   spent={spent_after:.2f} | shares={shares:.2f} | avg={avg_price:.4f} | bank={bank:.2f}")
+        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f}")
 
         toks = market.get("clobTokenIds")
         if isinstance(toks, str):
@@ -420,63 +440,69 @@ def main():
         no_token_id = (toks or [None, None])[1]
 
         log_open_trade(market, "NO", no_token_id, book_used=book,
-                       spent_after=spent_after, shares=shares,
-                       avg_price_eff=avg_price, bank_after_open=bank)
+                    spent_after=spent_after, shares=shares,
+                    avg_price_eff=avg_price, bank_after_open=bank)
+
         total_trades_taken += 1
         return True
 
-    # 3️⃣ Main loop — reseeds & polls continuously
-    REFRESH_SEED_EVERY = 300  # 5 min
+    REFRESH_SEED_EVERY = 180  # re-fetch markets every 3 minutes
     last_seed = 0
 
     try:
         while True:
             now_ts = int(time.time())
 
-            # ⏳ refresh markets every few minutes
+            # periodic reseed to catch new markets
             if now_ts - last_seed >= REFRESH_SEED_EVERY:
                 try:
-                    fresh = fetch_open_yesno_fast(limit=250, max_pages=2, days_back=3, verbose=False)
+                    fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
                     tradable = [m for m in fresh if is_actively_tradable(m)]
                     mgr.seed_from_gamma(tradable)
-                    print(f"[REFRESH] Added {len(tradable)} tradable markets to watchlist.")
+                    vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
                 except Exception as e:
                     print(f"[WARN reseed] {e}")
                 last_seed = now_ts
 
-            # 🔁 check books & take NOs
             opened, checked = mgr.step(
                 now_ts,
                 fetch_book_fn=fetch_book,
                 open_position_fn=open_position_fn,
                 bet_size_fn=bet_size_fn,
-                max_checks_per_tick=100,
-                min_probe_when_idle=40,
-                probe_strategy="oldest",
+                max_checks_per_tick=200,     # go harder
+                min_probe_when_idle=100,     # and chew backlog
+                probe_strategy="newest",     # or "oldest"
             )
 
             log_run_snapshot(bank, total_trades_taken)
 
             if opened == 0 and checked == 0:
-                time.sleep(mgr.poll_every)   # nothing due → small rest
+                time.sleep(mgr.poll_every)   # idle
             else:
-                time.sleep(0.2)              # slight pause between batches
+                time.sleep(0.15)             # tiny breather
 
     except KeyboardInterrupt:
         print("\nStopped by user.")
         log_run_snapshot(bank, total_trades_taken)
 
 LOG_DIR = "logs"
-TRADE_LOG = os.path.join(LOG_DIR, "trades_taken.jsonl")   # one line per trade
-RUN_SNAP  = os.path.join(LOG_DIR, "run_snapshots.jsonl")  # optional periodic snapshots
 
 def _ensure_logdir():
     os.makedirs(LOG_DIR, exist_ok=True)
 
-def append_jsonl(filename: str, record: dict):
+def _dated(path_base: str) -> str:
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    name, ext = os.path.splitext(path_base)
+    return os.path.join(LOG_DIR, f"{name}_{day}{ext}")
+
+def append_jsonl(path_base: str, record: dict):
     _ensure_logdir()
-    with open(filename, "a", encoding="utf-8") as f:
+    path = _dated(path_base)
+    with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+
+TRADE_LOG_BASE = "trades_taken.jsonl"
+RUN_SNAP_BASE  = "run_snapshots.jsonl"
 
 def compute_potential_value_if_all_win():
     total = 0.0
@@ -504,7 +530,7 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
         "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
         "bank_after_open": round(float(bank_after_open), 6),
     }
-    append_jsonl(TRADE_LOG, rec)
+    append_jsonl(TRADE_LOG_BASE, rec)
 
 def log_run_snapshot(bank, total_trades_count: int):
     snap = {
@@ -519,7 +545,7 @@ def log_run_snapshot(bank, total_trades_count: int):
         "first_trade_time": first_trade_dt.isoformat() if first_trade_dt else None,
         "last_settle_time": last_settle_dt.isoformat() if last_settle_dt else None,
     }
-    append_jsonl(RUN_SNAP, snap)
+    append_jsonl(RUN_SNAP_BASE, snap)
 
 if __name__ == "__main__":
     main()
