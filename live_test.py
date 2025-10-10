@@ -61,19 +61,37 @@ def fetch_book(token_id: str, depth: int = 10, session=SESSION):
     book["asks"] = (book.get("asks") or [])[:depth]
     return book
 
-def get_no_token_id(market: dict) -> str | None:
-    """Return the NO token id for a Yes/No market, else None."""
+def get_no_token_id(market, session=SESSION):
     outs = market.get("outcomes")
     if isinstance(outs, str):
-        try: outs = json.loads(outs)
-        except: outs = None
+        try:
+            outs = json.loads(outs)
+        except Exception:
+            outs = None
     toks = market.get("clobTokenIds") or []
     if isinstance(toks, str):
-        try: toks = json.loads(toks)
-        except: toks = []
-    if outs == ["Yes", "No"] and len(toks) >= 2:
-        return toks[1]  # index 1 is "No" when outcomes == ["Yes","No"]
-    return None
+        try:
+            toks = json.loads(toks)
+        except Exception:
+            toks = []
+
+    if not outs or len(outs) != 2 or len(toks) != 2:
+        return None
+
+    yes_tok, no_tok = toks[0], toks[1]
+
+    # sanity-check which token has higher average price
+    try:
+        b0 = fetch_book(yes_tok, depth=1)
+        b1 = fetch_book(no_tok,  depth=1)
+        a0 = b0.get("asks", [{}])[0].get("price")
+        a1 = b1.get("asks", [{}])[0].get("price")
+        if a0 is None or a1 is None:
+            return no_tok  # fallback
+        # the cheaper one is likely YES; we want NO
+        return no_tok if a0 < a1 else yes_tok
+    except Exception:
+        return no_tok
 
 # --------------------------------------------------------------------
 # Watchlist Manager
