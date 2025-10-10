@@ -206,8 +206,8 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
                 won = (no_p < yes_p)
 
             pnl = (shares - spent_after) if won else (-spent_after)
-            if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                pnl = 0
+            #if avg_ < 0.09 and won: #might not need to !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #    pnl = 0
 
             # update account & totals
             bank += pnl
@@ -252,7 +252,7 @@ def run_simple():
     for _ in range(100):  # up to 100 * 50 = 5000 markets
         time.sleep(1)
         pnl_batch, bank, offset, bets, createdAt, sp = rolling_markets(
-            bank, check="yes",
+            bank, check="no",
             limit=50, offset=offset,
             max_price_cap=0.4,  # e.g., 0.40 to avoid expensive NO
             fee_bps=600, slip_bps=200

@@ -521,3 +521,11 @@ amount of bets:194 | total spent 13633.78 | batch P/L: -701.70 | total P/L: -432
 amount of bets:228 | total spent 15804.14 | batch P/L: -102.60 | total P/L: -4423.96 | bank: 576.04 | next offset: 10939 | timestamp2024-04-25T19:47:39.206888Z
 
 amount of bets:275 | total spent 16601.99 | batch P/L: -578.37 | total P/L: -5002.33 | bank: -2.33 | next offset: 10986 | timestamp2024-04-29T19:26:17.286001Z
+
+amount of bets:36 | total spent 240.84 | batch P/L: -194.40 | total P/L: -194.40 | bank: 4805.60 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:36 | total spent 2207.99 | batch P/L: -1831.79 | total P/L: -1831.79 | bank: 3168.21 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:36 | total spent 252.25 | batch P/L: 714.20 | total P/L: 714.20 | bank: 5714.20 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z
+
+amount of bets:36 | total spent 252.25 | batch P/L: 11782.64 | total P/L: 11782.64 | bank: 16782.64 | next offset: 10747 | timestamp2024-04-15T15:15:10.646795Z

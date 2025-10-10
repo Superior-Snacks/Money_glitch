@@ -179,6 +179,17 @@ def decide_book(bookvalue):
     given value book, decide 
     """
 
+def fech_file(filename):
+    result = []
+    # ensure parent folder exists
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+    with open(filename, "r", encoding="utf-8") as file:
+        # if file already has content, add newline first
+        for line in file:
+            result.append(line)
+    return result
+
+
 
 def save_to_file(filename, data):
     # ensure parent folder exists
