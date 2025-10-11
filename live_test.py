@@ -19,8 +19,13 @@ LOG_DIR = "logs"
 TRADE_LOG_BASE = "trades_taken.jsonl"
 RUN_SNAP_BASE  = "run_snapshots.jsonl"
 DECISION_LOG_BASE = "decisions.jsonl"
+DECISION_LOG_SAMPLE = 0.15  # 15% sampling
 VERBOSE = True
 
+
+# ----------------------------------------------------------------------
+#network helpers
+# ----------------------------------------------------------------------
 def make_session():
     s = requests.Session()
     retry = Retry(
@@ -39,11 +44,31 @@ def make_session():
     return s
 SESSION = make_session()
 
+# --- Simple global RPS limiter ---------------------------------------
+RPS_TARGET = 5.0     # choose 2–5 to stay very safe
+_last_tokens_ts = time.monotonic()
+_bucket = RPS_TARGET
+
+def _rate_limit():
+    global _last_tokens_ts, _bucket
+    now = time.monotonic()
+    # refill bucket
+    _bucket = min(RPS_TARGET, _bucket + (now - _last_tokens_ts) * RPS_TARGET)
+    _last_tokens_ts = now
+    if _bucket < 1.0:
+        # need to wait for 1 token
+        need = (1.0 - _bucket) / RPS_TARGET
+        time.sleep(need)
+        now2 = time.monotonic()
+        _bucket = min(RPS_TARGET, _bucket + (now2 - _last_tokens_ts) * RPS_TARGET)
+        _last_tokens_ts = now2
+    _bucket -= 1.0
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
 def fetch_book(token_id: str, depth: int = 20, session=SESSION):
     """Fetch the CLOB book for one token (YES or NO)."""
+    _rate_limit()  # <-- throttle globally
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
     book = r.json() or {}
@@ -260,7 +285,7 @@ class WatchlistManager:
                 if best_ask is None or "no_asks_under_cap" in reasons:
                     debug_show_books_for_market(m)
 
-                log_decision(
+                maybe_log_decision(
                     m, self.max_no_price, bet_size_fn(takeable), book,
                     takeable, best_ask, shares, reasons,
                     result=None
@@ -271,7 +296,7 @@ class WatchlistManager:
                     vprint(f"    TRY OPEN NO for ${dollars:.2f} (<= takeable)")
                     ok = open_position_fn(cid, m, "NO", dollars, best_ask, book)
                     if ok:
-                        log_decision(
+                        maybe_log_decision(
                             m, self.max_no_price, dollars, book,
                             takeable, best_ask, shares, reasons,
                             result={"ok": True}
@@ -282,7 +307,7 @@ class WatchlistManager:
                         vprint("    ✅ OPENED; removed from watch")
                         continue
                     else:
-                        log_decision(
+                        maybe_log_decision(
                             m, self.max_no_price, dollars, book,
                             takeable, best_ask, shares, reasons,
                             result={"ok": False, "why": "open_position_fn_false"}
@@ -741,6 +766,11 @@ def debug_show_books_for_market(market):
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+def maybe_log_decision(*args, **kwargs):
+    import random
+    if random.random() < DECISION_LOG_SAMPLE:
+        log_decision(*args, **kwargs)
 
 def log_decision(market, price_cap, budget, book, takeable, best_ask, shares, reasons, result):
     """
