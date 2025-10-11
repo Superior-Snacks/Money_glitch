@@ -182,31 +182,42 @@ class WatchlistManager:
         best_price = float(asks[0]["price"])
 
         for idx, a in enumerate(asks[:10]):
-            p = float(a["price"])
-            s = float(a["size"])
+            try:
+                p = float(a["price"])
+                s = float(a["size"])
+            except (KeyError, TypeError, ValueError):
+                continue
+
             ep = self._effective_price(p)
-            vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s}")
-            if p > self.max_no_price:
-                reasons.append(f"cap_break at {p:.4f} (eff {ep:.4f} > cap {self.max_no_price:.4f})")
-                break
-            # notional for NO = p * shares
+            vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s:.2f}")
+
+            # Skip individual asks above the cap but continue checking deeper levels
+            if ep > self.max_no_price:
+                reasons.append(f"skip ask {idx} (eff {ep:.4f} > cap {self.max_no_price:.4f})")
+                continue
+
+            # Add to takeable total if within cap
             takeable += p * s
-            shares   += s
+            shares += s
 
         if takeable <= 0:
             reasons.append("no_takeable_under_cap")
-            return 0.0, best_price, 0.0, reasons
-
-        # “cheap dust” guard
-        if best_price <= self.dust_price and takeable < self.dust_min_notional:
-            reasons.append(f"cheap_dust best={best_price:.4f} takeable={takeable:.2f} < {self.dust_min_notional}")
             return 0.0, best_price, shares, reasons
 
-        if takeable >= self.min_notional:
+        # Relaxed dust guard — only skip if both price and notional are tiny
+        if best_price <= self.dust_price and takeable <= self.dust_min_notional:
+            reasons.append(
+                f"cheap_dust best={best_price:.4f} takeable={takeable:.2f} ≤ {self.dust_min_notional}"
+            )
+            return 0.0, best_price, shares, reasons
+
+        # More lenient min_notional: warn but don’t block
+        if takeable < self.min_notional:
+            reasons.append(f"below_min_notional takeable={takeable:.2f} < {self.min_notional}")
+            # Allow the trade anyway for testing and tuning
             return takeable, best_price, shares, reasons
 
-        reasons.append(f"below_min_notional takeable={takeable:.2f} < {self.min_notional}")
-        return 0.0, best_price, shares, reasons
+        return takeable, best_price, shares, reasons
 
     def step(self,
              now_ts: int,
