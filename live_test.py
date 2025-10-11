@@ -644,7 +644,6 @@ def append_jsonl(path_base: str, record: dict):
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
-
 def compute_potential_value_if_all_win():
     total = 0.0
     for pos in positions_by_id.values():
@@ -740,7 +739,6 @@ def debug_show_books_for_market(market):
     fmt_side("YES", yb)
     print(f"  NO  token={no_token}")
     fmt_side("NO", nb)
-
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
