@@ -223,7 +223,7 @@ class WatchlistManager:
              open_position_fn,
              bet_size_fn,
              max_checks_per_tick=100,
-             min_probe_when_idle=40,
+             min_probe_when_idle=None,
              probe_strategy="newest"):
         """
         Returns (opened_count, checked_count).
@@ -231,6 +231,8 @@ class WatchlistManager:
           so you can chew through a 3-day backlog quickly.
         """
         due = self.due_ids(now_ts)
+        if min_probe_when_idle is None:
+            min_probe_when_idle = max(40, min(200, len(self.watch)//5))
         # If backlog is large but not many due, force-probe a slice:
         if len(due) < min_probe_when_idle:
             # pick some IDs deterministically
