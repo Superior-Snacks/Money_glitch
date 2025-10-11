@@ -76,7 +76,7 @@ def log_net_usage():
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
-def fetch_book(token_id: str, depth: int = 50, session=SESSION):
+def fetch_book(token_id: str, depth: int = 100, session=SESSION):
     _rate_limit()
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
@@ -416,6 +416,34 @@ def probe_under_cap_sample(mgr, n=30, depth=20):
     for cid, p, s in samples[:5]:
         vprint(f"   -> {cid} first under-cap ask ~ p={p:.4f} size={s:.4f}")
 
+def quick_scan_yes_no(mgr, n=20):
+    from math import inf
+    fee_mult = 1.0 + mgr.fee + mgr.slip
+    cnt_no_under = cnt_yes_under = 0
+    for cid, st in list(mgr.watch.items())[:n]:
+        m = st["m"]
+        om = outcome_map_from_market(m)
+        nb = fetch_book(om["NO"], depth=50)
+        yb = fetch_book(om["YES"], depth=50)
+        min_no = min((float(a["price"]) for a in (nb.get("asks") or []) if a.get("price")), default=inf)
+        min_yes = min((float(a["price"]) for a in (yb.get("asks") or []) if a.get("price")), default=inf)
+        if min_no < inf and min_no*fee_mult <= mgr.max_no_price: cnt_no_under += 1
+        if min_yes < inf and min_yes*fee_mult <= mgr.max_no_price: cnt_yes_under += 1
+    print(f"[SCAN] NO under-cap in sample: {cnt_no_under}/{n} | YES under-cap: {cnt_yes_under}/{n}")
+
+def best_of_book(book):
+    bids = book.get("bids") or []
+    asks = book.get("asks") or []
+    try:
+        best_bid = max((float(b["price"]) for b in bids if "price" in b), default=None)
+    except ValueError:
+        best_bid = None
+    try:
+        best_ask = min((float(a["price"]) for a in asks if "price" in a), default=None)
+    except ValueError:
+        best_ask = None
+    return best_bid, best_ask
+
 # --------------------------------------------------------------------
 # Fast open-market fetch
 # --------------------------------------------------------------------
@@ -487,13 +515,15 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
     return all_rows
 
 def is_actively_tradable(m):
-    # Only require the order book to be enabled and that there are 2 token ids.
-    if not m.get("enableOrderBook"):
-        return False
-    toks = m.get("clobTokenIds") or []
+    if not m.get("enableOrderBook"): return False
+    toks = m.get("clobTokenIds"); 
     if isinstance(toks, str):
-        try: toks = json.loads(toks)
-        except: toks = []
+        try: toks=json.loads(toks)
+        except: toks=[]
+    q = (m.get("question") or "").lower()
+    # Skip range/between/greater-than style if you want simpler binarys:
+    if any(w in q for w in ["between", "range", "greater than", "less than"]):
+        return False
     return isinstance(toks, list) and len(toks) == 2
 
 # --------------------------------------------------------------------
@@ -588,7 +618,7 @@ def main():
     total_trades_taken = 0
 
     # 1️⃣ Fetch initial 3 days of markets
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=10, verbose=True)
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=3, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
@@ -761,6 +791,7 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
     """
     Persist a single line for the trade you just took.
     """
+    bb, ba = best_of_book(book_used or {})
     rec = {
         "ts": datetime.now(timezone.utc).isoformat(),
         "market_id": market.get("conditionId"),
@@ -771,8 +802,8 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
         "spent_after": round(float(spent_after), 6),
         "shares": round(float(shares), 6),
         "avg_price_eff": round(float(avg_price_eff), 6),  # effective avg (after fees/slip used to decide)
-        "book_best_bid": (book_used.get("bids") or [{}])[0].get("price") if book_used else None,
-        "book_best_ask": (book_used.get("asks") or [{}])[0].get("price") if book_used else None,
+        "book_best_bid": bb,
+        "book_best_ask": ba,
         "locked_now": round(float(locked_now), 6),
         "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
         "bank_after_open": round(float(bank_after_open), 6),
