@@ -21,6 +21,7 @@ RUN_SNAP_BASE  = "run_snapshots.jsonl"
 DECISION_LOG_BASE = "decisions.jsonl"
 DECISION_LOG_SAMPLE = 0.15  # 15% sampling
 VERBOSE = True
+SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets for inspection
 
 
 # ----------------------------------------------------------------------
@@ -311,7 +312,7 @@ class WatchlistManager:
                     st["ever_under_cap"] = True
                 vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares:.2f}")
 
-                if best_ask is None or "no_asks_under_cap" in reasons:
+                if SHOW_DEBUG_BOOKS and (best_ask is None or "no_asks_under_cap" in reasons):
                     debug_show_books_for_market(m)
 
                 maybe_log_decision(
@@ -633,6 +634,8 @@ def main():
     )
     mgr.seed_from_gamma(markets)
     probe_under_cap_sample(mgr, n=30)
+    fee_mult = 1.0 + mgr.fee + mgr.slip
+    print(f"[CAP] fee_mult={fee_mult:.4f} raw_cap=0.65 -> max_no_price={mgr.max_no_price:.4f} (=> p <= {mgr.max_no_price / fee_mult:.4f} pre-fee)")
 
     # --- trade sizing and fill simulation ---
     fee, slip, price_cap = mgr.fee, mgr.slip, mgr.max_no_price
