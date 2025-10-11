@@ -477,8 +477,6 @@ def simulate_take_from_asks(book: dict, dollars: float, fee: float, slip: float,
 # --------------------------------------------------------------------
 # MAIN: run the watcher
 # --------------------------------------------------------------------
-
-# ---- simple open-position ledger (for logging potential value) ----
 positions_by_id = {}   # id -> {"shares": float, "side": "NO"/"YES"}
 SETTLE_FEE = 0.01      # 1% winner fee
 locked_now = 0.0
@@ -629,7 +627,9 @@ def main():
         print("\nStopped by user.")
         log_run_snapshot(bank, total_trades_taken)
 
-
+# ----------------------------------------------------------------------
+# log logic
+# ----------------------------------------------------------------------
 def _ensure_logdir():
     os.makedirs(LOG_DIR, exist_ok=True)
 
