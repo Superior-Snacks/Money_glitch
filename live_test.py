@@ -61,42 +61,48 @@ def fetch_book(token_id: str, depth: int = 20, session=SESSION):
     book["asks"] = (book.get("asks") or [])[:depth]
     return book
 
-def get_no_token_id(market: dict) -> str | None:
+
+def outcome_map_from_market(market: dict) -> dict:
+    """
+    Returns {"YES": <token_id_yes>, "NO": <token_id_no>}.
+    Handles Gamma shapes where outcomes/clobTokenIds might be strings or lists.
+    """
     outs = market.get("outcomes")
+    toks = market.get("clobTokenIds")
+
     if isinstance(outs, str):
-        try:
-            outs = json.loads(outs)
-        except Exception:
-            outs = None
-
-    toks = market.get("clobTokenIds") or []
+        try: outs = json.loads(outs)
+        except: outs = None
     if isinstance(toks, str):
-        try:
-            toks = json.loads(toks)
-        except Exception:
-            toks = []
+        try: toks = json.loads(toks)
+        except: toks = None
 
-    if not outs or len(outs) != 2 or len(toks) != 2:
+    # Common case: 2 outcomes named Yes/No
+    if isinstance(outs, list) and isinstance(toks, list) and len(outs) == 2 and len(toks) == 2:
+        o0, o1 = str(outs[0]).strip().upper(), str(outs[1]).strip().upper()
+        if (o0, o1) == ("YES", "NO"):
+            return {"YES": toks[0], "NO": toks[1]}
+        if (o0, o1) == ("NO", "YES"):
+            return {"YES": toks[1], "NO": toks[0]}
+        # fuzzy
+        if "NO" in o0 and "YES" in o1:  # "No/Yes"
+            return {"YES": toks[1], "NO": toks[0]}
+        if "YES" in o0 and "NO" in o1:  # "Yes/No"
+            return {"YES": toks[0], "NO": toks[1]}
+
+    # Fallbacks
+    if isinstance(toks, list) and len(toks) == 2:
+        # last resort: assume [YES, NO]
+        return {"YES": toks[0], "NO": toks[1]}
+
+    raise ValueError(f"Cannot resolve YES/NO token ids for market {market.get('id') or market.get('conditionId')}")
+
+
+def get_no_token_id(market: dict) -> str | None:
+    try:
+        return outcome_map_from_market(market)["NO"]
+    except Exception:
         return None
-
-    # Normalize outcome names
-    o0 = str(outs[0]).strip().lower()
-    o1 = str(outs[1]).strip().lower()
-
-    # exact Yes/No ordering
-    if (o0, o1) == ("yes", "no"):
-        return toks[1]
-    if (o0, o1) == ("no", "yes"):
-        return toks[0]
-
-    # If they’re synonyms/casey, fall back to matching the word "no"
-    if "no" in o0 and "yes" in o1:
-        return toks[0]
-    if "yes" in o0 and "no" in o1:
-        return toks[1]
-
-    # Last-resort fallback: assume second token is NO (often true)
-    return toks[1]
 
 # --------------------------------------------------------------------
 # Watchlist Manager
@@ -168,8 +174,8 @@ class WatchlistManager:
 
     def _valid_no_from_book(self, book: dict):
         """
-        Walk asks from best up until our effective price cap.
-        Return (takeable_notional, best_ask_price, shares_at_cap, reasons[])
+        Walk asks (print them), aggregate pre-fee dollars under cap, and total shares.
+        Returns (takeable_notional_ex_fee, best_ask_price, shares_at_cap, reasons[])
         """
         asks = book.get("asks") or []
         reasons = []
@@ -177,45 +183,40 @@ class WatchlistManager:
             reasons.append("no_asks")
             return 0.0, None, 0.0, reasons
 
-        takeable = 0.0
+        # Print all visible asks
+        for idx, a in enumerate(asks):
+            try:
+                p = float(a["price"]); s = float(a["size"])
+                ep = self._effective_price(p)
+                vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s:.6f}")
+            except Exception:
+                vprint(f"   [ASK {idx}] {a!r}")
+
+        takeable_ex = 0.0
         shares = 0.0
         best_price = None
         skipped = 0
-        for idx, a in enumerate(asks[:10]):
+
+        for a in asks:
             try:
-                p = float(a["price"])
-                s = float(a["size"])
-            except (KeyError, TypeError, ValueError):
+                p = float(a["price"]); s = float(a["size"])
+            except Exception:
                 continue
-
             ep = self._effective_price(p)
-            vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s:.2f}")
-
             if ep > self.max_no_price:
                 skipped += 1
                 continue
-
             if best_price is None:
                 best_price = p
-
-            takeable += p * s
+            takeable_ex += p * s
             shares += s
 
         if skipped:
             reasons.append(f"skipped_{skipped}_over_cap")
-
-        under_cap_levels = sum(
-        1 for a in asks[:10]
-        if float(a.get("price", 1)) * (1 + self.fee + self.slip) <= self.max_no_price
-        )
-        vprint(f"    under_cap_levels={under_cap_levels}")
-
         if best_price is None:
             reasons.append("no_asks_under_cap")
-            return 0.0, None, 0.0, reasons
 
-        # If there's any liquidity under cap, return it
-        return takeable, best_price, shares, reasons
+        return takeable_ex, best_price, shares, reasons
 
     def step(self,
              now_ts: int,
@@ -269,26 +270,43 @@ class WatchlistManager:
                 if best_ask is None or "no_asks_under_cap" in reasons:
                     debug_show_books_for_market(m)
 
+                log_decision(
+                    m, self.max_no_price, bet_size_fn(takeable), book,
+                    takeable, best_ask, shares, reasons,
+                    result=None
+                )
+
                 if takeable > 0:
                     dollars = bet_size_fn(takeable)
                     vprint(f"    TRY OPEN NO for ${dollars:.2f} (<= takeable)")
-                    if open_position_fn(cid, m, "NO", dollars, best_ask, book):
+                    ok = open_position_fn(cid, m, "NO", dollars, best_ask, book)
+                    if ok:
+                        log_decision(
+                            m, self.max_no_price, dollars, book,
+                            takeable, best_ask, shares, reasons,
+                            result={"ok": True}
+                        )
                         self.entered.add(cid)
                         self.watch.pop(cid, None)
                         opened += 1
                         vprint("    ✅ OPENED; removed from watch")
                         continue
                     else:
-                        vprint("    ❌ open_position_fn returned False")
+                        log_decision(
+                            m, self.max_no_price, dollars, book,
+                            takeable, best_ask, shares, reasons,
+                            result={"ok": False, "why": "open_position_fn_false"}
+                        )
+                        # liquidity existed but we didn't fill (book moved, race, etc.) → QUICK RETRY
+                        st["fails"] = 0
+                        st["next_check"] = now_ts + max(1, self.backoff_first // 2)
+                        vprint("    ⚠️ had_liquidity_but_no_fill → quick retry scheduled")
+                        continue
 
-                elif takeable > 0 and checked > 0:
-                    st["fails"] = 0
-                    st["next_check"] = now_ts + self.backoff_first
-                    vprint("    liquidity present; quick retry scheduled")
-
-                # not valid / failed open → backoff
+                # No takeable liquidity right now → backoff, but gently if we were close
                 st["fails"] += 1
-                next_in = self._backoff(st["fails"])
+                fast = ("skipped_" in " ".join(reasons)) or ("no_asks" not in reasons)
+                next_in = max(1, (self.backoff_first if fast else self._backoff(st["fails"])))
                 st["next_check"] = now_ts + next_in
                 vprint(f"    SKIP (reasons={reasons}) → fails={st['fails']} next_check=+{next_in}s")
 
@@ -388,51 +406,74 @@ def is_actively_tradable(m):
 # --------------------------------------------------------------------
 def simulate_take_from_asks(book: dict, dollars: float, fee: float, slip: float, price_cap: float):
     """
-    Simulate taking NO asks up to `dollars` budget, only for asks where
-    effective price (p*(1+fee+slip)) <= price_cap.
-    Aggregates across multiple price levels.
+    Take NO asks up to 'dollars' while enforcing aggregate VWAP (inc fee+slip) <= price_cap.
+    Allows partial fill at the boundary level.
     """
     asks = book.get("asks") or []
-    if not asks:
+    if not asks or dollars <= 0:
         return 0.0, 0.0, 0.0
 
-    spent_pre = 0.0
+    # sort by ascending price
+    try:
+        asks = sorted(
+            [
+                {"price": float(a["price"]), "size": float(a["size"])}
+                for a in asks
+                if float(a.get("price", 0)) > 0 and float(a.get("size", 0)) > 0
+            ],
+            key=lambda a: a["price"],
+        )
+    except Exception:
+        return 0.0, 0.0, 0.0
+
+    fee_mult = 1.0 + float(fee) + float(slip)
+
+    spent_ex = 0.0
     shares = 0.0
+    budget_left = float(dollars)
 
-    for idx, a in enumerate(asks):
-        try:
-            p = float(a["price"])
-            s = float(a["size"])
-        except (KeyError, TypeError, ValueError):
+    for lvl in asks:
+        px, sz = lvl["price"], lvl["size"]
+        lvl_dollars_cap = min(budget_left, px * sz)
+        if lvl_dollars_cap <= 0:
             continue
 
-        ep = p * (1.0 + fee + slip)
-        if ep > price_cap:
-            # skip overpriced ask
+        # Try full slice at this level
+        new_spent_ex = spent_ex + lvl_dollars_cap
+        new_shares   = shares + (lvl_dollars_cap / px)
+        vwap_ex      = new_spent_ex / new_shares
+        vwap_inc     = vwap_ex * fee_mult
+
+        if vwap_inc <= price_cap:
+            # take full slice
+            spent_ex = new_spent_ex
+            shares   = new_shares
+            budget_left -= lvl_dollars_cap
+            if budget_left <= 1e-9:
+                break
             continue
 
-        # max shares we can still afford at this price
-        remaining_budget = dollars - spent_pre
-        if remaining_budget <= 0:
-            break
-
-        max_shares_here = remaining_budget / p
-        take_shares = min(s, max_shares_here)
-
-        spent_pre += take_shares * p
-        shares += take_shares
-
-        # if we hit the budget, stop
-        if spent_pre >= dollars:
-            break
+        # Otherwise, solve for the *fraction* x we can still take at this px without breaking cap:
+        # (spent_ex + x) / (shares + x/px) * fee_mult <= price_cap
+        target_ex = price_cap / fee_mult
+        denom = 1.0 - (target_ex / px)  # x*(1 - target/px) <= target*shares - spent_ex
+        rhs   = target_ex * shares - spent_ex
+        if denom <= 0:
+            # This price is too high to add even a tiny amount and keep VWAP under the cap
+            continue
+        x_max = max(0.0, min(lvl_dollars_cap, rhs / denom))
+        if x_max > 1e-8:
+            spent_ex += x_max
+            shares   += x_max / px
+            budget_left -= x_max
+            break  # boundary hit; further higher levels would only worsen VWAP
 
     if shares <= 0:
         return 0.0, 0.0, 0.0
 
-    # apply fee + slippage after total spent
-    spent_after = spent_pre * (1.0 + fee + slip)
-    avg_price = spent_after / shares
-    return spent_after, shares, avg_price
+    spent_inc = spent_ex * fee_mult
+    avg_price_inc = spent_inc / shares
+    return spent_inc, shares, avg_price_inc
 
 # --------------------------------------------------------------------
 # MAIN: run the watcher
@@ -486,6 +527,17 @@ def main():
         spent_after, shares, avg_price = simulate_take_from_asks(
             book, dollars, fee=fee, slip=slip, price_cap=price_cap
         )
+        append_jsonl(DECISION_LOG_BASE, {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "type": "fill_sim",
+            "market_id": market.get("conditionId"),
+            "question": market.get("question"),
+            "spent_after": round(float(spent_after), 6),
+            "shares": round(float(shares), 6),
+            "avg_price_eff": round(float(avg_price), 6),
+            "budget": round(float(dollars), 6),
+            "cap_inc_fee": round(float(price_cap), 6),
+        })
         vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
 
         if shares <= 0:
@@ -613,39 +665,75 @@ def log_run_snapshot(bank, total_trades_count: int):
     append_jsonl(RUN_SNAP_BASE, snap)
 
 def debug_show_books_for_market(market):
-    toks = market.get("clobTokenIds")
-    outs = market.get("outcomes")
-    if isinstance(toks, str):
-        try: toks = json.loads(toks)
-        except: pass
-    if isinstance(outs, str):
-        try: outs = json.loads(outs)
-        except: pass
-
-    yes_token = None
-    no_token  = None
-    if isinstance(outs, list) and isinstance(toks, list) and len(outs) == 2 and len(toks) == 2:
-        o0, o1 = str(outs[0]).lower(), str(outs[1]).lower()
-        if (o0, o1) == ("yes", "no"):
+    try:
+        om = outcome_map_from_market(market)
+        yes_token, no_token = om["YES"], om["NO"]
+    except Exception:
+        # best-effort legacy fallback
+        toks = market.get("clobTokenIds")
+        outs = market.get("outcomes")
+        if isinstance(toks, str):
+            try: toks = json.loads(toks)
+            except: pass
+        if isinstance(outs, str):
+            try: outs = json.loads(outs)
+            except: pass
+        if isinstance(toks, list) and len(toks) == 2:
             yes_token, no_token = toks[0], toks[1]
-        elif (o0, o1) == ("no", "yes"):
-            yes_token, no_token = toks[1], toks[0]
-    # fallback if not matched
-    yes_token = yes_token or toks[0]
-    no_token  = no_token  or toks[1]
+        else:
+            print("[DEBUG BOOKS] cannot resolve tokens")
+            return
 
-    yb = fetch_book(yes_token, depth=3)
-    nb = fetch_book(no_token,  depth=3)
+    yb = fetch_book(yes_token, depth=8)
+    nb = fetch_book(no_token,  depth=8)
 
-    def top(b): 
-        a = (b.get("asks") or [])
-        return a[0]["price"] if a else None
+    def fmt_side(side, book):
+        asks = book.get("asks") or []
+        bids = book.get("bids") or []
+        print(f"  {side} — ASKS (price x size):")
+        for i,a in enumerate(asks):
+            try:
+                print(f"    [{i}] {float(a['price']):.4f} x {float(a['size']):.6f}")
+            except Exception:
+                print(f"    [{i}] {a}")
+        print(f"  {side} — BIDS (price x size):")
+        for i,b in enumerate(bids):
+            try:
+                print(f"    [{i}] {float(b['price']):.4f} x {float(b['size']):.6f}")
+            except Exception:
+                print(f"    [{i}] {b}")
 
     print(f"\n[DEBUG BOOKS] {market.get('question')}")
-    print(f" outcomes={outs}")
-    print(f" YES token={yes_token} best_ask={top(yb)}")
-    print(f"  NO token={no_token}  best_ask={top(nb)}")
+    print(f"  outcomes={market.get('outcomes')}")
+    print(f"  YES token={yes_token}")
+    fmt_side("YES", yb)
+    print(f"  NO  token={no_token}")
+    fmt_side("NO", nb)
 
+DECISION_LOG_BASE = "decisions.jsonl"
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+def log_decision(market, price_cap, budget, book, takeable, best_ask, shares, reasons, result):
+    """
+    result can include: {'ok': bool, 'spent_after': float, 'avg_price': float, 'shares': float}
+    """
+    rec = {
+        "ts": now_iso(),
+        "type": "decision",
+        "market_id": market.get("conditionId"),
+        "question": market.get("question"),
+        "price_cap_inc_fee": price_cap,
+        "budget": budget,
+        "best_ask": best_ask,
+        "book_seq": book.get("sequence") if book else None,
+        "under_cap_takeable_ex": takeable,
+        "under_cap_shares": shares,
+        "reasons": reasons,
+        "result": result,
+    }
+    append_jsonl(DECISION_LOG_BASE, rec)
 if __name__ == "__main__":
     main()
 
