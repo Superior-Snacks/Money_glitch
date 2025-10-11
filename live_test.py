@@ -10,6 +10,8 @@ import re
 import random, time
 import os, json, time, math
 from datetime import datetime, timedelta, timezone
+import gzip
+import glob
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -22,6 +24,8 @@ DECISION_LOG_BASE = "decisions.jsonl"
 DECISION_LOG_SAMPLE = 0.15  # 15% sampling
 VERBOSE = True
 SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets for inspection
+RETAIN_DAYS = 7           # delete logs older than this
+COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 
 
 # ----------------------------------------------------------------------
@@ -619,7 +623,7 @@ def main():
     total_trades_taken = 0
 
     # 1️⃣ Fetch initial 3 days of markets
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=3, verbose=True)
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=4, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
@@ -773,14 +777,25 @@ def main():
 def _ensure_logdir():
     os.makedirs(LOG_DIR, exist_ok=True)
 
-def _dated(path_base: str) -> str:
+MAX_LOG_BYTES = 50 * 1024 * 1024   # 50 MB per part
+
+def _dated_with_part(path_base: str) -> str:
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     name, ext = os.path.splitext(path_base)
-    return os.path.join(LOG_DIR, f"{name}_{day}{ext}")
+    base = os.path.join(LOG_DIR, f"{name}_{day}{ext}")
+    # If base exceeds MAX_LOG_BYTES, find next part suffix
+    if os.path.exists(base) and os.path.getsize(base) >= MAX_LOG_BYTES:
+        i = 1
+        while True:
+            candidate = os.path.join(LOG_DIR, f"{name}_{day}_part{i}{ext}")
+            if not os.path.exists(candidate) or os.path.getsize(candidate) < MAX_LOG_BYTES:
+                return candidate
+            i += 1
+    return base
 
 def append_jsonl(path_base: str, record: dict):
     _ensure_logdir()
-    path = _dated(path_base)
+    path = _dated_with_part(path_base)
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
@@ -908,6 +923,57 @@ def log_decision(market, price_cap, budget, book, takeable, best_ask, shares, re
         "result": result,
     }
     append_jsonl(DECISION_LOG_BASE, rec)
+
+def _parse_day_from_filename(path):
+    # expects logs/<name>_YYYY-MM-DD.jsonl (your current format)
+    base = os.path.basename(path)
+    m = re.search(r"_(\d{4}-\d{2}-\d{2})\.jsonl$", base)
+    if not m:
+        return None
+    try:
+        return datetime.strptime(m.group(1), "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+def compress_and_prune_logs(log_dir="logs",
+                            retain_days=RETAIN_DAYS,
+                            compress_after_days=COMPRESS_AFTER_DAYS):
+    """Gzip old logs and delete very old ones. Safe to run during writes because files are opened per-append."""
+    today = datetime.now(timezone.utc).date()
+    now_ts = time.time()
+
+    # Compress *.jsonl older than compress_after_days (skip today's files)
+    for path in glob.glob(os.path.join(log_dir, "*.jsonl")):
+        d = _parse_day_from_filename(path)
+        if not d: 
+            continue
+        age_days = (today - d).days
+        gz_path = path + ".gz"
+        if age_days >= compress_after_days and not os.path.exists(gz_path):
+            try:
+                # Double-check it's not the current day
+                if d != today:
+                    with open(path, "rb") as fin, gzip.open(gz_path, "wb") as fout:
+                        fout.writelines(fin)
+                    # Remove the original only after successful gzip write
+                    os.replace(gz_path, gz_path)  # no-op but ensures file exists
+                    os.remove(path)
+                    print(f"[LOG] compressed {os.path.basename(path)}")
+            except Exception as e:
+                print(f"[LOG WARN] compress failed for {path}: {e}")
+
+    # Delete *.jsonl.gz (and any stray *.jsonl) older than retain_days
+    for path in glob.glob(os.path.join(log_dir, "*.jsonl*")):
+        d = _parse_day_from_filename(path.replace(".gz", ""))
+        if not d:
+            continue
+        age_days = (today - d).days
+        if age_days > retain_days:
+            try:
+                os.remove(path)
+                print(f"[LOG] deleted old log {os.path.basename(path)}")
+            except Exception as e:
+                print(f"[LOG WARN] delete failed for {path}: {e}")
 
 if __name__ == "__main__":
     main()
