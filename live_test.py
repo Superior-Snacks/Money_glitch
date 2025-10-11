@@ -321,6 +321,10 @@ class WatchlistManager:
 def cap_for_raw(raw, fee_bps, slip_bps):
     return raw * (1 + fee_bps/10000 + slip_bps/10000)
 
+def compute_locked_now():
+    # Total cost basis still tied up in open positions
+    return sum(float(p.get("cost", 0.0)) for p in positions_by_id.values())
+
 # --------------------------------------------------------------------
 # Fast open-market fetch you already had (kept here for completeness)
 # --------------------------------------------------------------------
@@ -527,28 +531,49 @@ def main():
         spent_after, shares, avg_price = simulate_take_from_asks(
             book, dollars, fee=fee, slip=slip, price_cap=price_cap
         )
+        vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
         append_jsonl(DECISION_LOG_BASE, {
             "ts": datetime.now(timezone.utc).isoformat(),
             "type": "fill_sim",
             "market_id": market.get("conditionId"),
+            "market_slug": market.get("slug"),
             "question": market.get("question"),
+            "side": side,
+            "token_id": no_token_id,
             "spent_after": round(float(spent_after), 6),
             "shares": round(float(shares), 6),
             "avg_price_eff": round(float(avg_price), 6),
             "budget": round(float(dollars), 6),
             "cap_inc_fee": round(float(price_cap), 6),
+            "bank_after_open": round(float(bank), 6),
+            "locked_now": round(float(locked_now), 6),
+            "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
         })
-        vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
 
         if shares <= 0:
             vprint("    open_position_fn: no shares (book changed?)")
             return False
 
+        # --- apply bookkeeping
         bank -= spent_after
-        positions_by_id[cid] = {"shares": shares, "side": side}
+
+        # record the position WITH cost (so we can compute 'locked')
+        positions_by_id[cid] = {"shares": shares, "side": side, "cost": spent_after}
+
+        # first-trade timestamp
+        global first_trade_dt
+        if first_trade_dt is None:
+            first_trade_dt = datetime.now(timezone.utc)
+
+        # update locked + peak
+        global locked_now, peak_locked, peak_locked_time
+        locked_now = compute_locked_now()
+        if locked_now > peak_locked:
+            peak_locked = locked_now
+            peak_locked_time = datetime.now(timezone.utc)
 
         print(f"\n✅ ENTER NO | {market.get('question')}")
-        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f}")
+        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f} | locked_now={locked_now:.2f}")
 
         toks = market.get("clobTokenIds")
         if isinstance(toks, str):
@@ -556,9 +581,10 @@ def main():
             except: toks = []
         no_token_id = (toks or [None, None])[1]
 
+        # log AFTER updating locked_now so the field is correct
         log_open_trade(market, "NO", no_token_id, book_used=book,
-                    spent_after=spent_after, shares=shares,
-                    avg_price_eff=avg_price, bank_after_open=bank)
+                       spent_after=spent_after, shares=shares,
+                       avg_price_eff=avg_price, bank_after_open=bank)
 
         total_trades_taken += 1
         return True
@@ -650,6 +676,13 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
     append_jsonl(TRADE_LOG_BASE, rec)
 
 def log_run_snapshot(bank, total_trades_count: int):
+    global locked_now, peak_locked, peak_locked_time
+    # Recompute locked from positions to avoid drift
+    locked_now = compute_locked_now()
+    if locked_now > peak_locked:
+        peak_locked = locked_now
+        peak_locked_time = datetime.now(timezone.utc)
+
     snap = {
         "ts": datetime.now(timezone.utc).isoformat(),
         "bank": round(float(bank), 6),
@@ -984,6 +1017,54 @@ def fetch_book(token_id, depth=10):
     book["asks"] = book.get("asks", [])[:depth]
     print(book)
     return book
+
+
+    def open_position_fn(cid, market, side, dollars, best_ask, book):
+        nonlocal bank, total_trades_taken
+
+        vprint(f"    open_position_fn: side={side} dollars={dollars:.2f} bank={bank:.2f} best_ask={best_ask}")
+        if side != "NO" or dollars <= 0 or bank < dollars:
+            vprint("    open_position_fn: rejected (side/budget)")
+            return False
+
+        spent_after, shares, avg_price = simulate_take_from_asks(
+            book, dollars, fee=fee, slip=slip, price_cap=price_cap
+        )
+        append_jsonl(DECISION_LOG_BASE, {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "type": "fill_sim",
+            "market_id": market.get("conditionId"),
+            "question": market.get("question"),
+            "spent_after": round(float(spent_after), 6),
+            "shares": round(float(shares), 6),
+            "avg_price_eff": round(float(avg_price), 6),
+            "budget": round(float(dollars), 6),
+            "cap_inc_fee": round(float(price_cap), 6),
+        })
+        vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
+
+        if shares <= 0:
+            vprint("    open_position_fn: no shares (book changed?)")
+            return False
+
+        bank -= spent_after
+        positions_by_id[cid] = {"shares": shares, "side": side}
+
+        print(f"\n✅ ENTER NO | {market.get('question')}")
+        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f}")
+
+        toks = market.get("clobTokenIds")
+        if isinstance(toks, str):
+            try: toks = json.loads(toks)
+            except: toks = []
+        no_token_id = (toks or [None, None])[1]
+
+        log_open_trade(market, "NO", no_token_id, book_used=book,
+                    spent_after=spent_after, shares=shares,
+                    avg_price_eff=avg_price, bank_after_open=bank)
+
+        total_trades_taken += 1
+        return True
 
 
 """
