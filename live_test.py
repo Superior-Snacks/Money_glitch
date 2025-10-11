@@ -262,6 +262,9 @@ class WatchlistManager:
                 takeable, best_ask, shares, reasons = self._valid_no_from_book(book)
                 vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares:.2f}")
 
+                if best_ask is None or "no_asks_under_cap" in reasons:
+                    debug_show_books_for_market(m)
+
                 if takeable > 0:
                     dollars = bet_size_fn(takeable)
                     vprint(f"    TRY OPEN NO for ${dollars:.2f} (<= takeable)")
@@ -273,6 +276,11 @@ class WatchlistManager:
                         continue
                     else:
                         vprint("    ❌ open_position_fn returned False")
+
+                elif takeable > 0 and checked > 0:
+                    st["fails"] = 0
+                    st["next_check"] = now_ts + self.backoff_first
+                    vprint("    liquidity present; quick retry scheduled")
 
                 # not valid / failed open → backoff
                 st["fails"] += 1
