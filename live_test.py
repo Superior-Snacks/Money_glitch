@@ -758,6 +758,8 @@ def main():
                 # --- every ~5 minutes, log network usage stats
                 if now_ts % 300 < mgr.poll_every:   # within a small window so it fires once
                     log_net_usage()
+                if now_ts % 600 < mgr.poll_every:   # ~every 10 minutes
+                    compress_and_prune_logs()
 
                 if opened == 0 and checked == 0:
                     time.sleep(mgr.poll_every)
