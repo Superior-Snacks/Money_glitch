@@ -76,7 +76,7 @@ def log_net_usage():
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
-def fetch_book(token_id: str, depth: int = 20, session=SESSION):
+def fetch_book(token_id: str, depth: int = 50, session=SESSION):
     _rate_limit()
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
