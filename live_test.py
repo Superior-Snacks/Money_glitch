@@ -12,6 +12,8 @@ import bisect
 import re
 import heapq
 import random, time
+import os, json, time, math
+from datetime import datetime, timedelta, timezone
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -19,8 +21,15 @@ BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
 
-import os, json, time, math
-from datetime import datetime, timedelta, timezone
+positions_by_id = {}   # id -> {"shares": float, "side": "NO"/"YES"}
+SETTLE_FEE = 0.01      # 1% winner fee
+locked_now = 0.0
+peak_locked = 0.0
+peak_locked_time = None
+first_trade_dt = None
+last_settle_dt = None
+REFRESH_SEED_EVERY = 300  # 5 minutes
+last_seed = 0
 
 # --------------------------------------------------------------------
 # Endpoints
