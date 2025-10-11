@@ -2,15 +2,11 @@ import json
 import time
 import requests
 from datetime import datetime, timezone
-import pandas as pd
-import matplotlib.pyplot as plt
 import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import os
-import bisect
 import re
-import heapq
 import random, time
 import os, json, time, math
 from datetime import datetime, timedelta, timezone
@@ -592,35 +588,39 @@ def main():
 
     try:
         while True:
-            now_ts = int(time.time())
+            try:
+                now_ts = int(time.time())
 
-            # periodic reseed to catch new markets
-            if now_ts - last_seed >= REFRESH_SEED_EVERY:
-                try:
-                    fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
-                    tradable = [m for m in fresh if is_actively_tradable(m)]
-                    mgr.seed_from_gamma(tradable)
-                    vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
-                except Exception as e:
-                    print(f"[WARN reseed] {e}")
-                last_seed = now_ts
+                # periodic reseed to catch new markets
+                if now_ts - last_seed >= REFRESH_SEED_EVERY:
+                    try:
+                        fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
+                        tradable = [m for m in fresh if is_actively_tradable(m)]
+                        mgr.seed_from_gamma(tradable)
+                        vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
+                    except Exception as e:
+                        print(f"[WARN reseed] {e}")
+                    last_seed = now_ts
 
-            opened, checked = mgr.step(
-                now_ts,
-                fetch_book_fn=fetch_book,
-                open_position_fn=open_position_fn,
-                bet_size_fn=bet_size_fn,
-                max_checks_per_tick=200,     # go harder
-                min_probe_when_idle=100,     # and chew backlog
-                probe_strategy="newest",     # or "oldest"
-            )
+                opened, checked = mgr.step(
+                    now_ts,
+                    fetch_book_fn=fetch_book,
+                    open_position_fn=open_position_fn,
+                    bet_size_fn=bet_size_fn,
+                    max_checks_per_tick=200,     # go harder
+                    min_probe_when_idle=100,     # and chew backlog
+                    probe_strategy="newest",     # or "oldest"
+                )
 
-            log_run_snapshot(bank, total_trades_taken)
+                log_run_snapshot(bank, total_trades_taken)
 
-            if opened == 0 and checked == 0:
-                time.sleep(mgr.poll_every)   # idle
-            else:
-                time.sleep(0.15)             # tiny breather
+                if opened == 0 and checked == 0:
+                    time.sleep(mgr.poll_every)
+                else:
+                    time.sleep(0.15)
+            except Exception as loop_err:
+                print(f"[MAIN-LOOP WARN] {loop_err}")
+                time.sleep(2.0)  # brief cooloff
 
     except KeyboardInterrupt:
         print("\nStopped by user.")
