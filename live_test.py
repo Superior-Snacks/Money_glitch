@@ -181,9 +181,12 @@ class WatchlistManager:
             self.watch[cid] = {
                 "m": m,
                 "no_token": no_token,
-                "next_check": now + random.randint(0, 2),  # stagger a bit
+                "next_check": now + random.randint(0, 2),
                 "fails": 0,
                 "last_quote": None,
+                "last_seen_ts": now,          # <-- add
+                "last_seq": None,             # <-- for book-change detection (used below)
+                "ever_under_cap": False,      # <-- optional heuristic (explained below)
             }
             added += 1
         vprint(f"[SEED] added {added} markets (watch size now {len(self.watch)})")
@@ -294,7 +297,18 @@ class WatchlistManager:
             try:
                 book = fetch_book_fn(st["no_token"])
                 st["last_quote"] = book
+                st["last_seen_ts"] = now_ts
+                seq = book.get("sequence") or book.get("version")
+                prev_seq = st.get("last_seq")
+                if seq and seq != prev_seq:
+                    st["last_seq"] = seq
+                    # reset backoff to probe sooner since there was fresh activity
+                    st["fails"] = 0
+                    st["next_check"] = now_ts + max(1, self.backoff_first // 2)
+                    
                 takeable, best_ask, shares, reasons = self._valid_no_from_book(book)
+                if best_ask is not None and shares > 0:
+                    st["ever_under_cap"] = True
                 vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares:.2f}")
 
                 if best_ask is None or "no_asks_under_cap" in reasons:
@@ -347,7 +361,27 @@ class WatchlistManager:
                 vprint(f"    [ERR] {e} → fails={st['fails']} next_check=+{next_in}s")
 
         return opened, checked
-    
+
+    def purge_stale(self, now_ts: int, ttl_seconds: int = 48*3600, protect_if_ever_under_cap: bool = True):
+        """
+        Remove markets we haven't 'seen' (book fetched) in ttl_seconds.
+        If protect_if_ever_under_cap is True, keep markets that *once* had under-cap liquidity.
+        """
+        stale = []
+        for cid, st in list(self.watch.items()):
+            last_seen = st.get("last_seen_ts", now_ts)
+            if now_ts - last_seen > ttl_seconds:
+                if protect_if_ever_under_cap and st.get("ever_under_cap"):
+                    continue  # keep; it was interesting at least once
+                stale.append(cid)
+
+        for cid in stale:
+            self.watch.pop(cid, None)
+
+        if stale:
+            vprint(f"[PURGE] removed {len(stale)} stale markets (ttl={ttl_seconds}s)")
+
+
 def cap_for_raw(raw, fee_bps, slip_bps):
     return raw * (1 + fee_bps/10000 + slip_bps/10000)
 
@@ -638,6 +672,7 @@ def main():
                         tradable = [m for m in fresh if is_actively_tradable(m)]
                         mgr.seed_from_gamma(tradable)
                         vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
+                        mgr.purge_stale(now_ts)   # default ~48h TTL
                     except Exception as e:
                         print(f"[WARN reseed] {e}")
                     last_seed = now_ts
