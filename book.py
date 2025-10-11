@@ -46,6 +46,7 @@ def fetch_book(token_id: str, depth: int = 10, session=SESSION):
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
     book = r.json() or {}
+    print(book)
     # normalize & trim
     book["bids"] = (book.get("bids") or [])[:depth]
     book["asks"] = (book.get("asks") or [])[:depth]
@@ -160,3 +161,11 @@ def is_actively_tradable(m):
         except: toks = []
     has_quote = (m.get("bestBid") is not None) or (m.get("bestAsk") is not None)
     return bool(toks) and has_quote
+
+
+def main():
+    markets = fetch_open_yesno_fast()
+    first_book = 
+
+if __name__ == "__main__":
+    main()
