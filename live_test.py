@@ -21,16 +21,6 @@ BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
 BASE_BOOK = "https://clob.polymarket.com/book"
 
-positions_by_id = {}   # id -> {"shares": float, "side": "NO"/"YES"}
-SETTLE_FEE = 0.01      # 1% winner fee
-locked_now = 0.0
-peak_locked = 0.0
-peak_locked_time = None
-first_trade_dt = None
-last_settle_dt = None
-REFRESH_SEED_EVERY = 300  # 5 minutes
-last_seed = 0
-
 # --------------------------------------------------------------------
 # Endpoints
 # --------------------------------------------------------------------
@@ -531,16 +521,58 @@ def main():
 
     def open_position_fn(cid, market, side, dollars, best_ask, book):
         nonlocal bank, total_trades_taken
+        # Declare globals BEFORE any use or assignment
+        global first_trade_dt, locked_now, peak_locked, peak_locked_time
 
         vprint(f"    open_position_fn: side={side} dollars={dollars:.2f} bank={bank:.2f} best_ask={best_ask}")
         if side != "NO" or dollars <= 0 or bank < dollars:
             vprint("    open_position_fn: rejected (side/budget)")
             return False
 
+        # Resolve NO token early so we can log with it
+        toks = market.get("clobTokenIds")
+        if isinstance(toks, str):
+            try:
+                toks = json.loads(toks)
+            except Exception:
+                toks = []
+        no_token_id = (toks or [None, None])[1]
+
+        # Simulate taking from asks
         spent_after, shares, avg_price = simulate_take_from_asks(
             book, dollars, fee=fee, slip=slip, price_cap=price_cap
         )
         vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
+
+        if shares <= 0:
+            vprint("    open_position_fn: no shares (book moved?)")
+            return False
+
+        # --- apply bookkeeping (update bank and locked BEFORE logging)
+        bank -= spent_after
+
+        # store position with cost so 'locked' = sum(costs)
+        positions_by_id[cid] = {"shares": shares, "side": side, "cost": spent_after}
+
+        # first trade timestamp
+        if first_trade_dt is None:
+            first_trade_dt = datetime.now(timezone.utc)
+
+        # recompute locked and update peak
+        locked_now = compute_locked_now()
+        if locked_now > peak_locked:
+            peak_locked = locked_now
+            peak_locked_time = datetime.now(timezone.utc)
+
+        print(f"\n✅ ENTER NO | {market.get('question')}")
+        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f} | locked_now={locked_now:.2f}")
+
+        # trade log (after updates so numbers are correct)
+        log_open_trade(market, "NO", no_token_id, book_used=book,
+                    spent_after=spent_after, shares=shares,
+                    avg_price_eff=avg_price, bank_after_open=bank)
+
+        # decision/analytics log for the fill
         append_jsonl(DECISION_LOG_BASE, {
             "ts": datetime.now(timezone.utc).isoformat(),
             "type": "fill_sim",
@@ -558,42 +590,6 @@ def main():
             "locked_now": round(float(locked_now), 6),
             "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
         })
-
-        if shares <= 0:
-            vprint("    open_position_fn: no shares (book changed?)")
-            return False
-
-        # --- apply bookkeeping
-        bank -= spent_after
-
-        # record the position WITH cost (so we can compute 'locked')
-        positions_by_id[cid] = {"shares": shares, "side": side, "cost": spent_after}
-
-        # first-trade timestamp
-        global first_trade_dt
-        if first_trade_dt is None:
-            first_trade_dt = datetime.now(timezone.utc)
-
-        # update locked + peak
-        global locked_now, peak_locked, peak_locked_time
-        locked_now = compute_locked_now()
-        if locked_now > peak_locked:
-            peak_locked = locked_now
-            peak_locked_time = datetime.now(timezone.utc)
-
-        print(f"\n✅ ENTER NO | {market.get('question')}")
-        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f} | locked_now={locked_now:.2f}")
-
-        toks = market.get("clobTokenIds")
-        if isinstance(toks, str):
-            try: toks = json.loads(toks)
-            except: toks = []
-        no_token_id = (toks or [None, None])[1]
-
-        # log AFTER updating locked_now so the field is correct
-        log_open_trade(market, "NO", no_token_id, book_used=book,
-                       spent_after=spent_after, shares=shares,
-                       avg_price_eff=avg_price, bank_after_open=bank)
 
         total_trades_taken += 1
         return True
