@@ -165,7 +165,12 @@ def is_actively_tradable(m):
 
 def main():
     markets = fetch_open_yesno_fast()
-    first_book = 
+    print(1)
+    first_book = fetch_book(markets[0]["clobTokenIds"])
+    print(2)
+    print(first_book)
+    no = get_no_token_id(markets[0]["clobTokenIds"])
+    print(no)
 
 if __name__ == "__main__":
     main()
