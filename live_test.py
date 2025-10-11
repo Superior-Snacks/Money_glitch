@@ -179,7 +179,7 @@ class WatchlistManager:
 
         takeable = 0.0
         shares = 0.0
-        best_price = float(asks[0]["price"])
+        best_price = None
 
         for idx, a in enumerate(asks[:10]):
             try:
@@ -191,32 +191,22 @@ class WatchlistManager:
             ep = self._effective_price(p)
             vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s:.2f}")
 
-            # Skip individual asks above the cap but continue checking deeper levels
+            # Skip individual asks above the cap but keep scanning deeper ones
             if ep > self.max_no_price:
                 reasons.append(f"skip ask {idx} (eff {ep:.4f} > cap {self.max_no_price:.4f})")
                 continue
 
-            # Add to takeable total if within cap
+            if best_price is None:
+                best_price = p
+
             takeable += p * s
             shares += s
 
-        if takeable <= 0:
-            reasons.append("no_takeable_under_cap")
-            return 0.0, best_price, shares, reasons
+        if best_price is None:
+            reasons.append("no_asks_under_cap")
+            return 0.0, None, 0.0, reasons
 
-        # Relaxed dust guard — only skip if both price and notional are tiny
-        if best_price <= self.dust_price and takeable <= self.dust_min_notional:
-            reasons.append(
-                f"cheap_dust best={best_price:.4f} takeable={takeable:.2f} ≤ {self.dust_min_notional}"
-            )
-            return 0.0, best_price, shares, reasons
-
-        # More lenient min_notional: warn but don’t block
-        if takeable < self.min_notional:
-            reasons.append(f"below_min_notional takeable={takeable:.2f} < {self.min_notional}")
-            # Allow the trade anyway for testing and tuning
-            return takeable, best_price, shares, reasons
-
+        # If there's any liquidity under cap, return it
         return takeable, best_price, shares, reasons
 
     def step(self,
@@ -376,32 +366,48 @@ def is_actively_tradable(m):
 # --------------------------------------------------------------------
 def simulate_take_from_asks(book: dict, dollars: float, fee: float, slip: float, price_cap: float):
     """
-    Simulate taking from top-of-book NO asks up to dollars (pre-fee budget).
-    Returns (spent_after, shares, avg_fill_price) or (0,0,0) if nothing.
+    Simulate taking NO asks up to `dollars` budget, only for asks where
+    effective price (p*(1+fee+slip)) <= price_cap.
+    Aggregates across multiple price levels.
     """
     asks = book.get("asks") or []
-    if not asks: return 0.0, 0.0, 0.0
+    if not asks:
+        return 0.0, 0.0, 0.0
 
     spent_pre = 0.0
     shares = 0.0
-    for a in asks:
-        p = float(a["price"])
-        s = float(a["size"])
-        if p * (1.0 + fee + slip) > price_cap:
+
+    for idx, a in enumerate(asks):
+        try:
+            p = float(a["price"])
+            s = float(a["size"])
+        except (KeyError, TypeError, ValueError):
+            continue
+
+        ep = p * (1.0 + fee + slip)
+        if ep > price_cap:
+            # skip overpriced ask
+            continue
+
+        # max shares we can still afford at this price
+        remaining_budget = dollars - spent_pre
+        if remaining_budget <= 0:
             break
-        # take as much as fits remaining budget
-        max_shares_here = (dollars - spent_pre) / p
+
+        max_shares_here = remaining_budget / p
         take_shares = min(s, max_shares_here)
-        if take_shares <= 0:
-            break
+
         spent_pre += take_shares * p
         shares += take_shares
-        if spent_pre >= dollars - 1e-9:
+
+        # if we hit the budget, stop
+        if spent_pre >= dollars:
             break
 
     if shares <= 0:
         return 0.0, 0.0, 0.0
 
+    # apply fee + slippage after total spent
     spent_after = spent_pre * (1.0 + fee + slip)
     avg_price = spent_after / shares
     return spent_after, shares, avg_price
