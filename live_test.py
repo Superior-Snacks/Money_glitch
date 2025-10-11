@@ -77,7 +77,7 @@ def log_net_usage():
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
-def fetch_book(token_id: str, depth: int = 100, session=SESSION):
+def fetch_book(token_id: str, depth: int = 50, session=SESSION):
     _rate_limit()
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
@@ -744,8 +744,8 @@ def main():
                     fetch_book_fn=fetch_book,
                     open_position_fn=open_position_fn,
                     bet_size_fn=bet_size_fn,
-                    max_checks_per_tick=10,     # was 200
-                    min_probe_when_idle=5,      # was 100
+                    max_checks_per_tick=50,     # was 200
+                    min_probe_when_idle=25,      # was 100
                     probe_strategy="newest",
                 )
 
