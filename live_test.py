@@ -658,13 +658,8 @@ def main():
             return False
 
         # Resolve NO token early so we can log with it
-        toks = market.get("clobTokenIds")
-        if isinstance(toks, str):
-            try:
-                toks = json.loads(toks)
-            except Exception:
-                toks = []
-        no_token_id = (toks or [None, None])[1]
+        no_token_id = get_no_token_id(market)
+
 
         # Simulate taking from asks
         spent_after, shares, avg_price = simulate_take_from_asks(
@@ -927,9 +922,9 @@ def log_decision(market, price_cap, budget, book, takeable, best_ask, shares, re
     append_jsonl(DECISION_LOG_BASE, rec)
 
 def _parse_day_from_filename(path):
-    # expects logs/<name>_YYYY-MM-DD.jsonl (your current format)
     base = os.path.basename(path)
-    m = re.search(r"_(\d{4}-\d{2}-\d{2})\.jsonl$", base)
+    # matches both: name_YYYY-MM-DD.jsonl  and  name_YYYY-MM-DD_partN.jsonl
+    m = re.search(r"_(\d{4}-\d{2}-\d{2})(?:_part\d+)?\.jsonl$", base)
     if not m:
         return None
     try:
@@ -958,7 +953,6 @@ def compress_and_prune_logs(log_dir="logs",
                     with open(path, "rb") as fin, gzip.open(gz_path, "wb") as fout:
                         fout.writelines(fin)
                     # Remove the original only after successful gzip write
-                    os.replace(gz_path, gz_path)  # no-op but ensures file exists
                     os.remove(path)
                     print(f"[LOG] compressed {os.path.basename(path)}")
             except Exception as e:
