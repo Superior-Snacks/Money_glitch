@@ -389,6 +389,33 @@ def compute_locked_now():
     # Total cost basis still tied up in open positions
     return sum(float(p.get("cost", 0.0)) for p in positions_by_id.values())
 
+def probe_under_cap_sample(mgr, n=30, depth=20):
+    ok = 0
+    total = 0
+    samples = []
+    for cid, st in list(mgr.watch.items())[:n]:
+        total += 1
+        try:
+            book = fetch_book(st["no_token"], depth=depth)
+            asks = book.get("asks") or []
+            fee_mult = 1.0 + mgr.fee + mgr.slip
+            under = [
+                (float(a["price"]), float(a["size"]))
+                for a in asks
+                if float(a.get("price", 0)) > 0 and float(a.get("size", 0)) > 0
+                and (float(a["price"]) * fee_mult) <= mgr.max_no_price
+            ]
+            if under:
+                ok += 1
+                # keep a tiny sample line for visibility
+                p0, s0 = under[0]
+                samples.append((cid, p0, s0))
+        except Exception:
+            pass
+    vprint(f"[PROBE] under-cap markets in sample: {ok}/{total}")
+    for cid, p, s in samples[:5]:
+        vprint(f"   -> {cid} first under-cap ask ~ p={p:.4f} size={s:.4f}")
+
 # --------------------------------------------------------------------
 # Fast open-market fetch
 # --------------------------------------------------------------------
@@ -460,14 +487,14 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
     return all_rows
 
 def is_actively_tradable(m):
+    # Only require the order book to be enabled and that there are 2 token ids.
     if not m.get("enableOrderBook"):
         return False
     toks = m.get("clobTokenIds") or []
     if isinstance(toks, str):
         try: toks = json.loads(toks)
         except: toks = []
-    has_quote = (m.get("bestBid") is not None) or (m.get("bestAsk") is not None)
-    return bool(toks) and has_quote
+    return isinstance(toks, list) and len(toks) == 2
 
 # --------------------------------------------------------------------
 # Open_position “simulation” for live watcher
@@ -567,7 +594,7 @@ def main():
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=cap_for_raw(0.60, 600, 200),
+        max_no_price=cap_for_raw(0.65, 600, 200),
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
@@ -575,6 +602,7 @@ def main():
         backoff_max=120, jitter=3
     )
     mgr.seed_from_gamma(markets)
+    probe_under_cap_sample(mgr, n=30)
 
     # --- trade sizing and fill simulation ---
     fee, slip, price_cap = mgr.fee, mgr.slip, mgr.max_no_price
@@ -673,6 +701,7 @@ def main():
                         mgr.seed_from_gamma(tradable)
                         vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
                         mgr.purge_stale(now_ts)   # default ~48h TTL
+                        probe_under_cap_sample(mgr, n=30)
                     except Exception as e:
                         print(f"[WARN reseed] {e}")
                     last_seed = now_ts
