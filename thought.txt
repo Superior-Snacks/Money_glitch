@@ -407,33 +407,3 @@ ef það eru mikið af markets þá byrja þannig ég hef efni á continuous tra
 hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
 3 files, bought, pending, log(bottom shows p/l, active, done, bank, lockedup, etmifallsold)
 """
-
-Purge dead/old markets from the watchlist
-Add a “last_seen” timestamp and drop items that haven’t shown under-cap liquidity or book updates for a long time (prevents the watch dict from growing forever):
-
-# when you seed:
-self.watch[cid] = { ..., "last_seen_ts": now }
-
-# after fetching a book in step():
-st["last_seen_ts"] = now_ts
-
-# periodic purge (e.g., once per reseed or every N loops):
-def purge_stale(self, now_ts, ttl=48*3600):
-    stale = [cid for cid, st in self.watch.items() if now_ts - st.get("last_seen_ts", now_ts) > ttl]
-    for cid in stale:
-        self.watch.pop(cid, None)
-    if stale:
-        vprint(f"[PURGE] removed {len(stale)} stale markets")
-
-
-Call mgr.purge_stale(now_ts) right after reseeding.
-
-Backoff reset on book change
-Probe faster when the book actually changes:
-
-prev_seq = st.get("last_seq")
-seq = (book.get("sequence") or book.get("version"))
-if seq and seq != prev_seq:
-    st["last_seq"] = seq
-    st["fails"] = 0
-    st["next_check"] = now_ts + max(1, self.backoff_first // 2)

@@ -63,18 +63,33 @@ def _rate_limit():
         _bucket = min(RPS_TARGET, _bucket + (now2 - _last_tokens_ts) * RPS_TARGET)
         _last_tokens_ts = now2
     _bucket -= 1.0
+
+NET_LOG_BASE = "net_usage.jsonl"
+bytes_in_total = 0
+
+def log_net_usage():
+    append_jsonl(NET_LOG_BASE, {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "bytes_in_total": bytes_in_total
+    })
+
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
 def fetch_book(token_id: str, depth: int = 20, session=SESSION):
-    """Fetch the CLOB book for one token (YES or NO)."""
-    _rate_limit()  # <-- throttle globally
+    _rate_limit()
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
-    book = r.json() or {}
+    # count compressed payload bytes
+    body = r.content
+    book = r.json() if body else {}
     # normalize & trim
     book["bids"] = (book.get("bids") or [])[:depth]
     book["asks"] = (book.get("asks") or [])[:depth]
+
+    # bump counters
+    global bytes_in_total
+    bytes_in_total += len(body) if body else 0
     return book
 
 
@@ -632,12 +647,16 @@ def main():
                     fetch_book_fn=fetch_book,
                     open_position_fn=open_position_fn,
                     bet_size_fn=bet_size_fn,
-                    max_checks_per_tick=200,     # go harder
-                    min_probe_when_idle=100,     # and chew backlog
-                    probe_strategy="newest",     # or "oldest"
+                    max_checks_per_tick=10,     # was 200
+                    min_probe_when_idle=5,      # was 100
+                    probe_strategy="newest",
                 )
 
                 log_run_snapshot(bank, total_trades_taken)
+
+                # --- every ~5 minutes, log network usage stats
+                if now_ts % 300 < mgr.poll_every:   # within a small window so it fires once
+                    log_net_usage()
 
                 if opened == 0 and checked == 0:
                     time.sleep(mgr.poll_every)
