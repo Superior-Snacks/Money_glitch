@@ -51,7 +51,7 @@ SESSION = make_session()
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
-def fetch_book(token_id: str, depth: int = 10, session=SESSION):
+def fetch_book(token_id: str, depth: int = 20, session=SESSION):
     """Fetch the CLOB book for one token (YES or NO)."""
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
@@ -181,7 +181,7 @@ class WatchlistManager:
         shares = 0.0
         best_price = None
 
-        for idx, a in enumerate(asks[:10]):
+        for idx, a in enumerate(asks[:10]): # not 20?
             try:
                 p = float(a["price"])
                 s = float(a["size"])
@@ -329,7 +329,11 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
             if isinstance(outs, str):
                 try: outs = json.loads(outs)
                 except: outs = None
-            if outs == ["Yes","No"]:
+            def is_yesno(lst):
+                if not isinstance(lst, list) or len(lst) != 2: return False
+                s = [str(x).strip().lower() for x in lst]
+                return set(s) == {"yes", "no"}
+            if is_yesno(outs):
                 mid = m.get("id")
                 if mid not in seen_ids:
                     all_rows.append(m)
