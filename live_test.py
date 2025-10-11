@@ -389,7 +389,6 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
-
 def is_actively_tradable(m):
     if not m.get("enableOrderBook"):
         return False
