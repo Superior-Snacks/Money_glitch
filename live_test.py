@@ -180,8 +180,8 @@ class WatchlistManager:
         takeable = 0.0
         shares = 0.0
         best_price = None
-
-        for idx, a in enumerate(asks[:10]): # not 20?
+        skipped = 0
+        for idx, a in enumerate(asks[:10]):
             try:
                 p = float(a["price"])
                 s = float(a["size"])
@@ -191,9 +191,8 @@ class WatchlistManager:
             ep = self._effective_price(p)
             vprint(f"   [ASK {idx}] p={p:.4f} ep={ep:.4f} size={s:.2f}")
 
-            # Skip individual asks above the cap but keep scanning deeper ones
             if ep > self.max_no_price:
-                reasons.append(f"skip ask {idx} (eff {ep:.4f} > cap {self.max_no_price:.4f})")
+                skipped += 1
                 continue
 
             if best_price is None:
@@ -201,6 +200,9 @@ class WatchlistManager:
 
             takeable += p * s
             shares += s
+
+        if skipped:
+            reasons.append(f"skipped_{skipped}_over_cap")
 
         under_cap_levels = sum(
         1 for a in asks[:10]
