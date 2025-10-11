@@ -305,7 +305,7 @@ class WatchlistManager:
                     # reset backoff to probe sooner since there was fresh activity
                     st["fails"] = 0
                     st["next_check"] = now_ts + max(1, self.backoff_first // 2)
-                    
+
                 takeable, best_ask, shares, reasons = self._valid_no_from_book(book)
                 if best_ask is not None and shares > 0:
                     st["ever_under_cap"] = True
@@ -845,5 +845,6 @@ def log_decision(market, price_cap, budget, book, takeable, best_ask, shares, re
         "result": result,
     }
     append_jsonl(DECISION_LOG_BASE, rec)
+
 if __name__ == "__main__":
     main()
