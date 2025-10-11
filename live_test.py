@@ -202,6 +202,12 @@ class WatchlistManager:
             takeable += p * s
             shares += s
 
+        under_cap_levels = sum(
+        1 for a in asks[:10]
+        if float(a.get("price", 1)) * (1 + self.fee + self.slip) <= self.max_no_price
+        )
+        vprint(f"    under_cap_levels={under_cap_levels}")
+
         if best_price is None:
             reasons.append("no_asks_under_cap")
             return 0.0, None, 0.0, reasons
