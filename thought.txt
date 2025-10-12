@@ -427,3 +427,10 @@ sample trade {"ts": "2025-10-12T17:57:22.746410+00:00", "market_id": "0x418c6dd1
 {"ts": "2025-10-12T17:59:08.845296+00:00", "bank": 4997030.71172, "locked_now": 2969.28828, "open_positions": 280, "potential_value_if_all_win": 12479.052485, "total_trades_taken": 280, "peak_locked": 2969.28828, "peak_locked_time": "2025-10-12T17:57:22.746410+00:00", "first_trade_time": "2025-10-12T17:55:19.053235+00:00", "last_settle_time": null}
 
 of mikið af crypto mörkuðum filtera out will the price of x or will x be above
+120896 / 3 ? = 40,298.66666666667 profit? kanski 30827.794817 spent known 9,470.87184966667 take home after p/L 10 dagar? það er gott!
+er þriðjungur í minn hag of gott? nei það held ég ekki kanski þó!? ekki vera of vongóður strax,við leyfum þessu að runna, svo bý ég til á morgun:
+-fyrst log checker, clean prolly print í aðra bók tið að sjá almenilega
+-annað skrifa script til að checka ef trades eru lokuð og uppfæra p/l (það má bíða því ég er ekki að búast við því að markaðirnir eru lokaðir strax!!)
+-SHITT ÞAÐ ER 30827.794817 locked up á fyrstu 10 dögum af opnum trades! og þó ef það voru einhver sem opnuðu og lokuðu innan tíma þá skipa ég þau
+-þarf að bæta við "from start, no backlog bot þegar ég hef klárað check fyrir lokun"!!!!!!!!!!!!!!
+en það má bíða
