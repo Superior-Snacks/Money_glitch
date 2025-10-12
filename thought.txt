@@ -407,3 +407,13 @@ ef það eru mikið af markets þá byrja þannig ég hef efni á continuous tra
 hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
 3 files, bought, pending, log(bottom shows p/l, active, done, bank, lockedup, etmifallsold)
 """
+
+
+[PAGE 0] got 250 raw, added 89 new, total 89
+[PAGE 1] got 250 raw, added 96 new, total 185
+[PAGE 2] got 250 raw, added 111 new, total 296
+✅ Total open Yes/No markets: 296
+[SEED] added 0 markets (watch size now 1350)
+[REFRESH] watch=1350 entered=40
+[PROBE] under-cap markets in sample: 0/30
+[STEP] due=1345 watch=1350 entered=40

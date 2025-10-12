@@ -50,7 +50,7 @@ def make_session():
 SESSION = make_session()
 
 # --- Simple global RPS limiter ---------------------------------------
-RPS_TARGET = 5.0     # choose 2–5 to stay very safe
+RPS_TARGET = 10.0     # choose 2–5 to stay very safe
 _last_tokens_ts = time.monotonic()
 _bucket = RPS_TARGET
 
@@ -81,7 +81,7 @@ def log_net_usage():
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
-def fetch_book(token_id: str, depth: int = 50, session=SESSION):
+def fetch_book(token_id: str, depth: int = 80, session=SESSION):
     _rate_limit()
     r = session.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
     r.raise_for_status()
@@ -191,7 +191,8 @@ class WatchlistManager:
                 "last_quote": None,
                 "last_seen_ts": now,          # <-- add
                 "last_seq": None,             # <-- for book-change detection (used below)
-                "ever_under_cap": False,      # <-- optional heuristic (explained below)
+                "ever_under_cap": False,
+                "seeded_ts": now,      # <-- optional heuristic (explained below)
             }
             added += 1
         vprint(f"[SEED] added {added} markets (watch size now {len(self.watch)})")
@@ -261,7 +262,7 @@ class WatchlistManager:
              fetch_book_fn,
              open_position_fn,
              bet_size_fn,
-             max_checks_per_tick=100,
+             max_checks_per_tick=200,
              min_probe_when_idle=None,
              probe_strategy="newest"):
         """
@@ -270,6 +271,11 @@ class WatchlistManager:
           so you can chew through a 3-day backlog quickly.
         """
         due = self.due_ids(now_ts)
+        # Prioritize newest markets (and most-recently created) first
+        due.sort(key=lambda cid: (
+            self.watch[cid].get("seeded_ts", 0),
+            self.watch[cid]["m"].get("startDate") or self.watch[cid]["m"].get("createdAt") or ""
+        ), reverse=True)
         if min_probe_when_idle is None:
             min_probe_when_idle = max(40, min(200, len(self.watch)//5))
         # If backlog is large but not many due, force-probe a slice:
@@ -290,6 +296,8 @@ class WatchlistManager:
 
         opened = 0
         checked = 0
+        due.sort(key=lambda cid: (not self.watch[cid].get("ever_under_cap", False),
+                          self.watch[cid].get("next_check", 0)))
         vprint(f"[STEP] due={len(due)} watch={len(self.watch)} entered={len(self.entered)}")
         for cid in due[:max_checks_per_tick]:
             st = self.watch.get(cid)
@@ -622,8 +630,8 @@ def main():
     desired_bet = 100.0
     total_trades_taken = 0
 
-    # 1️⃣ Fetch initial 3 days of markets
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=4, verbose=True)
+    # 1️⃣ Fetch initial markets
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=10, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
@@ -633,8 +641,8 @@ def main():
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
-        poll_every=3, backoff_first=6, backoff_base=12,
-        backoff_max=120, jitter=3
+        poll_every=3, backoff_first=3, backoff_base=6,
+        backoff_max=60, jitter=3
     )
     mgr.seed_from_gamma(markets)
     probe_under_cap_sample(mgr, n=30)
@@ -717,7 +725,7 @@ def main():
         total_trades_taken += 1
         return True
 
-    REFRESH_SEED_EVERY = 180  # re-fetch markets every 3 minutes
+    REFRESH_SEED_EVERY = 90  # re-fetch markets every 3 minutes
     last_seed = 0
 
     try:
@@ -728,7 +736,7 @@ def main():
                 # periodic reseed to catch new markets
                 if now_ts - last_seed >= REFRESH_SEED_EVERY:
                     try:
-                        fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=3, verbose=True)
+                        fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=2, verbose=True)
                         tradable = [m for m in fresh if is_actively_tradable(m)]
                         mgr.seed_from_gamma(tradable)
                         vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
@@ -743,8 +751,8 @@ def main():
                     fetch_book_fn=fetch_book,
                     open_position_fn=open_position_fn,
                     bet_size_fn=bet_size_fn,
-                    max_checks_per_tick=50,     # was 200
-                    min_probe_when_idle=25,      # was 100
+                    max_checks_per_tick=200,     # was 200
+                    min_probe_when_idle=100,      # was 100
                     probe_strategy="newest",
                 )
 
