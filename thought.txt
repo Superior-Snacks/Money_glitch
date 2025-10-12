@@ -417,3 +417,6 @@ hafa sterk guards á eldri mörkuðum þannig tap er ekki of hátt.
 [REFRESH] watch=1350 entered=40
 [PROBE] under-cap markets in sample: 0/30
 [STEP] due=1345 watch=1350 entered=40
+
+{"ts": "2025-10-12T17:36:45.395336+00:00", "bank": 4975099.268608, "locked_now": 24900.731392, "open_positions": 256, "potential_value_if_all_win": 103616.317057, "total_trades_taken": 256, "peak_locked": 24900.731392, "peak_locked_time": "2025-10-12T17:30:04.428044+00:00", "first_trade_time": "2025-10-12T16:47:01.574897+00:00", "last_settle_time": null}
+{"ts": "2025-10-12T17:30:04.428044+00:00", "market_id": "0x6eb634ba287bfb419b640d3d6dc342de475b0e4bac3c3c6a62bd3a785e105a72", "market_slug": "bitcoin-above-108k-on-october-19", "question": "Will the price of Bitcoin be above $108,000 on October 19?", "side": "NO", "token_id": "79864628293348041596079107769082418744226304765547934810617715440285957792596", "spent_after": 2.808, "shares": 10.0, "avg_price_eff": 0.2808, "book_best_bid": 0.02, "book_best_ask": 0.26, "locked_now": 24900.731392, "potential_value_if_all_win": 103616.317057, "bank_after_open": 4975099.268608}
