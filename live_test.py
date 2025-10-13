@@ -572,7 +572,12 @@ def is_crypto_market(market):
     "ape", "apecoin", "sand", "sandbox", "mana", "decentraland",
     "pepe", "wbtc", "eth2"
 ]
-    text = (market.get("question") or "").lower() + " " + (market.get("slug") or "").lower()
+    """Return True if the question or slug mentions a crypto ticker."""
+    text = (
+        (market.get("question") or "") + " " +
+        (market.get("market_slug") or "") + " " +
+        (market.get("slug") or "")
+    ).lower()
     return any(k in text for k in CRYPTO_KEYWORDS)
 
 # --------------------------------------------------------------------

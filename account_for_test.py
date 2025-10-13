@@ -29,6 +29,12 @@ from urllib3.util.retry import Retry
 # ----------------------------
 # CONFIG
 # ----------------------------
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_BOOK  = "https://clob.polymarket.com/book"
+BASE_PHIST = "https://clob.polymarket.com/prices-history"
+
+SESSION = requests.Session()
+SESSION.headers.update({"User-Agent": "pl-bot/1.0"})
 LOG_DIR = "logs"
 TRADE_LOG_GLOB = os.path.join(LOG_DIR, "trades_taken_*.jsonl*")   # picks .jsonl and .jsonl.gz
 OUTPUT_ALL         = os.path.join(LOG_DIR, "pl_timeseries_all.jsonl")
@@ -89,6 +95,63 @@ def make_session() -> requests.Session:
     return s
 
 SESSION = make_session()
+
+def outcome_map_from_market(m: dict):
+    outs = m.get("outcomes"); toks = m.get("clobTokenIds")
+    if isinstance(outs, str):
+        try: outs = json.loads(outs)
+        except: outs = None
+    if isinstance(toks, str):
+        try: toks = json.loads(toks)
+        except: toks = None
+    if isinstance(outs, list) and isinstance(toks, list) and len(outs)==2 and len(toks)==2:
+        o0,o1 = str(outs[0]).strip().upper(), str(outs[1]).strip().upper()
+        if (o0,o1)==("YES","NO"):  return {"YES": toks[0], "NO": toks[1]}
+        if (o0,o1)==("NO","YES"):  return {"YES": toks[1], "NO": toks[0]}
+        if "YES" in o0 and "NO" in o1: return {"YES": toks[0], "NO": toks[1]}
+        if "NO"  in o0 and "YES" in o1: return {"YES": toks[1], "NO": toks[0]}
+    if isinstance(toks, list) and len(toks)==2:
+        return {"YES": toks[0], "NO": toks[1]}
+    raise ValueError("cannot resolve YES/NO tokens")
+
+
+def fetch_market_meta(condition_id: str) -> dict | None:
+    try:
+        r = SESSION.get(BASE_GAMMA, params={"condition_ids": condition_id, "limit": 1}, timeout=15)
+        r.raise_for_status()
+        rows = r.json() or []
+        for m in rows:
+            if m.get("conditionId") == condition_id:
+                return m
+    except Exception:
+        pass
+    return None
+
+def fetch_best_bid_for_no_token(token_id: str) -> float | None:
+    try:
+        r = SESSION.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        book = r.json() or {}
+        bids = book.get("bids") or []
+        best = max((float(b["price"]) for b in bids if "price" in b), default=None)
+        return best
+    except Exception:
+        return None
+
+def fetch_last_no_trade_price(token_id: str) -> float | None:
+    try:
+        r = SESSION.get(BASE_PHIST, params={"token_id": token_id, "resolution": "1h", "limit": 1}, timeout=15)
+        r.raise_for_status()
+        rows = r.json() or []
+        if rows:
+            # prices-history returns objects with "price" (ask/bid mid). Treat as last traded/quoted price.
+            return float(rows[-1].get("price", 0)) or None
+    except Exception:
+        pass
+    return None
+
 
 def parse_dt_iso(s: str) -> datetime:
     # tolerate no tz by assuming UTC; prefer ISO strings from your logs with +00:00
@@ -176,48 +239,65 @@ def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, includ
         st["cost"]   += cost
     return pos
 
-def fetch_best_bid_for_no(token_id: str) -> Optional[float]:
-    """
-    For NO token, MTM at bid (what you could immediately sell at).
-    """
-    consume_token()
-    r = SESSION.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
-    r.raise_for_status()
-    data = r.json() or {}
-    bids = data.get("bids") or []
-    if not bids: 
-        return 0.0
-    try:
-        # top-of-book highest bid
-        best = max(float(b["price"]) for b in bids if "price" in b)
-        return best
-    except Exception:
-        return 0.0
+SETTLE_FEE = 0.01  # same as your live script
 
-def mark_to_market(positions: Dict[str, dict]) -> Tuple[float, float, int]:
+def mtm_no_position(condition_id: str, shares: float) -> tuple[float, str]:
     """
-    Returns (total_cost, total_value_mtm, markets_marked)
-    Value MTM = sum(shares * best_bid_no).
+    Returns (mark_value, status_note)
+    - If resolved and NO won: value = shares * (1 - SETTLE_FEE)
+    - If resolved and YES won: value = 0
+    - If open: use best bid on NO; if no book, use last price; if none, 0.
     """
+    m = fetch_market_meta(condition_id)
+    if not m:
+        # No meta: treat as conservative 0 mark
+        return 0.0, "no_meta"
+
+    # Resolution path
+    resolved = bool(m.get("resolved") or m.get("isResolved"))
+    winning = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
+    if resolved:
+        if winning == "NO":
+            return shares * (1.0 - SETTLE_FEE), "resolved_NO"
+        elif winning == "YES":
+            return 0.0, "resolved_YES"
+        else:
+            # Resolved but winner missing? conservative 0
+            return 0.0, "resolved_unknown"
+
+    # Still open → get NO token and try book/last
+    try:
+        om = outcome_map_from_market(m)
+        no_tok = om["NO"]
+    except Exception:
+        return 0.0, "open_tokens_unknown"
+
+    bid = fetch_best_bid_for_no_token(no_tok)
+    if bid is not None:
+        return shares * bid, "open_bid"
+
+    lastp = fetch_last_no_trade_price(no_tok)
+    if lastp is not None:
+        return shares * lastp, "open_last"
+
+    return 0.0, "open_unpriced"
+
+def mark_to_market(positions_by_market: dict[str, dict]):
     total_cost = 0.0
     total_val  = 0.0
-    marked = 0
-
-    # de-dup book requests by token
-    token_to_shares: Dict[str, float] = {}
-    token_to_cost: Dict[str, float]   = {}
-    for mid, st in positions.items():
-        tok = st["no_token_id"]
-        token_to_shares[tok] = token_to_shares.get(tok, 0.0) + float(st["shares"])
-        token_to_cost[tok]   = token_to_cost.get(tok, 0.0) + float(st["cost"])
-
-    for tok, sh in token_to_shares.items():
-        bid = fetch_best_bid_for_no(tok) or 0.0
-        total_val  += sh * bid
-        total_cost += token_to_cost.get(tok, 0.0)
-        marked += 1
-
-    return total_cost, total_val, marked
+    nmk = 0
+    for mid, p in positions_by_market.items():
+        shares = float(p.get("shares", 0.0))
+        cost   = float(p.get("cost", 0.0))
+        if shares <= 0:
+            continue
+        nmk += 1
+        total_cost += cost
+        val, note = mtm_no_position(mid, shares)
+        total_val += val
+        # (Optional) log per-market MTM notes somewhere if you want:
+        # print(f"[MTM] {mid} shares={shares:.2f} cost={cost:.2f} val={val:.2f} note={note}")
+    return total_cost, total_val, nmk
 
 # ----------------------------
 # output
