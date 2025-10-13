@@ -13,18 +13,11 @@ from datetime import datetime, timedelta, timezone
 import gzip
 import glob
 import os, glob, gzip, json, time
-from datetime import datetime, timezone
-import requests
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
 
 #!/usr/bin/env python3
 import os, re, json, gzip, time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Iterable, Tuple, Optional
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 # ----------------------------
 # CONFIG
@@ -60,6 +53,21 @@ CRYPTO_WORDS = {
 # ----------------------------
 # small helpers
 # ----------------------------
+
+# --- simple per-run caches ---
+_market_meta_cache: dict[str, dict] = {}
+_best_bid_cache: dict[str, float | None] = {}
+_last_price_cache: dict[str, float | None] = {}
+
+def fetch_market_meta_cached(condition_id: str) -> dict | None:
+    m = _market_meta_cache.get(condition_id)
+    if m is not None:
+        return m
+    m = fetch_market_meta(condition_id)
+    _market_meta_cache[condition_id] = m
+    return m
+
+
 def _rate_limit_factory(rps: float):
     last_ts = time.monotonic()
     bucket = rps
@@ -128,29 +136,39 @@ def fetch_market_meta(condition_id: str) -> dict | None:
     return None
 
 def fetch_best_bid_for_no_token(token_id: str) -> float | None:
+    if token_id in _best_bid_cache:
+        return _best_bid_cache[token_id]
     try:
+        consume_token()  # rate-limit
         r = SESSION.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
         if r.status_code == 404:
+            _best_bid_cache[token_id] = None
             return None
         r.raise_for_status()
         book = r.json() or {}
         bids = book.get("bids") or []
         best = max((float(b["price"]) for b in bids if "price" in b), default=None)
+        _best_bid_cache[token_id] = best
         return best
     except Exception:
+        _best_bid_cache[token_id] = None
         return None
 
 def fetch_last_no_trade_price(token_id: str) -> float | None:
+    if token_id in _last_price_cache:
+        return _last_price_cache[token_id]
     try:
+        consume_token()  # rate-limit
         r = SESSION.get(BASE_PHIST, params={"token_id": token_id, "resolution": "1h", "limit": 1}, timeout=15)
         r.raise_for_status()
         rows = r.json() or []
-        if rows:
-            # prices-history returns objects with "price" (ask/bid mid). Treat as last traded/quoted price.
-            return float(rows[-1].get("price", 0)) or None
+        price = float(rows[-1].get("price", 0)) if rows else 0.0
+        val = price or None
+        _last_price_cache[token_id] = val
+        return val
     except Exception:
-        pass
-    return None
+        _last_price_cache[token_id] = None
+        return None
 
 
 def parse_dt_iso(s: str) -> datetime:
@@ -299,6 +317,182 @@ def mark_to_market(positions_by_market: dict[str, dict]):
         # print(f"[MTM] {mid} shares={shares:.2f} cost={cost:.2f} val={val:.2f} note={note}")
     return total_cost, total_val, nmk
 
+
+def per_market_mark(mid: str, shares: float, cost: float) -> dict:
+    """
+    Returns a dict describing this position's status and values.
+    Keys: status ('open'|'resolved_NO'|'resolved_YES'|'resolved_unknown'|'no_meta'|'open_unpriced'|'open_last'|'open_bid'),
+          realized_value, unrealized_value, realized_pl, unrealized_pl
+    """
+    m = fetch_market_meta_cached(mid)
+    if not m:
+        return {
+            "status": "no_meta",
+            "realized_value": 0.0,
+            "unrealized_value": 0.0,
+            "realized_pl": 0.0,
+            "unrealized_pl": -cost,  # conservative (no mark)
+        }
+
+    resolved = bool(m.get("resolved") or m.get("isResolved"))
+    winner   = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
+
+    if resolved:
+        if winner == "NO":
+            rv = shares * (1.0 - SETTLE_FEE)
+            return {
+                "status": "resolved_NO",
+                "realized_value": rv,
+                "unrealized_value": 0.0,
+                "realized_pl": rv - cost,
+                "unrealized_pl": 0.0,
+            }
+        if winner == "YES":
+            return {
+                "status": "resolved_YES",
+                "realized_value": 0.0,
+                "unrealized_value": 0.0,
+                "realized_pl": -cost,
+                "unrealized_pl": 0.0,
+            }
+        # resolved but winner missing
+        return {
+            "status": "resolved_unknown",
+            "realized_value": 0.0,
+            "unrealized_value": 0.0,
+            "realized_pl": -cost,  # safest
+            "unrealized_pl": 0.0,
+        }
+
+    # OPEN → bid/last/zero fallback
+    try:
+        om = outcome_map_from_market(m)
+        no_tok = om["NO"]
+    except Exception:
+        return {
+            "status": "open_tokens_unknown",
+            "realized_value": 0.0,
+            "unrealized_value": 0.0,
+            "realized_pl": 0.0,
+            "unrealized_pl": -cost,
+        }
+
+    bid = fetch_best_bid_for_no_token(no_tok)
+    if bid is not None:
+        uv = shares * bid
+        return {
+            "status": "open_bid",
+            "realized_value": 0.0,
+            "unrealized_value": uv,
+            "realized_pl": 0.0,
+            "unrealized_pl": uv - cost,
+        }
+
+    lastp = fetch_last_no_trade_price(no_tok)
+    if lastp is not None:
+        uv = shares * lastp
+        return {
+            "status": "open_last",
+            "realized_value": 0.0,
+            "unrealized_value": uv,
+            "realized_pl": 0.0,
+            "unrealized_pl": uv - cost,
+        }
+
+    # no price
+    return {
+        "status": "open_unpriced",
+        "realized_value": 0.0,
+        "unrealized_value": 0.0,
+        "realized_pl": 0.0,
+        "unrealized_pl": -cost,
+    }
+
+
+def breakdown_pl(positions_by_market: dict[str, dict]) -> dict:
+    stats = {
+        "positions_count": 0,
+        "markets_marked": 0,
+
+        "open_count": 0,
+        "open_cost": 0.0,
+        "open_mtm_value": 0.0,
+        "unrealized_pl": 0.0,
+
+        "closed_count": 0,
+        "closed_cost": 0.0,
+        "realized_value": 0.0,
+        "realized_pl": 0.0,
+
+        "total_cost": 0.0,
+        "mtm_value": 0.0,   # realized_value + open_mtm_value
+        "pl_total": 0.0,    # realized_pl + unrealized_pl
+    }
+
+    for mid, p in positions_by_market.items():
+        shares = float(p.get("shares", 0.0))
+        cost   = float(p.get("cost", 0.0))
+        if shares <= 0 or cost < 0:
+            continue
+
+        stats["positions_count"] += 1
+        marks = per_market_mark(mid, shares, cost)
+        stats["markets_marked"]  += 1
+
+        status = marks["status"]
+        rv = float(marks["realized_value"])
+        uv = float(marks["unrealized_value"])
+        rpl = float(marks["realized_pl"])
+        upl = float(marks["unrealized_pl"])
+
+        if status.startswith("resolved"):
+            stats["closed_count"] += 1
+            stats["closed_cost"]  += cost
+            stats["realized_value"] += rv
+            stats["realized_pl"] += rpl
+        else:
+            stats["open_count"] += 1
+            stats["open_cost"]  += cost
+            stats["open_mtm_value"] += uv
+            stats["unrealized_pl"] += upl
+
+    stats["total_cost"] = stats["open_cost"] + stats["closed_cost"]
+    stats["mtm_value"]  = stats["realized_value"] + stats["open_mtm_value"]
+    stats["pl_total"]   = stats["realized_pl"] + stats["unrealized_pl"]
+    return stats
+
+
+def write_breakdown_line(start_date: str, variant: str, positions: dict, outfile: str):
+    as_of = datetime.now(timezone.utc).isoformat()
+    stats = breakdown_pl(positions)
+    rec = {
+        "run_ts": as_of,
+        "as_of_ts": as_of,
+        "start_date": start_date,
+        "variant": variant,
+
+        # counts
+        "positions_count": stats["positions_count"],
+        "markets_marked":  stats["markets_marked"],
+        "open_count":      stats["open_count"],
+        "closed_count":    stats["closed_count"],
+
+        # dollars
+        "open_cost":        stats["open_cost"],
+        "open_mtm_value":   stats["open_mtm_value"],
+        "unrealized_pl":    stats["unrealized_pl"],
+        "closed_cost":      stats["closed_cost"],
+        "realized_value":   stats["realized_value"],
+        "realized_pl":      stats["realized_pl"],
+
+        # totals / reconciliation
+        "total_cost": stats["total_cost"],
+        "mtm_value":  stats["mtm_value"],
+        "pl_total":   stats["pl_total"],
+    }
+    with open(outfile, "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
 # ----------------------------
 # output
 # ----------------------------
@@ -335,30 +529,23 @@ def compute_and_write_once(include_crypto: bool):
     out_path = OUTPUT_ALL if include_crypto else OUTPUT_NO_CRYPTO
     print(f"[RUN] {now_dt.isoformat()} variant={variant} days={len(start_dates)}")
 
-    # cache of token->bid inside this run
-    # (We already dedup in mark_to_market; keeping simple.)
+    variant = "all" if include_crypto else "no_crypto"
+    out_path = OUTPUT_ALL if include_crypto else OUTPUT_NO_CRYPTO
+    print(f"[RUN] {now_dt.isoformat()} variant={variant} days={len(start_dates)}")
+
     for sd in start_dates:
+        # rebuild per-run caches each start-date pass to avoid cross-contamination if you prefer:
+        _market_meta_cache.clear()
+        _best_bid_cache.clear()
+        _last_price_cache.clear()
+
         positions = build_positions_for_start(trades, sd, include_crypto=include_crypto)
-        total_cost, total_val, nmk = mark_to_market(positions)
-        pl_mtm = total_val - total_cost
 
-        rec = {
-            "run_ts": now_dt.isoformat(),
-            "as_of_ts": now_dt.isoformat(),
-            "start_date": sd.date().isoformat(),
-            "variant": variant,
-            "positions_count": len(positions),
-            "markets_marked": nmk,
-            "total_cost": round(float(total_cost), 6),
-            "mtm_value": round(float(total_val), 6),
-            "pl_mtm": round(float(pl_mtm), 6),
-        }
-        append_jsonl(out_path, rec)
-        # short print for visibility
-        print(f"  {variant} | start={rec['start_date']} pos={rec['positions_count']} "
-              f"cost={rec['total_cost']:.2f} mtm={rec['mtm_value']:.2f} P/L={rec['pl_mtm']:.2f}")
+        # write full realized/unrealized breakdown (includes totals & counts)
+        write_breakdown_line(sd.date().isoformat(), variant, positions, out_path)
 
-    print(f"[DONE] wrote to {out_path}")
+        # optional console line
+        print(f"  {variant} | start={sd.date().isoformat()} pos={len(positions)} → wrote breakdown")
 
 def main():
     import argparse
