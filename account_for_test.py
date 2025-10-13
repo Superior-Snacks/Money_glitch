@@ -103,22 +103,23 @@ def iter_trade_files() -> List[str]:
     return sorted(glob.glob(TRADE_LOG_GLOB))
 
 def open_maybe_gz(path: str, mode: str = "rt"):
+    # Always read/write text as UTF-8; tolerate bad bytes.
     if path.endswith(".gz"):
-        return gzip.open(path, mode)
-    return open(path, mode, encoding="utf-8")
+        return gzip.open(path, mode, encoding="utf-8", errors="replace")
+    return open(path, mode, encoding="utf-8", errors="replace")
 
-def iter_trade_records() -> Iterable[dict]:
-    """Stream all trade lines across all dated parts (jsonl and jsonl.gz)."""
+def iter_trade_records():
     for path in iter_trade_files():
         try:
             with open_maybe_gz(path, "rt") as f:
                 for line in f:
                     line = line.strip()
-                    if not line: continue
+                    if not line:
+                        continue
                     try:
-                        rec = json.loads(line)
-                        yield rec
+                        yield json.loads(line)
                     except Exception:
+                        # If a single line is corrupted, skip it rather than crash.
                         continue
         except FileNotFoundError:
             continue
