@@ -96,6 +96,22 @@ def get_yes_no_token_ids(market: dict):
     om = outcome_map_from_market(market)
     return om["YES"], om["NO"]
 
+CRYPTO_KEYWORDS = [
+    "bitcoin", "btc", "ethereum", "eth", "solana", "sol",
+    "xrp", "ripple", "doge", "dogecoin", "avax", "avalanche",
+    "matic", "polygon", "ada", "cardano", "ltc", "litecoin",
+    "dot", "polkadot", "bch", "tron", "trx", "shib", "shiba",
+    "ton", "toncoin", "link", "chainlink", "usdt", "tether",
+    "usdc", "dai", "busd", "tusd", "frax", "aave", "uni",
+    "op", "optimism", "arb", "arbitrum", "atom", "cosmos",
+    "ape", "apecoin", "sand", "sandbox", "mana", "decentraland",
+    "pepe", "wbtc", "eth2"
+]
+
+def is_crypto_market(market):
+    text = (market.get("question") or "").lower() + " " + (market.get("slug") or "").lower()
+    return any(k in text for k in CRYPTO_KEYWORDS)
+
 # ---- Log reading ----------------------------------------------------
 def iter_trade_records():
     paths = sorted(glob.glob(TRADE_LOG_GLOB))
@@ -123,6 +139,9 @@ def load_positions_from_logs():
     pos = {}
     for rec in iter_trade_records():
         if rec.get("side") != "NO":
+            continue
+        if is_crypto_market(rec):
+            print("CRYPTO SCUM")
             continue
         mid = rec.get("market_id")
         shares = float(rec.get("shares", 0.0))
