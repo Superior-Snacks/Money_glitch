@@ -529,10 +529,6 @@ def compute_and_write_once(include_crypto: bool):
     out_path = OUTPUT_ALL if include_crypto else OUTPUT_NO_CRYPTO
     print(f"[RUN] {now_dt.isoformat()} variant={variant} days={len(start_dates)}")
 
-    variant = "all" if include_crypto else "no_crypto"
-    out_path = OUTPUT_ALL if include_crypto else OUTPUT_NO_CRYPTO
-    print(f"[RUN] {now_dt.isoformat()} variant={variant} days={len(start_dates)}")
-
     for sd in start_dates:
         # rebuild per-run caches each start-date pass to avoid cross-contamination if you prefer:
         _market_meta_cache.clear()
