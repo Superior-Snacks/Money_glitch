@@ -68,6 +68,28 @@ def fetch_market_meta_cached(condition_id: str) -> dict | None:
     return m
 
 
+def read_last_snapshot_for(outfile: str, variant: str, start_date: str) -> dict | None:
+    """
+    Read the most recent line in `outfile` for the given (variant, start_date).
+    Returns that JSON record or None if not found.
+    """
+    if not os.path.exists(outfile):
+        return None
+    last = None
+    with open(outfile, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except Exception:
+                continue
+            if rec.get("variant") == variant and rec.get("start_date") == start_date:
+                last = rec
+    return last
+
+
 def _rate_limit_factory(rps: float):
     last_ts = time.monotonic()
     bucket = rps
@@ -465,6 +487,29 @@ def breakdown_pl(positions_by_market: dict[str, dict]) -> dict:
 def write_breakdown_line(start_date: str, variant: str, positions: dict, outfile: str):
     as_of = datetime.now(timezone.utc).isoformat()
     stats = breakdown_pl(positions)
+
+    # Base totals
+    total_cost = float(stats["total_cost"])
+    mtm_value  = float(stats["mtm_value"])
+    pl_total   = float(stats["pl_total"])
+
+    # Ratios / returns (guard divide-by-zero)
+    return_pct           = (pl_total / total_cost) if total_cost > 0 else 0.0
+    mtm_to_cost_pct      = (mtm_value / total_cost - 1.0) if total_cost > 0 else 0.0
+    realized_return_pct  = (stats["realized_pl"] / total_cost) if total_cost > 0 else 0.0
+    unrealized_return_pct= (stats["unrealized_pl"] / total_cost) if total_cost > 0 else 0.0
+    open_exposure_pct    = (stats["open_cost"] / total_cost) if total_cost > 0 else 0.0
+    closed_exposure_pct  = (stats["closed_cost"] / total_cost) if total_cost > 0 else 0.0
+
+    # Previous snapshot (for deltas)
+    prev = read_last_snapshot_for(outfile, variant, start_date) or {}
+
+    def delta(curr: float, key: str) -> float:
+        try:
+            return curr - float(prev.get(key, 0.0))
+        except Exception:
+            return 0.0
+
     rec = {
         "run_ts": as_of,
         "as_of_ts": as_of,
@@ -472,24 +517,43 @@ def write_breakdown_line(start_date: str, variant: str, positions: dict, outfile
         "variant": variant,
 
         # counts
-        "positions_count": stats["positions_count"],
-        "markets_marked":  stats["markets_marked"],
-        "open_count":      stats["open_count"],
-        "closed_count":    stats["closed_count"],
+        "positions_count": int(stats["positions_count"]),
+        "markets_marked":  int(stats["markets_marked"]),
+        "open_count":      int(stats["open_count"]),
+        "closed_count":    int(stats["closed_count"]),
 
         # dollars
-        "open_cost":        stats["open_cost"],
-        "open_mtm_value":   stats["open_mtm_value"],
-        "unrealized_pl":    stats["unrealized_pl"],
-        "closed_cost":      stats["closed_cost"],
-        "realized_value":   stats["realized_value"],
-        "realized_pl":      stats["realized_pl"],
+        "open_cost":        float(stats["open_cost"]),
+        "open_mtm_value":   float(stats["open_mtm_value"]),
+        "unrealized_pl":    float(stats["unrealized_pl"]),
+        "closed_cost":      float(stats["closed_cost"]),
+        "realized_value":   float(stats["realized_value"]),
+        "realized_pl":      float(stats["realized_pl"]),
 
         # totals / reconciliation
-        "total_cost": stats["total_cost"],
-        "mtm_value":  stats["mtm_value"],
-        "pl_total":   stats["pl_total"],
+        "total_cost": total_cost,
+        "mtm_value":  mtm_value,
+        "pl_total":   pl_total,
+
+        # ratios
+        "return_pct":            return_pct,            # pl_total / total_cost
+        "mtm_to_cost_pct":       mtm_to_cost_pct,       # mtm_value / total_cost - 1
+        "realized_return_pct":   realized_return_pct,   # realized_pl / total_cost
+        "unrealized_return_pct": unrealized_return_pct, # unrealized_pl / total_cost
+        "open_exposure_pct":     open_exposure_pct,     # open_cost / total_cost
+        "closed_exposure_pct":   closed_exposure_pct,   # closed_cost / total_cost
+
+        # deltas vs previous line for this (variant,start_date)
+        "delta_pl_total":        delta(pl_total,  "pl_total"),
+        "delta_unrealized_pl":   delta(stats["unrealized_pl"], "unrealized_pl"),
+        "delta_realized_pl":     delta(stats["realized_pl"],   "realized_pl"),
+        "delta_mtm_value":       delta(mtm_value, "mtm_value"),
+        "delta_open_cost":       delta(stats["open_cost"], "open_cost"),
+        "delta_closed_cost":     delta(stats["closed_cost"], "closed_cost"),
+        "delta_open_count":      delta(stats["open_count"], "open_count"),
+        "delta_closed_count":    delta(stats["closed_count"], "closed_count"),
     }
+
     with open(outfile, "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
