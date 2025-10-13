@@ -527,7 +527,8 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
-"""def is_actively_tradable(m):
+#current
+def is_actively_tradable(m):
     if not m.get("enableOrderBook"): return False
     toks = m.get("clobTokenIds"); 
     if isinstance(toks, str):
@@ -537,15 +538,42 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
     # Skip range/between/greater-than style if you want simpler binarys:
     if any(w in q for w in ["between", "range", "greater than", "less than"]):
         return False
-    return isinstance(toks, list) and len(toks) == 2"""
+    return isinstance(toks, list) and len(toks) == 2
     #don't filter rn
-def is_actively_tradable(m):
+"""def is_actively_tradable(m):
     if not m.get("enableOrderBook"): return False
     toks = m.get("clobTokenIds"); 
     if isinstance(toks, str):
         try: toks=json.loads(toks)
         except: toks=[]
-    return isinstance(toks, list) and len(toks) == 2
+    return isinstance(toks, list) and len(toks) == 2"""
+
+"""def is_actively_tradable(m):
+    if not m.get("enableOrderBook"): return False
+    toks = m.get("clobTokenIds"); 
+    if isinstance(toks, str):
+        try: toks=json.loads(toks)
+        except: toks=[]
+    q = (m.get("question") or "").lower()
+    # Skip crypto
+    if is_crypto_market(m):
+        return False
+    return isinstance(toks, list) and len(toks) == 2"""
+
+def is_crypto_market(market):
+    CRYPTO_KEYWORDS = [
+    "bitcoin", "btc", "ethereum", "eth", "solana", "sol",
+    "xrp", "ripple", "doge", "dogecoin", "avax", "avalanche",
+    "matic", "polygon", "ada", "cardano", "ltc", "litecoin",
+    "dot", "polkadot", "bch", "tron", "trx", "shib", "shiba",
+    "ton", "toncoin", "link", "chainlink", "usdt", "tether",
+    "usdc", "dai", "busd", "tusd", "frax", "aave", "uni",
+    "op", "optimism", "arb", "arbitrum", "atom", "cosmos",
+    "ape", "apecoin", "sand", "sandbox", "mana", "decentraland",
+    "pepe", "wbtc", "eth2"
+]
+    text = (market.get("question") or "").lower() + " " + (market.get("slug") or "").lower()
+    return any(k in text for k in CRYPTO_KEYWORDS)
 
 # --------------------------------------------------------------------
 # Open_position “simulation” for live watcher
