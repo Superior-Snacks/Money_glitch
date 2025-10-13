@@ -18,369 +18,289 @@ import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
-LOG_DIR = "logs"
-TRADE_LOG_GLOB = os.path.join(LOG_DIR, "trades_taken_*.jsonl*")
+#!/usr/bin/env python3
+import os, re, json, gzip, time
+from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Iterable, Tuple, Optional
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+# ----------------------------
+# CONFIG
+# ----------------------------
+LOG_DIR = "logs"
+TRADE_LOG_GLOB = os.path.join(LOG_DIR, "trades_taken_*.jsonl*")   # picks .jsonl and .jsonl.gz
+OUTPUT_ALL         = os.path.join(LOG_DIR, "pl_timeseries_all.jsonl")
+OUTPUT_NO_CRYPTO   = os.path.join(LOG_DIR, "pl_timeseries_no_crypto.jsonl")
+UPDATE_INTERVAL_S  = 3600   # run hourly
+BOOK_DEPTH = 1              # only need top of book to MTM at bid
+RPS_TARGET = 5.0            # gentle rate limit for /book
+
 BASE_BOOK  = "https://clob.polymarket.com/book"
 
-FEE_BPS   = 600      # same as live script
-SLIP_BPS  = 200
-SETTLE_FEE = 0.01    # winner fee (same assumption as your main script)
+# same fees as your main watcher to keep apples-to-apples (MTM uses raw bid; P/L uses cost basis)
+SETTLE_FEE = 0.01
 
-RPS_TARGET = 3.0     # keep gentle
-SLEEP_BETWEEN_MARKETS = 0.05
-LOOP_SECONDS = 3600  # 1 hour when run with --loop
+# crude crypto detector (expand as you like)
+CRYPTO_WORDS = {
+    "crypto","coin","token","blockchain","defi","stablecoin",
+    "bitcoin","btc","ethereum","eth","solana","sol","xrp","ripple","doge","dogecoin",
+    "ada","cardano","bnb","ton","shib","litecoin","ltc","avalanche","avax","tron","trx",
+    "chainlink","link","polkadot","dot","near","aptos","apt","arbitrum","arb","base",
+    "matic","polygon","pepe","sui","kaspa","kas","sei",
+}
 
-# -------------------------------------------------------------------
-_last_tokens_ts = time.monotonic()
-_bucket = RPS_TARGET
+# ----------------------------
+# small helpers
+# ----------------------------
+def _rate_limit_factory(rps: float):
+    last_ts = time.monotonic()
+    bucket = rps
+    def _consume():
+        nonlocal last_ts, bucket
+        now = time.monotonic()
+        bucket = min(rps, bucket + (now - last_ts) * rps)
+        last_ts = now
+        if bucket < 1.0:
+            need = (1.0 - bucket)/rps
+            time.sleep(need)
+            now2 = time.monotonic()
+            bucket = min(rps, bucket + (now2 - last_ts) * rps)
+            last_ts = now2
+        bucket -= 1.0
+    return _consume
 
-def _rate_limit():
-    global _last_tokens_ts, _bucket
-    now = time.monotonic()
-    _bucket = min(RPS_TARGET, _bucket + (now - _last_tokens_ts) * RPS_TARGET)
-    _last_tokens_ts = now
-    if _bucket < 1.0:
-        need = (1.0 - _bucket) / RPS_TARGET
-        time.sleep(need)
-        now2 = time.monotonic()
-        _bucket = min(RPS_TARGET, _bucket + (now2 - _last_tokens_ts) * RPS_TARGET)
-        _last_tokens_ts = now2
-    _bucket -= 1.0
+consume_token = _rate_limit_factory(RPS_TARGET)
 
-def make_session():
+def make_session() -> requests.Session:
     s = requests.Session()
     retry = Retry(
-        total=5,
-        connect=5,
-        read=5,
+        total=5, connect=5, read=5,
         backoff_factor=0.5,
         status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=("GET",),
+        allowed_methods=("GET","POST"),
         raise_on_status=False,
     )
-    adapter = HTTPAdapter(max_retries=retry, pool_connections=30, pool_maxsize=30)
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=32, pool_maxsize=32)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pl-watcher/1.0"})
+    s.headers.update({"User-Agent": "pl-timeseries-reporter/1.0"})
     return s
 
 SESSION = make_session()
 
-# ---- Helpers from your live code (robust to strings/lists) ----------
-def outcome_map_from_market(market: dict) -> dict:
-    outs = market.get("outcomes")
-    toks = market.get("clobTokenIds")
-    if isinstance(outs, str):
-        try: outs = json.loads(outs)
-        except: outs = None
-    if isinstance(toks, str):
-        try: toks = json.loads(toks)
-        except: toks = None
-    if isinstance(outs, list) and isinstance(toks, list) and len(outs) == 2 and len(toks) == 2:
-        o0, o1 = str(outs[0]).strip().upper(), str(outs[1]).strip().upper()
-        if (o0, o1) == ("YES", "NO"):
-            return {"YES": toks[0], "NO": toks[1]}
-        if (o0, o1) == ("NO", "YES"):
-            return {"YES": toks[1], "NO": toks[0]}
-        if "NO" in o0 and "YES" in o1:
-            return {"YES": toks[1], "NO": toks[0]}
-        if "YES" in o0 and "NO" in o1:
-            return {"YES": toks[0], "NO": toks[1]}
-    if isinstance(toks, list) and len(toks) == 2:
-        return {"YES": toks[0], "NO": toks[1]}
-    raise ValueError(f"Cannot map YES/NO for market {market.get('id') or market.get('conditionId')}")
+def parse_dt_iso(s: str) -> datetime:
+    # tolerate no tz by assuming UTC; prefer ISO strings from your logs with +00:00
+    try:
+        return datetime.fromisoformat(s.replace("Z","+00:00"))
+    except Exception:
+        # last resort: treat as UTC naive
+        return datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
 
-def get_yes_no_token_ids(market: dict):
-    om = outcome_map_from_market(market)
-    return om["YES"], om["NO"]
+def iter_trade_files() -> List[str]:
+    import glob
+    return sorted(glob.glob(TRADE_LOG_GLOB))
 
-CRYPTO_KEYWORDS = [
-    "bitcoin", "btc", "ethereum", "eth", "solana", "sol",
-    "xrp", "ripple", "doge", "dogecoin", "avax", "avalanche",
-    "matic", "polygon", "ada", "cardano", "ltc", "litecoin",
-    "dot", "polkadot", "bch", "tron", "trx", "shib", "shiba",
-    "ton", "toncoin", "link", "chainlink", "usdt", "tether",
-    "usdc", "dai", "busd", "tusd", "frax", "aave", "uni",
-    "op", "optimism", "arb", "arbitrum", "atom", "cosmos",
-    "ape", "apecoin", "sand", "sandbox", "mana", "decentraland",
-    "pepe", "wbtc", "eth2"
-]
+def open_maybe_gz(path: str, mode: str = "rt"):
+    if path.endswith(".gz"):
+        return gzip.open(path, mode)
+    return open(path, mode, encoding="utf-8")
 
-def is_crypto_market(market):
-    text = (market.get("question") or "").lower() + " " + (market.get("slug") or "").lower()
-    return any(k in text for k in CRYPTO_KEYWORDS)
-
-# ---- Log reading ----------------------------------------------------
-def iter_trade_records():
-    paths = sorted(glob.glob(TRADE_LOG_GLOB))
-    for path in paths:
-        opener = gzip.open if path.endswith(".gz") else open
+def iter_trade_records() -> Iterable[dict]:
+    """Stream all trade lines across all dated parts (jsonl and jsonl.gz)."""
+    for path in iter_trade_files():
         try:
-            with opener(path, "rt", encoding="utf-8") as f:
+            with open_maybe_gz(path, "rt") as f:
                 for line in f:
                     line = line.strip()
-                    if not line:
-                        continue
+                    if not line: continue
                     try:
                         rec = json.loads(line)
+                        yield rec
                     except Exception:
                         continue
-                    yield rec
         except FileNotFoundError:
             continue
 
-def load_positions_from_logs():
-    """
-    Returns dict market_id -> {"shares": float, "cost": float, "side": "NO"}
-    Ignores YES (you’re only opening NO in your current strategy).
-    """
-    pos = {}
-    for rec in iter_trade_records():
-        if rec.get("side") != "NO":
-            continue
-        if is_crypto_market(rec):
-            print("CRYPTO SCUM")
-            continue
-        mid = rec.get("market_id")
-        shares = float(rec.get("shares", 0.0))
-        cost   = float(rec.get("spent_after", 0.0))
-        if not mid or shares <= 0 or cost < 0:
-            continue
-        p = pos.setdefault(mid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
-        p["shares"] += shares
-        p["cost"]   += cost
-    return pos
-
-# ---- Market & book fetching ----------------------------------------
-def fetch_markets_by_ids(ids):
-    """
-    Try to fetch Gamma rows by IDs in chunks. This endpoint commonly supports a CSV in 'ids'.
-    Falls back per-id if needed.
-    """
-    rows = {}
-    chunk = 50
-    id_list = list(ids)
-    for i in range(0, len(id_list), chunk):
-        slab = id_list[i:i+chunk]
-        _rate_limit()
-        r = SESSION.get(BASE_GAMMA, params={"ids": ",".join(slab)}, timeout=20)
-        if r.status_code == 200:
-            arr = r.json() or []
-            for m in arr:
-                mid = m.get("conditionId") or m.get("id")
-                if mid:
-                    rows[mid] = m
-        else:
-            # fallback one by one
-            for mid in slab:
-                _rate_limit()
-                r2 = SESSION.get(BASE_GAMMA, params={"ids": mid}, timeout=20)
-                if r2.status_code == 200:
-                    arr2 = r2.json() or []
-                    for m in arr2:
-                        key = m.get("conditionId") or m.get("id")
-                        if key:
-                            rows[key] = m
-        time.sleep(0.02)
-    return rows
-
-def fetch_book(token_id, depth=10):
-    _rate_limit()
-    r = SESSION.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
-    if r.status_code != 200:
-        return {}
-    try:
-        b = r.json() or {}
-    except Exception:
-        return {}
-    # normalize/truncate
-    b["bids"] = (b.get("bids") or [])[:depth]
-    b["asks"] = (b.get("asks") or [])[:depth]
-    return b
-
-def best_bid(book):
-    bids = book.get("bids") or []
-    bb = None
-    for b in bids:
+def earliest_trade_date_utc(trades: List[dict]) -> Optional[datetime]:
+    dts = []
+    for r in trades:
+        ts = r.get("ts")
+        if not ts: continue
         try:
-            px = float(b.get("price"))
-            if bb is None or px > bb:
-                bb = px
+            dts.append(parse_dt_iso(ts))
         except Exception:
             pass
-    return bb
+    return min(dts).astimezone(timezone.utc) if dts else None
 
-# ---- Resolution detection ------------------------------------------
-def market_resolution_info(m):
+def is_crypto_market(rec: dict) -> bool:
+    # check slug and question fields as your trade log provides both
+    q = (rec.get("question") or "").lower()
+    s = (rec.get("market_slug") or "").lower()
+    text = f"{q} {s}"
+    return any(w in text for w in CRYPTO_WORDS)
+
+# ----------------------------
+# positions + MTM
+# ----------------------------
+def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, include_crypto: bool) -> Dict[str, dict]:
     """
-    Returns (is_resolved, winning_str) with winning_str in {"YES","NO",None}.
-    Tries several likely fields since Gamma schemas vary.
+    Build NO-only positions from trades occurring at/after start_dt_utc.
+    Returns: market_id -> { 'shares': float, 'cost': float, 'side': 'NO', 'no_token_id': str }
     """
-    # typical hints
-    resolved = bool(m.get("resolved") or m.get("isResolved") or m.get("closed"))
-    winning = m.get("winningOutcome") or m.get("winning_outcome") or m.get("resolution")
-    # Normalize strings
-    win_norm = None
-    if isinstance(winning, str):
-        w = winning.strip().upper()
-        if "YES" in w:
-            win_norm = "YES"
-        elif "NO" in w:
-            win_norm = "NO"
-        else:
-            # sometimes resolution text is like "Resolved: No" or "Cancel"
-            if "RESOLV" in w and "NO" in w:
-                win_norm = "NO"
-            elif "RESOLV" in w and "YES" in w:
-                win_norm = "YES"
-    # Another pattern: list of winning outcomes or booleans
-    if win_norm is None:
-        wo = m.get("winningOutcomes") or m.get("winning_outcomes")
-        if isinstance(wo, list) and len(wo) == 1:
-            s = str(wo[0]).strip().upper()
-            if s in ("YES","NO"):
-                win_norm = s
-    return resolved, win_norm
-
-# ---- P&L calc ------------------------------------------------------
-def compute_pl():
-    positions = load_positions_from_logs()
-    if not positions:
-        return {
-            "asof": datetime.now(timezone.utc).isoformat(),
-            "positions": 0,
-            "realized_pl": 0.0,
-            "unrealized_pl": 0.0,
-            "total_cost": 0.0,
-            "mtm_value": 0.0,
-            "closed_count": 0,
-            "open_count": 0,
-            "by_market": {}
-        }
-
-    market_ids = list(positions.keys())
-    gamma = fetch_markets_by_ids(market_ids)
-
-    fee_mult = 1.0 + (FEE_BPS/10000.0) + (SLIP_BPS/10000.0)
-
-    realized_pl = 0.0
-    unrealized_pl = 0.0
-    total_cost = 0.0
-    mtm_value = 0.0
-    closed_count = 0
-    open_count = 0
-
-    by_market = {}
-
-    for mid, pos in positions.items():
-        cost   = float(pos["cost"])
-        shares = float(pos["shares"])
-        total_cost += cost
-
-        mrow = gamma.get(mid) or {}
-        resolved, winning = market_resolution_info(mrow)
-
+    pos: Dict[str, dict] = {}
+    for rec in trades:
+        if rec.get("side") != "NO":
+            continue
+        ts = rec.get("ts")
+        if not ts: continue
         try:
-            yes_tok, no_tok = get_yes_no_token_ids(mrow)
+            t_dt = parse_dt_iso(ts).astimezone(timezone.utc)
         except Exception:
-            yes_tok = no_tok = None
+            continue
+        if t_dt < start_dt_utc:
+            continue
+        if not include_crypto and is_crypto_market(rec):
+            continue
 
-        status = "open"
-        pnl = 0.0
-        mval = 0.0
-        close_proceeds = None
+        mid = rec.get("market_id")
+        shares = float(rec.get("shares", 0.0) or 0.0)
+        cost   = float(rec.get("spent_after", 0.0) or 0.0)
+        tok    = rec.get("token_id")  # NO token in your logs
+        if not (mid and tok) or shares <= 0 or cost < 0:
+            continue
+        st = pos.setdefault(mid, {"shares": 0.0, "cost": 0.0, "side": "NO", "no_token_id": tok})
+        st["shares"] += shares
+        st["cost"]   += cost
+    return pos
 
-        if resolved and winning in ("YES","NO"):
-            status = "closed"
-            closed_count += 1
-            if winning == "NO":
-                close_proceeds = shares * (1.0 - SETTLE_FEE)
-            else:
-                close_proceeds = 0.0
-            pnl = (close_proceeds - cost)
-            realized_pl += pnl
-            mval = close_proceeds
-        else:
-            open_count += 1
-            # mark NO at best bid (conservative)
-            bb = None
-            if no_tok:
-                time.sleep(SLEEP_BETWEEN_MARKETS)
-                book = fetch_book(no_tok, depth=10)
-                bb = best_bid(book)
-            if bb is None:
-                bb = 0.0
-            # (optional) include exit fees/slip here; many people don't for MTM.
-            mval = shares * bb
-            pnl = mval - cost
-            unrealized_pl += pnl
-
-        mtm_value += mval
-
-        by_market[mid] = {
-            "question": mrow.get("question"),
-            "status": status,
-            "winning": winning,
-            "shares_no": shares,
-            "cost": round(cost, 6),
-            "mtm_value": round(mval, 6),
-            "pnl": round(pnl, 6),
-        }
-
-    snap = {
-        "asof": datetime.now(timezone.utc).isoformat(),
-        "positions": len(positions),
-        "realized_pl": round(realized_pl, 6),
-        "unrealized_pl": round(unrealized_pl, 6),
-        "total_cost": round(total_cost, 6),
-        "mtm_value": round(mtm_value, 6),
-        "closed_count": closed_count,
-        "open_count": open_count,
-        "by_market": by_market,
-    }
-    return snap
-
-def print_summary(snap):
-    print(f"\n=== P/L Snapshot @ {snap['asof']} ===")
-    print(f"Positions: {snap['positions']} | Open: {snap['open_count']} | Closed: {snap['closed_count']}")
-    print(f"Total cost:       {snap['total_cost']:.2f}")
-    print(f"MTM value:        {snap['mtm_value']:.2f}")
-    print(f"Realized P/L:     {snap['realized_pl']:.2f}")
-    print(f"Unrealized P/L:   {snap['unrealized_pl']:.2f}")
-    print(f"Total P/L:        {(snap['realized_pl']+snap['unrealized_pl']):.2f}")
-    # Show a few lines
-    shown = 0
-    for mid, row in list(snap["by_market"].items())[:8]:
-        print(f" - {row['status'].upper():6s} | {row['pnl']:>10.2f} | cost {row['cost']:>9.2f} | mtm {row['mtm_value']:>9.2f} | {row.get('question') or mid}")
-        shown += 1
-    if snap["positions"] > shown:
-        print(f"   ... (+{snap['positions']-shown} more)")
-
-def save_snapshot(snap, path=os.path.join(LOG_DIR, "pl_snapshot.json")):
+def fetch_best_bid_for_no(token_id: str) -> Optional[float]:
+    """
+    For NO token, MTM at bid (what you could immediately sell at).
+    """
+    consume_token()
+    r = SESSION.get(BASE_BOOK, params={"token_id": token_id}, timeout=15)
+    r.raise_for_status()
+    data = r.json() or {}
+    bids = data.get("bids") or []
+    if not bids: 
+        return 0.0
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(snap, f, ensure_ascii=False, indent=2)
-        print(f"[PL] wrote {path}")
-    except Exception as e:
-        print(f"[PL WARN] failed to write snapshot: {e}")
+        # top-of-book highest bid
+        best = max(float(b["price"]) for b in bids if "price" in b)
+        return best
+    except Exception:
+        return 0.0
 
-def main(loop=False):
+def mark_to_market(positions: Dict[str, dict]) -> Tuple[float, float, int]:
+    """
+    Returns (total_cost, total_value_mtm, markets_marked)
+    Value MTM = sum(shares * best_bid_no).
+    """
+    total_cost = 0.0
+    total_val  = 0.0
+    marked = 0
+
+    # de-dup book requests by token
+    token_to_shares: Dict[str, float] = {}
+    token_to_cost: Dict[str, float]   = {}
+    for mid, st in positions.items():
+        tok = st["no_token_id"]
+        token_to_shares[tok] = token_to_shares.get(tok, 0.0) + float(st["shares"])
+        token_to_cost[tok]   = token_to_cost.get(tok, 0.0) + float(st["cost"])
+
+    for tok, sh in token_to_shares.items():
+        bid = fetch_best_bid_for_no(tok) or 0.0
+        total_val  += sh * bid
+        total_cost += token_to_cost.get(tok, 0.0)
+        marked += 1
+
+    return total_cost, total_val, marked
+
+# ----------------------------
+# output
+# ----------------------------
+def append_jsonl(path: str, rec: dict):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
+
+# ----------------------------
+# main loop
+# ----------------------------
+def compute_and_write_once(include_crypto: bool):
+    # 1) load all trades into memory once (daily volumes are fine)
+    trades = list(iter_trade_records())
+    if not trades:
+        now = datetime.now(timezone.utc).isoformat()
+        print(f"[{now}] no trades found. nothing to do.")
+        return
+
+    earliest = earliest_trade_date_utc(trades)
+    if earliest is None:
+        now = datetime.now(timezone.utc).isoformat()
+        print(f"[{now}] could not parse earliest trade date.")
+        return
+
+    now_dt = datetime.now(timezone.utc)
+    # from earliest day to today, inclusive
+    total_days = (now_dt.date() - earliest.date()).days
+    start_dates = [datetime.combine(earliest.date() + timedelta(days=i), 
+                                    datetime.min.time(), tzinfo=timezone.utc)
+                   for i in range(total_days + 1)]
+
+    variant = "all" if include_crypto else "no_crypto"
+    out_path = OUTPUT_ALL if include_crypto else OUTPUT_NO_CRYPTO
+    print(f"[RUN] {now_dt.isoformat()} variant={variant} days={len(start_dates)}")
+
+    # cache of token->bid inside this run
+    # (We already dedup in mark_to_market; keeping simple.)
+    for sd in start_dates:
+        positions = build_positions_for_start(trades, sd, include_crypto=include_crypto)
+        total_cost, total_val, nmk = mark_to_market(positions)
+        pl_mtm = total_val - total_cost
+
+        rec = {
+            "run_ts": now_dt.isoformat(),
+            "as_of_ts": now_dt.isoformat(),
+            "start_date": sd.date().isoformat(),
+            "variant": variant,
+            "positions_count": len(positions),
+            "markets_marked": nmk,
+            "total_cost": round(float(total_cost), 6),
+            "mtm_value": round(float(total_val), 6),
+            "pl_mtm": round(float(pl_mtm), 6),
+        }
+        append_jsonl(out_path, rec)
+        # short print for visibility
+        print(f"  {variant} | start={rec['start_date']} pos={rec['positions_count']} "
+              f"cost={rec['total_cost']:.2f} mtm={rec['mtm_value']:.2f} P/L={rec['pl_mtm']:.2f}")
+
+    print(f"[DONE] wrote to {out_path}")
+
+def main():
+    import argparse
+    p = argparse.ArgumentParser(description="Continuous P/L MTM timeseries reporter")
+    g = p.add_mutually_exclusive_group(required=False)
+    g.add_argument("--include-crypto", action="store_true", help="Include crypto markets (default)")
+    g.add_argument("--exclude-crypto", action="store_true", help="Exclude crypto markets")
+    p.add_argument("--once", action="store_true", help="Run once and exit (no loop)")
+    p.add_argument("--interval", type=int, default=UPDATE_INTERVAL_S, help="Seconds between updates (default hourly)")
+    args = p.parse_args()
+
+    include_crypto = not args.exclude_crypto
+
+    if args.once:
+        compute_and_write_once(include_crypto)
+        return
+
     while True:
         try:
-            snap = compute_pl()
-            print_summary(snap)
-            save_snapshot(snap)
-        except KeyboardInterrupt:
-            raise
+            compute_and_write_once(include_crypto)
         except Exception as e:
-            print(f"[PL WARN] {e}")
-        if not loop:
-            break
-        time.sleep(LOOP_SECONDS)
+            print(f"[WARN] compute error: {e}")
+        time.sleep(max(60, args.interval))
 
 if __name__ == "__main__":
-    import sys
-    loop = ("--loop" in sys.argv)
-    main(loop=loop)
+    main()
