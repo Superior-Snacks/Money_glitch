@@ -27,13 +27,35 @@ def main():
         print(new_markets[0].keys())
         offset += 100
         valid_markets = filter_markets(new_markets)
+        n, y = check_winners(valid_markets)
+        no_won += n
+        yes_won += y
 
 def check_winners(markets):
     nos = 0
     yess = 0
     for market in markets:
-        ...
+        outcome_raw = market.get("outcomePrices", ["0", "0"])
+        outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
+        yes_p, no_p = float(outcome[0]), float(outcome[1])
+        if yes_p > no_p:
+            yess += 1
+        elif no_p > yes_p:
+            nos += 1
     return nos, yess
+
+['id', 'question', 'conditionId', 'slug', 'resolutionSource', 'endDate', 'liquidity', 'startDate', 'fee', 'image', 
+ 'icon', 'description', 'outcomes', 'outcomePrices', 'volume', 'active', 'marketType', 'closed', 'marketMakerAddress', 
+ 'createdAt', 'updatedAt', 'closedTime', 'wideFormat', 'new', 'featured', 'submitted_by', 'archived', 'resolvedBy', 'restricted', 
+ 'groupItemTitle', 'groupItemThreshold', 'questionID', 'umaEndDate', 'enableOrderBook', 'orderPriceMinTickSize', 'orderMinSize', 
+ 'umaResolutionStatus', 'volumeNum', 'liquidityNum', 'endDateIso', 'startDateIso', 'umaEndDateIso', 'hasReviewedDates', 'readyForCron', 
+ 'commentsEnabled', 'volume24hr', 'volume1wk', 'volume1mo', 'volume1yr', 'gameStartTime', 'secondsDelay', 'clobTokenIds', 'fpmmLive', 
+ 'volume24hrAmm', 'volume1wkAmm', 'volume1moAmm', 'volume1yrAmm', 'volume24hrClob', 'volume1wkClob', 'volume1moClob', 'volume1yrClob', 
+ 'volumeAmm', 'volumeClob', 'liquidityAmm', 'liquidityClob', 'events', 'creator', 'ready', 'funded', 'cyom', 'competitive', 
+ 'pagerDutyNotificationEnabled', 'approved', 'rewardsMinSize', 'rewardsMaxSpread', 'spread', 'oneDayPriceChange', 
+ 'oneHourPriceChange', 'oneWeekPriceChange', 'oneMonthPriceChange', 'oneYearPriceChange', 'lastTradePrice', 'bestBid', 'bestAsk', 
+ 'clearBookOnStart', 'manualActivation', 'negRiskOther', 'umaResolutionStatuses', 'pendingDeployment', 'deploying', 'rfqEnabled', 
+ 'holdingRewardsEnabled', 'feesEnabled']
 
 def fetch_markets(limit=20, offset=4811):
     params = {
