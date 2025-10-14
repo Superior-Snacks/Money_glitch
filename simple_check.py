@@ -243,7 +243,7 @@ def main():
 
 def run_simple():
     bank = 5000.0
-    offset = 4811 + 5900 #pressent 21186
+    offset = 4811 + 9900 #pressent 21186
     all_pl = 0.0
     all_bets = 0
     spent = 0.0
