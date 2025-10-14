@@ -18,6 +18,22 @@ BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
 
+def main():
+    yes_won = 0
+    no_won = 0
+    offset = 4811
+    while True:
+        new_markets = fetch_markets(limit=100, offset=offset)
+        offset += 100
+        valid_markets = filter_markets(new_markets)
+
+def check_winners(markets):
+    nos = 0
+    yess = 0
+    for market in markets:
+        ...
+    return nos, yess
+
 def fetch_markets(limit=20, offset=4811):
     params = {
         "limit": limit,
@@ -97,3 +113,6 @@ def normalize_time(value, default=None):
         return dt
     except Exception:
         return default
+    
+if __name__ == "__main__":
+    main()
