@@ -56,39 +56,49 @@ def is_yesno(m):
     return s == {"yes","no"}
 
 def infer_resolution_and_winner(m: dict):
-    # 1) UMA status first
+    """
+    Returns (is_resolved: bool, winner: 'YES'|'NO'|None)
+    Strategy:
+      - Trust UMA status when it explicitly encodes a winner
+      - Else, if closed and prices are extreme (≈1 vs ≈0), infer winner
+      - Else, not resolved
+    """
     uma = (m.get("umaResolutionStatus") or "").strip().lower()
-    # sometimes it’s literally "yes"/"no" when finalized, sometimes "resolved_yes"/"resolved_no", etc.
     if uma in {"yes", "no"}:
         return True, uma.upper()
     if uma.startswith("resolved_"):
         w = uma.split("_", 1)[1].upper()
-        if w in {"YES","NO"}:
+        if w in {"YES", "NO"}:
             return True, w
 
-    # 2) Price-based heuristic when closed
     if m.get("closed"):
-        # outcomePrices is usually ["YES","NO"] ordering
-        raw = m.get("outcomePrices", ["0","0"])
+        raw = m.get("outcomePrices", ["0", "0"])
         prices = json.loads(raw) if isinstance(raw, str) else raw
         try:
-            y = float(prices[0])
-            n = float(prices[1])
-            if y > n:
-                return "YES"
-            if n >  y:
-                return "NO"
+            y = float(prices[0]); n = float(prices[1])
+            # Require *extreme* prices to infer resolution
+            if y >= 0.98 and n <= 0.02:
+                return True, "YES"
+            if n >= 0.98 and y <= 0.02:
+                return True, "NO"
         except Exception:
             pass
-
-    # 3) Not resolved (or not inferable)
-    return None
+    print("NOT RESOLVED")
+    return False, None
 
 def resolved_datetime(m):
-    # prefer explicit resolution-ish fields
-    for k in ("resolutionTime","resolvedTime","resolveTime","endDate","closeDate","startDate"):
+    """
+    Best-effort 'resolution-ish' timestamp.
+    Prefer closed/resolved fields, avoid start/end dates for resolution month.
+    """
+    for k in ("closedTime", "resolvedTime", "resolveTime", "updatedAt"):
         dt = parse_dt_any(m.get(k))
-        if dt: return dt
+        if dt:
+            return dt
+    # last resort: endDate (still better than startDate for resolution)
+    dt = parse_dt_any(m.get("endDate"))
+    if dt:
+        return dt
     return None
 
 def fetch_page(offset, limit=250, since=None, until=None):
@@ -110,28 +120,32 @@ def monthly_yes_no(since_iso=None, until_iso=None):
     per_month = defaultdict(lambda: {"YES": 0, "NO": 0})
 
     offset, limit = 0, 250
+    empty_streak = 0
     while True:
         page = fetch_page(offset, limit, since_iso, until_iso)
         if not page:
-            break
+            empty_streak += 1
+            if empty_streak >= 3:
+                break
+        else:
+            empty_streak = 0
+
         for m in page:
             if not is_yesno(m):
                 continue
-            w = infer_resolution_and_winner(m)
-            if not w:
+            is_resolved, winner = infer_resolution_and_winner(m)
+            if not is_resolved or winner is None:
                 continue
             dt = resolved_datetime(m)
             if not dt:
                 continue
-            mk = month_key(dt)
-            per_month[mk][w] += 1
+            per_month[month_key(dt)][winner] += 1
 
         offset += limit
         time.sleep(0.30)  # polite pacing
 
     # sort by month
-    ordered = OrderedDict(sorted(per_month.items()))
-    return ordered
+    return OrderedDict(sorted(per_month.items()))
 
 def print_report(per_month):
     # headers
