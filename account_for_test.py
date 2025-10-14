@@ -279,6 +279,61 @@ def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, includ
         st["cost"]   += cost
     return pos
 
+def _normalize_uma_status(val: str | None) -> str:
+    if not val:
+        return ""
+    s = str(val).strip().lower()
+    # Common variants you’ll see:
+    # "yes", "no", "resolved_yes", "resolved_no", "finalized_yes", "finalized_no"
+    if s in {"yes", "resolved_yes", "finalized_yes"}:
+        return "YES"
+    if s in {"no", "resolved_no", "finalized_no"}:
+        return "NO"
+    return ""  # unknown/in-flight
+
+def resolve_status(m: dict) -> tuple[bool, str | None, str]:
+    """
+    Returns: (is_resolved, winner_or_None, note)
+    Winner is "YES" or "NO" if finalized; None otherwise.
+    """
+    # Primary: single UMA field
+    uma = m.get("umaResolutionStatus")
+    winner = _normalize_uma_status(uma)
+    if winner:
+        return True, winner, "umaResolutionStatus"
+
+    # Secondary: map/object of statuses (take a final/decided entry if present)
+    # Some markets expose a dict like {"UMA": "resolved_no"} or similar list/map.
+    statuses = m.get("umaResolutionStatuses")
+    if isinstance(statuses, dict):
+        for _, v in statuses.items():
+            w = _normalize_uma_status(v)
+            if w:
+                return True, w, "umaResolutionStatuses"
+    elif isinstance(statuses, list):
+        for v in statuses:
+            w = _normalize_uma_status(v)
+            if w:
+                return True, w, "umaResolutionStatuses"
+
+    # Heuristic (optional, conservative): if a market is closed AND prices are pinned,
+    # you can infer a likely winner; but keep it as NOT resolved for P/L accounting.
+    if m.get("closed"):
+        raw = m.get("outcomePrices", ["0", "0"])
+        prices = json.loads(raw) if isinstance(raw, str) else raw
+        try:
+            y, n = float(prices[0]), float(prices[1])
+            # If you really want a hint, return (False, "YES"/"NO", "closed_price_hint")
+            if y >= 0.995 or n <= 0.005:
+                return False, "YES", "closed_price_hint_yes"
+            if n >= 0.995 or y <= 0.005:
+                return False, "NO", "closed_price_hint_no"
+        except Exception:
+            pass
+
+    return False, None, "open_or_unfinalized"
+
+
 SETTLE_FEE = 0.01  # same as your live script
 
 def mtm_no_position(condition_id: str, shares: float) -> tuple[float, str]:
@@ -290,20 +345,15 @@ def mtm_no_position(condition_id: str, shares: float) -> tuple[float, str]:
     """
     m = fetch_market_meta(condition_id)
     if not m:
-        # No meta: treat as conservative 0 mark
         return 0.0, "no_meta"
 
-    # Resolution path
-    resolved = bool(m.get("resolved") or m.get("isResolved"))
-    winning = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
-    if resolved:
-        if winning == "NO":
+    is_resolved, winner, note = resolve_status(m)
+    if is_resolved:
+        if winner == "NO":
             return shares * (1.0 - SETTLE_FEE), "resolved_NO"
-        elif winning == "YES":
+        if winner == "YES":
             return 0.0, "resolved_YES"
-        else:
-            # Resolved but winner missing? conservative 0
-            return 0.0, "resolved_unknown"
+        return 0.0, "resolved_unknown"
 
     # Still open → get NO token and try book/last
     try:
@@ -356,10 +406,8 @@ def per_market_mark(mid: str, shares: float, cost: float) -> dict:
             "unrealized_pl": -cost,  # conservative (no mark)
         }
 
-    resolved = bool(m.get("resolved") or m.get("isResolved"))
-    winner   = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
-
-    if resolved:
+    is_resolved, winner, note = resolve_status(m)
+    if is_resolved:
         if winner == "NO":
             rv = shares * (1.0 - SETTLE_FEE)
             return {
@@ -377,15 +425,14 @@ def per_market_mark(mid: str, shares: float, cost: float) -> dict:
                 "realized_pl": -cost,
                 "unrealized_pl": 0.0,
             }
-        # resolved but winner missing
         return {
             "status": "resolved_unknown",
             "realized_value": 0.0,
             "unrealized_value": 0.0,
-            "realized_pl": -cost,  # safest
+            "realized_pl": -cost,
             "unrealized_pl": 0.0,
         }
-
+    
     # OPEN → bid/last/zero fallback
     try:
         om = outcome_map_from_market(m)
