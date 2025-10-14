@@ -317,47 +317,87 @@ def _normalize_uma_status(val: str | None) -> str:
         return "NO"
     return ""  # unknown/in-flight
 
-def resolve_status(m: dict) -> tuple[bool, str | None, str]:
-    """
-    Returns: (is_resolved, winner_or_None, note)
-    Winner is "YES" or "NO" if finalized; None otherwise.
-    """
-    # Primary: single UMA field
-    uma = m.get("umaResolutionStatus")
-    winner = _normalize_uma_status(uma)
-    if winner:
-        return True, winner, "umaResolutionStatus"
 
-    # Secondary: map/object of statuses (take a final/decided entry if present)
-    # Some markets expose a dict like {"UMA": "resolved_no"} or similar list/map.
-    statuses = m.get("umaResolutionStatuses")
-    if isinstance(statuses, dict):
-        for _, v in statuses.items():
-            w = _normalize_uma_status(v)
-            if w:
-                return True, w, "umaResolutionStatuses"
-    elif isinstance(statuses, list):
-        for v in statuses:
-            w = _normalize_uma_status(v)
-            if w:
-                return True, w, "umaResolutionStatuses"
+def parse_dt_any(v):
+    """Best-effort parse: ISO (with/without Z) or epoch seconds/millis → aware UTC datetime."""
+    if not v:
+        return None
+    # numeric epoch?
+    try:
+        if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().isdigit()):
+            ts = float(v)
+            if ts > 1e12:  # millis → seconds
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+    except Exception:
+        pass
+    # ISO-ish
+    try:
+        s = str(v).strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
 
-    # Heuristic (optional, conservative): if a market is closed AND prices are pinned,
-    # you can infer a likely winner; but keep it as NOT resolved for P/L accounting.
+HINT_SPREAD = 0.98           # how close to 0/1 we require for a decisive winner
+FINAL_GRACE = timedelta(days=2)   # wait this long after close before trusting price-only finals
+
+def resolve_status(m: dict) -> tuple[bool, str|None, str]:
+    """
+    Returns (finalized, winner_or_None, source)
+    sources: 'umaResolutionStatus' | 'winningOutcome' | 'terminal_outcomePrices' |
+             'legacy_price_history_yes/no' | 'closed_price_hint_yes/no' | 'unresolved'
+    """
+    # 1) Explicit UMA / winner fields
+    uma = (m.get("umaResolutionStatus") or "").strip().lower()
+    if uma in {"yes", "no"}:
+        return True, uma.upper(), "umaResolutionStatus"
+    if uma.startswith("resolved_"):
+        w = uma.split("_", 1)[1].upper()
+        if w in {"YES","NO"}:
+            return True, w, "umaResolutionStatus"
+
+    w = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
+    if w in {"YES","NO"}:
+        return True, w, "winningOutcome"
+
+    # 2) Closed long enough + outcomePrices at ~[1,0] or [0,1]
     if m.get("closed"):
-        raw = m.get("outcomePrices", ["0", "0"])
-        prices = json.loads(raw) if isinstance(raw, str) else raw
+        # choose a close-ish timestamp to measure age
+        end_dt = parse_dt_any(m.get("closedTime")) or parse_dt_any(m.get("umaEndDate")) \
+                 or parse_dt_any(m.get("endDate"))  or parse_dt_any(m.get("updatedAt"))
+        if end_dt:
+            age = datetime.now(timezone.utc) - end_dt
+        else:
+            age = FINAL_GRACE  # if missing, don't block on grace
+
+        raw = m.get("outcomePrices", ["0","0"])
+        prices = json.loads(raw) if isinstance(raw, str) else (raw or ["0","0"])
         try:
-            y, n = float(prices[0]), float(prices[1])
-            # If you really want a hint, return (False, "YES"/"NO", "closed_price_hint")
-            if y >= 0.995 or n <= 0.005:
-                return False, "YES", "closed_price_hint_yes"
-            if n >= 0.995 or y <= 0.005:
-                return False, "NO", "closed_price_hint_no"
+            y = float(prices[0]); n = float(prices[1])
+            # outcomes on Gamma are ["Yes","No"] in this order for yes/no markets
+            if age >= FINAL_GRACE:
+                if y >= HINT_SPREAD and n <= 1 - HINT_SPREAD:
+                    return True, "YES", "terminal_outcomePrices"
+                if n >= HINT_SPREAD and y <= 1 - HINT_SPREAD:
+                    return True, "NO",  "terminal_outcomePrices"
         except Exception:
             pass
 
-    return False, None, "open_or_unfinalized"
+        # 3) (Optional) older fallback via price history pinned near 0/1 for a week
+        # keep your existing 'legacy_price_history_yes/no' branch here if you like
+
+        # 4) Otherwise weak hints only (do not finalize)
+        try:
+            y = float(prices[0]); n = float(prices[1])
+            if y >= 0.90 and n <= 0.10:
+                return False, "YES", "closed_price_hint_yes"
+            if n >= 0.90 and y <= 0.10:
+                return False, "NO",  "closed_price_hint_no"
+        except Exception:
+            pass
+
+    return False, None, "unresolved"
 
 
 SETTLE_FEE = 0.01  # same as your live script
@@ -642,6 +682,7 @@ def append_jsonl(path: str, rec: dict):
 # main loop
 # ----------------------------
 def compute_and_write_once(include_crypto: bool):
+    _debug_check_closed_page(n=250) ####rmrmr
     # 1) load all trades into memory once (daily volumes are fine)
     trades = list(iter_trade_records())
     if not trades:
@@ -681,6 +722,34 @@ def compute_and_write_once(include_crypto: bool):
 
         # optional console line
         print(f"  {variant} | start={sd.date().isoformat()} pos={len(positions)} → wrote breakdown")
+
+
+def _debug_check_closed_page(n=250):
+    # Pull one page of closed markets and tally the UMA winner
+    r = SESSION.get(
+        BASE_GAMMA,
+        params={"limit": n, "offset": 0, "closed": True, "order": "startDate", "ascending": False},
+        timeout=20
+    )
+    r.raise_for_status()
+    rows = r.json() or []
+    from collections import Counter
+    c = Counter()
+    for m in rows:
+        isr, w, _ = resolve_status(m)
+        if isr and w in ("YES", "NO"):
+            c[w] += 1
+        else:
+            c["open_or_unfinalized"] += 1
+    print(f"[DEBUG CLOSED PAGE] {dict(c)}")
+
+
+def test_single_market(mid):
+    r = SESSION.get(BASE_GAMMA, params={"ids": mid}, timeout=10)
+    r.raise_for_status()
+    m = r.json()[0]
+    print(m["question"], m.get("umaResolutionStatus"), m.get("umaResolutionStatuses"))
+    print(resolve_status(m))
 
 def main():
     import argparse
