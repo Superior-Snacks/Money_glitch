@@ -55,11 +55,33 @@ def is_yesno(m):
     s = {str(x).strip().lower() for x in outs}
     return s == {"yes","no"}
 
-def resolved_winner(m):
-    winner = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
-    resolved = bool(m.get("resolved") or m.get("isResolved"))
-    if resolved and winner in ("YES","NO"):
-        return winner
+def infer_resolution_and_winner(m: dict):
+    # 1) UMA status first
+    uma = (m.get("umaResolutionStatus") or "").strip().lower()
+    # sometimes it’s literally "yes"/"no" when finalized, sometimes "resolved_yes"/"resolved_no", etc.
+    if uma in {"yes", "no"}:
+        return True, uma.upper()
+    if uma.startswith("resolved_"):
+        w = uma.split("_", 1)[1].upper()
+        if w in {"YES","NO"}:
+            return True, w
+
+    # 2) Price-based heuristic when closed
+    if m.get("closed"):
+        # outcomePrices is usually ["YES","NO"] ordering
+        raw = m.get("outcomePrices", ["0","0"])
+        prices = json.loads(raw) if isinstance(raw, str) else raw
+        try:
+            y = float(prices[0])
+            n = float(prices[1])
+            if y > n:
+                return "YES"
+            if n >  y:
+                return "NO"
+        except Exception:
+            pass
+
+    # 3) Not resolved (or not inferable)
     return None
 
 def resolved_datetime(m):
@@ -95,7 +117,7 @@ def monthly_yes_no(since_iso=None, until_iso=None):
         for m in page:
             if not is_yesno(m):
                 continue
-            w = resolved_winner(m)
+            w = infer_resolution_and_winner(m)
             if not w:
                 continue
             dt = resolved_datetime(m)
@@ -105,7 +127,7 @@ def monthly_yes_no(since_iso=None, until_iso=None):
             per_month[mk][w] += 1
 
         offset += limit
-        time.sleep(0.30)  # polite pacing
+        time.sleep(0.3)  # polite pacing
 
     # sort by month
     ordered = OrderedDict(sorted(per_month.items()))
