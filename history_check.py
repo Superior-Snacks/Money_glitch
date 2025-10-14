@@ -22,7 +22,8 @@ def main():
     yes_won = 0
     no_won = 0
     offset = 4811
-    while True:
+    while offset < 21186:
+        time.sleep(1)
         new_markets = fetch_markets(limit=100, offset=offset)
         offset += 100
         valid_markets = filter_markets(new_markets)
@@ -43,18 +44,6 @@ def check_winners(markets):
             nos += 1
     return nos, yess
 
-['id', 'question', 'conditionId', 'slug', 'resolutionSource', 'endDate', 'liquidity', 'startDate', 'fee', 'image', 
- 'icon', 'description', 'outcomes', 'outcomePrices', 'volume', 'active', 'marketType', 'closed', 'marketMakerAddress', 
- 'createdAt', 'updatedAt', 'closedTime', 'wideFormat', 'new', 'featured', 'submitted_by', 'archived', 'resolvedBy', 'restricted', 
- 'groupItemTitle', 'groupItemThreshold', 'questionID', 'umaEndDate', 'enableOrderBook', 'orderPriceMinTickSize', 'orderMinSize', 
- 'umaResolutionStatus', 'volumeNum', 'liquidityNum', 'endDateIso', 'startDateIso', 'umaEndDateIso', 'hasReviewedDates', 'readyForCron', 
- 'commentsEnabled', 'volume24hr', 'volume1wk', 'volume1mo', 'volume1yr', 'gameStartTime', 'secondsDelay', 'clobTokenIds', 'fpmmLive', 
- 'volume24hrAmm', 'volume1wkAmm', 'volume1moAmm', 'volume1yrAmm', 'volume24hrClob', 'volume1wkClob', 'volume1moClob', 'volume1yrClob', 
- 'volumeAmm', 'volumeClob', 'liquidityAmm', 'liquidityClob', 'events', 'creator', 'ready', 'funded', 'cyom', 'competitive', 
- 'pagerDutyNotificationEnabled', 'approved', 'rewardsMinSize', 'rewardsMaxSpread', 'spread', 'oneDayPriceChange', 
- 'oneHourPriceChange', 'oneWeekPriceChange', 'oneMonthPriceChange', 'oneYearPriceChange', 'lastTradePrice', 'bestBid', 'bestAsk', 
- 'clearBookOnStart', 'manualActivation', 'negRiskOther', 'umaResolutionStatuses', 'pendingDeployment', 'deploying', 'rfqEnabled', 
- 'holdingRewardsEnabled', 'feesEnabled']
 
 def fetch_markets(limit=20, offset=4811):
     params = {
@@ -66,6 +55,7 @@ def fetch_markets(limit=20, offset=4811):
     r.raise_for_status()
     payload = r.json()
     return payload
+
 
 def filter_markets(markets):
     """
@@ -84,7 +74,6 @@ def filter_markets(markets):
                 cleaned.append(mk)
         except:
             continue
-    print(f"valid markets {len(cleaned)}")
     cleaned = sorted(cleaned, key=lambda x: normalize_time(x["startDate"]))
     return cleaned
 
