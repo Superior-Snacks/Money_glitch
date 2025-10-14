@@ -279,6 +279,32 @@ def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, includ
         st["cost"]   += cost
     return pos
 
+
+def sanity_check_resolution_sample(positions: dict, sample_n: int = 50):
+    """Quick sample to verify we see some resolved markets when there should be."""
+    from random import sample
+    mids = list(positions.keys())
+    if not mids:
+        print("[SANITY] no positions")
+        return
+    mids = sample(mids, min(sample_n, len(mids)))
+    counts = {"resolved_NO": 0, "resolved_YES": 0, "open": 0}
+    for mid in mids:
+        m = fetch_market_meta_cached(mid)
+        if not m:
+            continue
+        r, w, _ = resolve_status(m)
+        if r:
+            if w == "NO":
+                counts["resolved_NO"] += 1
+            elif w == "YES":
+                counts["resolved_YES"] += 1
+        else:
+            counts["open"] += 1
+    print(f"[SANITY] sample={len(mids)} → resolved_NO={counts['resolved_NO']} "
+          f"resolved_YES={counts['resolved_YES']} open={counts['open']}")
+
+
 def _normalize_uma_status(val: str | None) -> str:
     if not val:
         return ""
@@ -647,6 +673,8 @@ def compute_and_write_once(include_crypto: bool):
         _last_price_cache.clear()
 
         positions = build_positions_for_start(trades, sd, include_crypto=include_crypto)
+
+        sanity_check_resolution_sample(positions, sample_n=40)
 
         # write full realized/unrealized breakdown (includes totals & counts)
         write_breakdown_line(sd.date().isoformat(), variant, positions, out_path)
