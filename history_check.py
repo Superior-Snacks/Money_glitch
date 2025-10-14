@@ -24,6 +24,7 @@ def main():
     offset = 4811
     while True:
         new_markets = fetch_markets(limit=100, offset=offset)
+        print(new_markets[0].keys())
         offset += 100
         valid_markets = filter_markets(new_markets)
 
