@@ -245,6 +245,81 @@ def is_crypto_market(rec: dict) -> bool:
     text = f"{q} {s}"
     return any(w in text for w in CRYPTO_WORDS)
 
+
+# --- YES/NO mix tracking -----------------------------------------------
+YESNO_PROGRESS_PATH = os.path.join(LOG_DIR, "yesno_progress.jsonl")
+
+def resolved_timestamp(m: dict) -> datetime | None:
+    # best-effort: when did it (likely) finalize?
+    for k in ("closedTime", "umaEndDate", "endDate", "updatedAt"):
+        dt = parse_dt_any(m.get(k))
+        if dt:
+            return dt
+    return None
+
+def tally_yes_no(positions: dict) -> dict:
+    """
+    Look at the positions' markets and count resolved YES/NO vs OPEN,
+    plus a little extra context (median resolution age).
+    """
+    from statistics import median
+    yes = no = open_ = 0
+    res_ages_days = []
+
+    for mid in positions.keys():
+        m = fetch_market_meta_cached(mid)
+        if not m:
+            continue
+        finalized, winner, _src = resolve_status(m)
+        if finalized:
+            if winner == "YES":
+                yes += 1
+            elif winner == "NO":
+                no += 1
+            # resolution age for context
+            rdt = resolved_timestamp(m)
+            if rdt:
+                res_ages_days.append((datetime.now(timezone.utc) - rdt).days)
+        else:
+            open_ += 1
+
+    total_closed = yes + no
+    yes_pct = (yes / total_closed) if total_closed else 0.0
+    no_pct  = (no  / total_closed) if total_closed else 0.0
+
+    return {
+        "closed_count": total_closed,
+        "open_count": open_,
+        "yes": yes,
+        "no": no,
+        "yes_pct": yes_pct,
+        "no_pct": no_pct,
+        "median_days_since_resolution": (median(res_ages_days) if res_ages_days else None),
+    }
+
+def write_yesno_progress_line(start_date: str, variant: str, positions: dict):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    stats = tally_yes_no(positions)
+    rec = {
+        "run_ts": now_iso,
+        "as_of_ts": now_iso,
+        "start_date": start_date,
+        "variant": variant,
+        **stats
+    }
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(YESNO_PROGRESS_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    # quick console summary
+    cc = stats["closed_count"]
+    if cc:
+        print(f"[YES/NO] {variant} | start={start_date} closed={cc} "
+              f"YES={stats['yes']} ({stats['yes_pct']:.1%}) "
+              f"NO={stats['no']} ({stats['no_pct']:.1%}) "
+              f"open={stats['open_count']}")
+    else:
+        print(f"[YES/NO] {variant} | start={start_date} closed=0 open={stats['open_count']}")
+
 # ----------------------------
 # positions + MTM
 # ----------------------------
@@ -342,15 +417,10 @@ def parse_dt_any(v):
 HINT_SPREAD = 0.98           # how close to 0/1 we require for a decisive winner
 FINAL_GRACE = timedelta(days=2)   # wait this long after close before trusting price-only finals
 
-def resolve_status(m: dict) -> tuple[bool, str|None, str]:
-    """
-    Returns (finalized, winner_or_None, source)
-    sources: 'umaResolutionStatus' | 'winningOutcome' | 'terminal_outcomePrices' |
-             'legacy_price_history_yes/no' | 'closed_price_hint_yes/no' | 'unresolved'
-    """
-    # 1) Explicit UMA / winner fields
+def resolve_status(m: dict) -> tuple[bool, str | None, str]:
+    # 1) explicit winner fields
     uma = (m.get("umaResolutionStatus") or "").strip().lower()
-    if uma in {"yes", "no"}:
+    if uma in {"yes","no"}:
         return True, uma.upper(), "umaResolutionStatus"
     if uma.startswith("resolved_"):
         w = uma.split("_", 1)[1].upper()
@@ -361,41 +431,38 @@ def resolve_status(m: dict) -> tuple[bool, str|None, str]:
     if w in {"YES","NO"}:
         return True, w, "winningOutcome"
 
-    # 2) Closed long enough + outcomePrices at ~[1,0] or [0,1]
+    # 2) price-based finalization ONLY if closed long enough
     if m.get("closed"):
-        # choose a close-ish timestamp to measure age
-        end_dt = parse_dt_any(m.get("closedTime")) or parse_dt_any(m.get("umaEndDate")) \
-                 or parse_dt_any(m.get("endDate"))  or parse_dt_any(m.get("updatedAt"))
-        if end_dt:
-            age = datetime.now(timezone.utc) - end_dt
-        else:
-            age = FINAL_GRACE  # if missing, don't block on grace
+        end_dt = (
+            parse_dt_any(m.get("closedTime"))
+            or parse_dt_any(m.get("umaEndDate"))
+            or parse_dt_any(m.get("endDate"))
+            or parse_dt_any(m.get("updatedAt"))
+        )
+        age_ok = True if end_dt is None else (datetime.now(timezone.utc) - end_dt) >= FINAL_GRACE
 
         raw = m.get("outcomePrices", ["0","0"])
         prices = json.loads(raw) if isinstance(raw, str) else (raw or ["0","0"])
         try:
             y = float(prices[0]); n = float(prices[1])
-            # outcomes on Gamma are ["Yes","No"] in this order for yes/no markets
-            if age >= FINAL_GRACE:
-                if y >= HINT_SPREAD and n <= 1 - HINT_SPREAD:
-                    return True, "YES", "terminal_outcomePrices"
-                if n >= HINT_SPREAD and y <= 1 - HINT_SPREAD:
-                    return True, "NO",  "terminal_outcomePrices"
         except Exception:
-            pass
+            y = n = None
 
-        # 3) (Optional) older fallback via price history pinned near 0/1 for a week
-        # keep your existing 'legacy_price_history_yes/no' branch here if you like
+        if age_ok and y is not None and n is not None:
+            # outcomes are ["Yes","No"] on Gamma for yes/no markets
+            if y >= HINT_SPREAD and n <= 1 - HINT_SPREAD:
+                return True, "YES", "terminal_outcomePrices"
+            if n >= HINT_SPREAD and y <= 1 - HINT_SPREAD:
+                return True, "NO",  "terminal_outcomePrices"
 
-        # 4) Otherwise weak hints only (do not finalize)
-        try:
-            y = float(prices[0]); n = float(prices[1])
+        # Optional “strong hint” (do NOT finalize, just hint)
+        if y is not None and n is not None:
             if y >= 0.90 and n <= 0.10:
-                return False, "YES", "closed_price_hint_yes"
+                print(f"YES | {m["question"]}")
+                return True, "YES", "closed_price_hint_yes"
             if n >= 0.90 and y <= 0.10:
-                return False, "NO",  "closed_price_hint_no"
-        except Exception:
-            pass
+                print(f"NO | {m["question"]}")
+                return True, "NO",  "closed_price_hint_no"
 
     return False, None, "unresolved"
 
@@ -555,6 +622,8 @@ def breakdown_pl(positions_by_market: dict[str, dict]) -> dict:
         "unrealized_pl": 0.0,
 
         "closed_count": 0,
+        "no":0,
+        "yes":0,
         "closed_cost": 0.0,
         "realized_value": 0.0,
         "realized_pl": 0.0,
@@ -563,7 +632,8 @@ def breakdown_pl(positions_by_market: dict[str, dict]) -> dict:
         "mtm_value": 0.0,   # realized_value + open_mtm_value
         "pl_total": 0.0,    # realized_pl + unrealized_pl
     }
-
+    no_count = 0
+    yes_count = 0
     for mid, p in positions_by_market.items():
         shares = float(p.get("shares", 0.0))
         cost   = float(p.get("cost", 0.0))
@@ -590,7 +660,14 @@ def breakdown_pl(positions_by_market: dict[str, dict]) -> dict:
             stats["open_cost"]  += cost
             stats["open_mtm_value"] += uv
             stats["unrealized_pl"] += upl
+        if status.startswith("resolved"):
+            if marks["status"] == "resolved_NO":
+                no_count += 1
+            else:
+                yes_count += 1
 
+    stats["no"] = no_count
+    stats["yes"] = yes_count
     stats["total_cost"] = stats["open_cost"] + stats["closed_cost"]
     stats["mtm_value"]  = stats["realized_value"] + stats["open_mtm_value"]
     stats["pl_total"]   = stats["realized_pl"] + stats["unrealized_pl"]
@@ -634,6 +711,8 @@ def write_breakdown_line(start_date: str, variant: str, positions: dict, outfile
         "markets_marked":  int(stats["markets_marked"]),
         "open_count":      int(stats["open_count"]),
         "closed_count":    int(stats["closed_count"]),
+        "no":              int(stats["no"]),
+        "yes":             int(stats["yes"]),
 
         # dollars
         "open_cost":        float(stats["open_cost"]),
@@ -716,6 +795,9 @@ def compute_and_write_once(include_crypto: bool):
         positions = build_positions_for_start(trades, sd, include_crypto=include_crypto)
 
         sanity_check_resolution_sample(positions, sample_n=40)
+
+        # NEW: log YES/NO mix for this cohort (cumulative, as of now)
+        write_yesno_progress_line(sd.date().isoformat(), variant, positions)
 
         # write full realized/unrealized breakdown (includes totals & counts)
         write_breakdown_line(sd.date().isoformat(), variant, positions, out_path)
