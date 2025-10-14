@@ -24,13 +24,12 @@ def main():
     offset = 4811
     while True:
         new_markets = fetch_markets(limit=100, offset=offset)
-        print(new_markets[0].keys())
         offset += 100
         valid_markets = filter_markets(new_markets)
         n, y = check_winners(valid_markets)
         no_won += n
         yes_won += y
-
+        print(f"no:{no_won}, yes:{yes_won}")
 def check_winners(markets):
     nos = 0
     yess = 0
