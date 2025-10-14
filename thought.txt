@@ -434,3 +434,16 @@ er þriðjungur í minn hag of gott? nei það held ég ekki kanski þó!? ekki 
 -SHITT ÞAÐ ER 30827.794817 locked up á fyrstu 10 dögum af opnum trades! og þó ef það voru einhver sem opnuðu og lokuðu innan tíma þá skipa ég þau
 -þarf að bæta við "from start, no backlog bot þegar ég hef klárað check fyrir lokun"!!!!!!!!!!!!!!
 en það má bíða
+
+
+'id', 'question', 'conditionId', 'slug', 'resolutionSource', 'endDate', 'liquidity', 'startDate', 'fee', 'image', 'icon', 
+'description', 'outcomes', 'outcomePrices', 'volume', 'active', 'marketType', 'closed', 'marketMakerAddress', 'createdAt', 
+'updatedAt', 'closedTime', 'wideFormat', 'new', 'featured', 'submitted_by', 'archived', 'resolvedBy', 'restricted', 'groupItemTitle', 
+'groupItemThreshold', 'questionID', 'umaEndDate', 'enableOrderBook', 'orderPriceMinTickSize', 'orderMinSize', 'umaResolutionStatus', 
+'volumeNum', 'liquidityNum', 'endDateIso', 'startDateIso', 'umaEndDateIso', 'hasReviewedDates', 'readyForCron', 'commentsEnabled', 
+'volume24hr', 'volume1wk', 'volume1mo', 'volume1yr', 'gameStartTime', 'secondsDelay', 'clobTokenIds', 'fpmmLive', 'volume24hrAmm', 
+'volume1wkAmm', 'volume1moAmm', 'volume1yrAmm', 'volume24hrClob', 'volume1wkClob', 'volume1moClob', 'volume1yrClob', 'volumeAmm', 
+'volumeClob', 'liquidityAmm', 'liquidityClob', 'events', 'creator', 'ready', 'funded', 'cyom', 'competitive', 'pagerDutyNotificationEnabled', 
+'approved', 'rewardsMinSize', 'rewardsMaxSpread', 'spread', 'oneDayPriceChange', 'oneHourPriceChange', 'oneWeekPriceChange', 'oneMonthPriceChange', 
+'oneYearPriceChange', 'lastTradePrice', 'bestBid', 'bestAsk', 'clearBookOnStart', 'manualActivation', 'negRiskOther', 'umaResolutionStatuses', 
+'pendingDeployment', 'deploying', 'rfqEnabled', 'holdingRewardsEnabled', 'feesEnabled'
