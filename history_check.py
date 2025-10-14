@@ -105,7 +105,7 @@ def monthly_yes_no(since_iso=None, until_iso=None):
             per_month[mk][w] += 1
 
         offset += limit
-        time.sleep(0.15)  # polite pacing
+        time.sleep(0.30)  # polite pacing
 
     # sort by month
     ordered = OrderedDict(sorted(per_month.items()))
