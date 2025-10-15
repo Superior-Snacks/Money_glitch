@@ -176,6 +176,7 @@ class WatchlistManager:
     def seed_from_gamma(self, markets: list[dict]):
         now = int(time.time())
         added = 0
+        added_cids = []  # <<<
         for m in markets:
             cid = m.get("conditionId")
             if not cid or cid in self.watch or cid in self.entered:
@@ -189,13 +190,15 @@ class WatchlistManager:
                 "next_check": now + random.randint(0, 2),
                 "fails": 0,
                 "last_quote": None,
-                "last_seen_ts": now,          # <-- add
-                "last_seq": None,             # <-- for book-change detection (used below)
+                "last_seen_ts": now,
+                "last_seq": None,
                 "ever_under_cap": False,
-                "seeded_ts": now,      # <-- optional heuristic (explained below)
+                "seeded_ts": now,
             }
             added += 1
+            added_cids.append(cid)  # <<<
         vprint(f"[SEED] added {added} markets (watch size now {len(self.watch)})")
+        return added_cids  # <<<
 
     def due_ids(self, now_ts: int):
         return [cid for cid, st in self.watch.items()
@@ -257,14 +260,9 @@ class WatchlistManager:
 
         return takeable_ex, best_price, shares, reasons
 
-    def step(self,
-             now_ts: int,
-             fetch_book_fn,
-             open_position_fn,
-             bet_size_fn,
-             max_checks_per_tick=200,
-             min_probe_when_idle=None,
-             probe_strategy="newest"):
+    def step(self, now_ts, fetch_book_fn, open_position_fn, bet_size_fn,
+         max_checks_per_tick=200, min_probe_when_idle=None, probe_strategy="newest",
+         maker=None, last_seen_under=None):
         """
         Returns (opened_count, checked_count).
         - If too few are due, we proactively probe a few more (min_probe_when_idle)
@@ -323,6 +321,30 @@ class WatchlistManager:
                 if best_ask is not None and shares > 0:
                     st["ever_under_cap"] = True
                 vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares:.2f}")
+
+                #-------------------------------------------------------------------------------------
+                if maker is not None:
+                    vm_fill = maker.on_book(
+                        m.get("conditionId") or cid,
+                        book,
+                        now_dt=datetime.now(timezone.utc),
+                        last_seen_under_dict=(last_seen_under if last_seen_under is not None else {})
+                    )
+                    if vm_fill:
+                        append_jsonl("virtual_fills.jsonl", {
+                            "ts": now_iso(),
+                            "market_id": vm_fill["condition_id"],
+                            "question": m.get("question"),
+                            "mode": vm_fill["mode"],
+                            "limit_inc": maker.orders[cid]["limit_inc"],
+                            "budget": maker.orders[cid]["budget_usd"],
+                            "fill_px": vm_fill["fill_px"],
+                            "fill_shares": vm_fill["fill_shares"],
+                            "fill_cost": vm_fill["fill_cost"],
+                            "placed_iso": vm_fill["placed_iso"],
+                            "fill_iso": vm_fill["fill_iso"],
+                        })
+                #-------------------------------------------------------------------------------------
 
                 if SHOW_DEBUG_BOOKS and (best_ask is None or "no_asks_under_cap" in reasons):
                     debug_show_books_for_market(m)
@@ -622,12 +644,13 @@ class VirtualMaker:
         # )
         self.orders = {}
 
-    def place_no_bid(self, condition_id: str, token_id: str,
-                     limit_inc: float, budget_usd: float, now_dt):
+    def place_no_bid(self, condition_id, token_id, limit_inc, budget_usd, now_dt):
         """
         limit_inc is your all-in cap (include any fees you model for 'maker').
         For 'maker' you can set slip=0 and include your expected fee in limit_inc.
         """
+        if condition_id in self.orders:   # <<<
+            return False
         if budget_usd <= 0 or limit_inc <= 0:
             return False
         desired_shares = budget_usd / limit_inc
@@ -853,24 +876,50 @@ def main():
     desired_bet = 100.0
     total_trades_taken = 0
 
-    # 1️⃣ Fetch initial markets
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=1, verbose=True) #one day back
+    # 1) Fetch initial markets
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=1, verbose=True)
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
-    # 2️⃣ Initialize the manager
+    # 2) Manager
     mgr = WatchlistManager(
-        max_no_price=1, #important fix cap_for_raw(0.6, 600, 200)
+        max_no_price=0.65,
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
         poll_every=3, backoff_first=3, backoff_base=6,
         backoff_max=60, jitter=3
     )
-    mgr.seed_from_gamma(markets)
+
+    # 2a) Virtual maker (create this BEFORE you place bids)
+    maker = VirtualMaker(
+        session=SESSION,
+        fee=0.0,
+        slip=0.0,
+        mode="optimistic",
+        queue_grace_s=2
+    )
+    _last_under_seen = {}  # persists across loop iterations
+
+    # 3) Seed and place bids only for newly added cids
+    added_cids = mgr.seed_from_gamma(markets)
+    for cid in added_cids:
+        st = mgr.watch[cid]
+        maker_limit = mgr.max_no_price
+        budget = 100.0
+        maker.place_no_bid(cid, st["no_token"], maker_limit, budget, now_dt=datetime.now(timezone.utc))
     probe_under_cap_sample(mgr, n=30)
     fee_mult = 1.0 + mgr.fee + mgr.slip
     print(f"[CAP] fee_mult={fee_mult:.4f} raw_cap=0.65 -> max_no_price={mgr.max_no_price:.4f} (=> p <= {mgr.max_no_price / fee_mult:.4f} pre-fee)")
+
+    maker = VirtualMaker(
+    session=SESSION,
+    fee=0.0,              # maker fills at your limit; slippage usually 0
+    slip=0.0,             # keep 0 for maker
+    mode="optimistic",    # or "conservative" for tape-gated fills
+    queue_grace_s=2       # require 2s under your bid before “fill”
+    )
+    _last_under_seen = {}     # helper dict for grace window
 
     # --- trade sizing and fill simulation ---
     fee, slip, price_cap = mgr.fee, mgr.slip, mgr.max_no_price
@@ -961,7 +1010,7 @@ def main():
                     try:
                         fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=1, verbose=True)
                         tradable = [m for m in fresh if is_actively_tradable(m)]
-                        mgr.seed_from_gamma(tradable)
+                        added_cids = mgr.seed_from_gamma(tradable)  # <<<
                         vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
                         mgr.purge_stale(now_ts)   # default ~48h TTL
                         probe_under_cap_sample(mgr, n=30)
@@ -969,14 +1018,22 @@ def main():
                         print(f"[WARN reseed] {e}")
                     last_seed = now_ts
 
+                    for cid in added_cids:
+                        st = mgr.watch[cid]
+                        maker_limit = mgr.max_no_price
+                        budget = 100.0
+                        maker.place_no_bid(cid, st["no_token"], maker_limit, budget, now_dt=datetime.now(timezone.utc))
+
                 opened, checked = mgr.step(
                     now_ts,
                     fetch_book_fn=fetch_book,
                     open_position_fn=open_position_fn,
                     bet_size_fn=bet_size_fn,
-                    max_checks_per_tick=200,     # was 200
-                    min_probe_when_idle=100,      # was 100
+                    max_checks_per_tick=200,
+                    min_probe_when_idle=100,
                     probe_strategy="newest",
+                    maker=maker,                   # <<<
+                    last_seen_under=_last_under_seen  # <<<
                 )
 
                 log_run_snapshot(bank, total_trades_taken)
