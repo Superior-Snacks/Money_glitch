@@ -580,6 +580,188 @@ def is_crypto_market(market):
     ).lower()
     return any(k in text for k in CRYPTO_KEYWORDS)
 
+
+def fetch_token_trades_since(session, token_id: str, since_iso: str, limit=500):
+    """
+    Best-effort small tape fetch for one token since an ISO timestamp.
+    Returns list of trades with fields: price, size, side, timestamp, etc.
+    NOTE: keep this lightweight (limit, backoff) so you don't hammer the API.
+    """
+    params = {
+        "token_id": token_id,
+        "start_time": since_iso,  # ISO8601
+        "limit": limit,
+        "sort": "asc",
+    }
+    r = session.get(DATA_TRADES, params=params, timeout=15)
+    r.raise_for_status()
+    return r.json() or []
+
+
+class VirtualMaker:
+    """
+    Track hypothetical resting bids for NO and decide when they *would* fill.
+    Modes:
+      - optimistic: fill as soon as best ask <= limit
+      - conservative: require cumulative *sell* volume at prices <= limit (since placed)
+                      to exceed our shares
+    """
+    def __init__(self, session, fee=0.0, slip=0.0, mode="optimistic",
+                 queue_grace_s=0, max_trades_fetch=400):
+        self.s = session
+        self.fee = float(fee)
+        self.slip = float(slip)  # you can keep slip=0 for maker; fills at resting price
+        self.mode = mode  # "optimistic" or "conservative"
+        self.queue_grace_s = int(queue_grace_s)  # require price to be under limit this long (extra safety)
+        self.max_trades_fetch = max_trades_fetch
+
+        # key: conditionId
+        # val: dict(
+        #   token_id, limit_inc, budget_usd, desired_shares, placed_ts, placed_iso,
+        #   filled=False, fill_ts=None, fill_price=None, fill_shares=None, note=...
+        # )
+        self.orders = {}
+
+    def place_no_bid(self, condition_id: str, token_id: str,
+                     limit_inc: float, budget_usd: float, now_dt):
+        """
+        limit_inc is your all-in cap (include any fees you model for 'maker').
+        For 'maker' you can set slip=0 and include your expected fee in limit_inc.
+        """
+        if budget_usd <= 0 or limit_inc <= 0:
+            return False
+        desired_shares = budget_usd / limit_inc
+        rec = {
+            "condition_id": condition_id,
+            "token_id": token_id,
+            "limit_inc": float(limit_inc),
+            "budget_usd": float(budget_usd),
+            "desired_shares": float(desired_shares),
+            "placed_ts": int(now_dt.timestamp()),
+            "placed_iso": now_dt.isoformat(),
+            "filled": False,
+            "fill_ts": None,
+            "fill_price": None,
+            "fill_shares": None,
+            "note": "",
+        }
+        self.orders[condition_id] = rec
+        return True
+
+    def _best_ask(self, book):
+        asks = book.get("asks") or []
+        try:
+            return min((float(a["price"]) for a in asks if "price" in a), default=None)
+        except Exception:
+            return None
+
+    def _under_limit_duration(self, order_rec, best_ask_now, last_seen_under_dict, now_ts):
+        """
+        Optional grace: require best ask to be <= limit for a continuous window before filling.
+        """
+        cid = order_rec["condition_id"]
+        limit_inc = order_rec["limit_inc"]
+        if best_ask_now is None or best_ask_now > limit_inc:
+            last_seen_under_dict.pop(cid, None)
+            return 0
+        # first time under → start clock
+        t0 = last_seen_under_dict.setdefault(cid, now_ts)
+        return now_ts - t0
+
+    def _conservative_can_fill(self, order_rec, since_iso):
+        """
+        Use DATA_TRADES tape: sum *sell* volume at or below our bid since placement.
+        If cumulative sells at p<=limit exceed desired_shares → we say we likely filled.
+        """
+        tok = order_rec["token_id"]
+        limit_inc = order_rec["limit_inc"]
+        desired = order_rec["desired_shares"]
+
+        try:
+            trades = fetch_token_trades_since(self.s, tok, since_iso, limit=self.max_trades_fetch)
+        except Exception:
+            return False, 0.0
+
+        sold_shares = 0.0
+        for t in trades:
+            # polymarket trade payload varies; handle common fields leniently
+            px = float(t.get("price") or 0.0)
+            sz = float(t.get("size") or t.get("amount") or 0.0)
+            side = (t.get("side") or "").lower()  # "buy"/"sell" from *taker* perspective
+            # If a taker *SELLS* NO at px <= our bid, they cross our resting order.
+            if side == "sell" and 0.0 < px <= limit_inc and sz > 0:
+                sold_shares += sz
+                if sold_shares + 1e-9 >= desired:
+                    return True, sold_shares
+        return False, sold_shares
+
+    def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict: dict):
+        """
+        Feed with every fresh book you fetch for that market. Decides if a virtual order should fill.
+        Returns a dict if filled; otherwise None.
+        """
+        ord = self.orders.get(condition_id)
+        if not ord or ord["filled"]:
+            return None
+
+        best_ask = self._best_ask(book)
+        now_ts = int(now_dt.timestamp())
+
+        # optimistic path: price check (plus optional grace)
+        if self.mode == "optimistic":
+            if best_ask is not None and best_ask <= ord["limit_inc"]:
+                if self.queue_grace_s > 0:
+                    dur = self._under_limit_duration(ord, best_ask, last_seen_under_dict, now_ts)
+                    if dur < self.queue_grace_s:
+                        return None  # wait until it persists
+                # maker matches at the resting order price (your bid), not at the ask
+                fill_px = ord["limit_inc"]
+                fill_sh = ord["desired_shares"]
+                fill_cost = fill_px * fill_sh
+                ord.update({
+                    "filled": True, "fill_ts": now_ts,
+                    "fill_price": fill_px, "fill_shares": fill_sh,
+                    "note": "optimistic_under_cap",
+                })
+                return {
+                    "condition_id": condition_id,
+                    "filled": True,
+                    "fill_px": fill_px,
+                    "fill_shares": fill_sh,
+                    "fill_cost": fill_cost,
+                    "placed_iso": ord["placed_iso"],
+                    "fill_iso": datetime.fromtimestamp(now_ts, tz=timezone.utc).isoformat(),
+                    "mode": self.mode,
+                }
+            return None
+
+        # conservative path: require tape-confirmed sells at/under limit since placed
+        if self.mode == "conservative":
+            can, sold_so_far = self._conservative_can_fill(ord, ord["placed_iso"])
+            if can:
+                fill_px = ord["limit_inc"]  # resting price
+                fill_sh = ord["desired_shares"]
+                fill_cost = fill_px * fill_sh
+                ord.update({
+                    "filled": True, "fill_ts": now_ts,
+                    "fill_price": fill_px, "fill_shares": fill_sh,
+                    "note": f"conservative_tape_ok sold_seen={sold_so_far:.4f}",
+                })
+                return {
+                    "condition_id": condition_id,
+                    "filled": True,
+                    "fill_px": fill_px,
+                    "fill_shares": fill_sh,
+                    "fill_cost": fill_cost,
+                    "placed_iso": ord["placed_iso"],
+                    "fill_iso": datetime.fromtimestamp(now_ts, tz=timezone.utc).isoformat(),
+                    "mode": self.mode,
+                    "sold_seen": sold_so_far,
+                }
+            return None
+
+        return None
+
 # --------------------------------------------------------------------
 # Open_position “simulation” for live watcher
 # --------------------------------------------------------------------
