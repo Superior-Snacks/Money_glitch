@@ -672,13 +672,13 @@ def main():
     total_trades_taken = 0
 
     # 1️⃣ Fetch initial markets
-    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=10, verbose=True)
+    open_markets = fetch_open_yesno_fast(limit=250, max_pages=10, days_back=1, verbose=True) #one day back
     markets = [m for m in open_markets if is_actively_tradable(m)]
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=cap_for_raw(0.70, 600, 200),
+        max_no_price=cap_for_raw(0.9, 600, 200), #important fix
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
@@ -777,7 +777,7 @@ def main():
                 # periodic reseed to catch new markets
                 if now_ts - last_seed >= REFRESH_SEED_EVERY:
                     try:
-                        fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=2, verbose=True)
+                        fresh = fetch_open_yesno_fast(limit=250, max_pages=3, days_back=1, verbose=True)
                         tradable = [m for m in fresh if is_actively_tradable(m)]
                         mgr.seed_from_gamma(tradable)
                         vprint(f"[REFRESH] watch={len(mgr.watch)} entered={len(mgr.entered)}")
