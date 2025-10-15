@@ -447,3 +447,12 @@ en það má bíða
 'approved', 'rewardsMinSize', 'rewardsMaxSpread', 'spread', 'oneDayPriceChange', 'oneHourPriceChange', 'oneWeekPriceChange', 'oneMonthPriceChange', 
 'oneYearPriceChange', 'lastTradePrice', 'bestBid', 'bestAsk', 'clearBookOnStart', 'manualActivation', 'negRiskOther', 'umaResolutionStatuses', 
 'pendingDeployment', 'deploying', 'rfqEnabled', 'holdingRewardsEnabled', 'feesEnabled'
+
+
+[PAGE 0] got 250 raw, added 78 new, total 78
+[PAGE 1] got 250 raw, added 232 new, total 310
+[PAGE 2] got 250 raw, added 218 new, total 528
+[PAGE 3] got 125 raw, added 70 new, total 598
+[INFO] last page (short).
+✅ Total open Yes/No markets: 598
+Tradable Yes/No with quotes: 514
