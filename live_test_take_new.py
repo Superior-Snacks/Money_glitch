@@ -673,7 +673,7 @@ def main():
     desired_bet = 100.0
     total_trades_taken = 0
     global _created_cutoff
-    _created_cutoff = datetime.now(timezone.utc)
+    _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
 
     # 1️⃣ Fetch initial markets
     open_markets = fetch_open_yesno_fast(limit=250, max_pages=4, days_back=0.25, verbose=True)
@@ -1044,3 +1044,7 @@ def compress_and_prune_logs(log_dir="logs",
 
 if __name__ == "__main__":
     main()
+
+"""
+issue partially fills right away
+"""
