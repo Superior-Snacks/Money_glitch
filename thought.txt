@@ -456,3 +456,12 @@ en það má bíða
 [INFO] last page (short).
 ✅ Total open Yes/No markets: 598
 Tradable Yes/No with quotes: 514
+
+[PAGE 0] got 250 raw, added 49 new, total 49
+[PAGE 1] got 250 raw, added 216 new, total 265
+[PAGE 2] got 250 raw, added 228 new, total 493
+✅ Total open Yes/No markets: 493
+[SEED] added 0 markets (watch size now 384)
+[REFRESH] watch=384 entered=106
+[PROBE] under-cap markets in sample: 0/30
+[STEP] due=186 watch=384 entered=106
