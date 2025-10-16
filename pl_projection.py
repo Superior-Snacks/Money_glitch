@@ -10,7 +10,7 @@ from urllib3.util.retry import Retry
 # ----------------------------
 # CONFIG
 # ----------------------------
-LOG_DIR = "logs_run_1760551033"
+LOG_DIR = "logs_run_1760535417"
 TRADE_LOG_GLOB = os.path.join(LOG_DIR, "trades_taken_*.jsonl*")  # both .jsonl and .jsonl.gz
 
 OUTPUT_ALL       = os.path.join(LOG_DIR, "projection_all.jsonl")
