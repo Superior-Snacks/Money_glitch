@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-# coverage_tester.py
+# coverage_tester_trade_driven.py
 #
-# Goal: Maximize ENTRY COVERAGE across Yes/No markets.
-# Strategy:
-#   1) EV-based cap from your base rate P(NO)=~0.70
-#   2) Micro-taker "dust" bites when best ask <= cap (to count as entered)
-#   3) Maker ladder: post 3 small NO quotes (post-only simulated) just under cap
-#   4) Prioritize NEWEST markets; reseed fast
-#   5) Track coverage metrics for comparison
+# Coverage-first simulator for Polymarket Yes/No markets.
+# - Micro-taker "dust" entries to count as entered ASAP
+# - Maker ladder with STABLE order_ids and REMAINING shares
+# - Fills are TRADE-DRIVEN: only when new external trades hit at/through our price
+# - Queue accounting: subtract size ahead of us at/above our price
+# - Idempotent trade processing via per-token trade cursors + seen trade ids
 #
-# NOTE: This is a *simulation* of placing/taking; no live authenticated orders.
+# Logs (JSONL) are written into a unique run folder for easy A/B comparison:
+#   trades_YYYY-MM-DD.jsonl
+#   decisions_YYYY-MM-DD.jsonl
+#   snapshots_YYYY-MM-DD.jsonl
+#   net_usage_YYYY-MM-DD.jsonl
+#
+# NOTE: This is a SIMULATION. It doesn't place real orders.
 
-import os, re, json, time, math, glob, gzip, random
+import os, re, json, time, math, glob, gzip, random, uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional, Tuple
 import requests
@@ -22,32 +27,33 @@ from urllib3.util.retry import Retry
 
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
 BASE_BOOK    = "https://clob.polymarket.com/book"
+DATA_TRADES  = "https://data-api.polymarket.com/trades"  # used for trade-driven fills
 
 # Coverage emphasis
-RESEED_EVERY_SEC       = 15   # refresh market list fast
-DAYS_BACK_FOR_SEED     = 0.05 # ~72 minutes
+RESEED_EVERY_SEC       = 15    # refresh market list fast
+DAYS_BACK_FOR_SEED     = 0.05  # ~72 minutes
 MAX_CHECKS_PER_TICK    = 400
 MIN_PROBE_WHEN_IDLE    = 200
 TICK_SLEEP_ACTIVE      = 0.20
 TICK_SLEEP_IDLE        = 2.5
 
-# Fees & EV (adjust as needed)
+# Fees & EV (adjust to your measurements)
 P_NO_BASE              = 0.70     # your measured base-rate
 SETTLE_FEE             = 0.01     # 1% winner fee
 TAKER_ENTRY_FEE        = 0.06     # taker effective entry premium
-MAKER_ENTRY_FEE        = 0.06     # maker uses fee only (no slippage in sim)
-TAKER_SLIP             = 0.02     # only for taker simulation; maker uses 0
+MAKER_ENTRY_FEE        = 0.06     # maker fee (no slip assumed here)
+TAKER_SLIP             = 0.02     # only for taker simulation
 MAKER_SLIP             = 0.00
 
 # Budget & sizing
 GLOBAL_BANK_START      = 5_000_000.0
-PER_MARKET_BUDGET      = 100.0    # target at each market total
+PER_MARKET_BUDGET      = 100.0    # target per market
 MICRO_TAKER_DUST_USD   = 5.0      # small bite to count as "entered"
-MAKER_LADDER_SIZES     = [5.0, 5.0, 5.0]  # dollars per ladder rung
+MAKER_LADDER_SIZES     = [5.0, 5.0, 5.0]  # dollars per rung
 
 # Books & throttling
 BOOK_DEPTH             = 80
-RPS_TARGET             = 10.0      # token bucket
+RPS_TARGET             = 10.0
 HTTP_TIMEOUT           = 15
 TICK                   = 0.01
 
@@ -63,7 +69,6 @@ RETAIN_DAYS            = 7
 COMPRESS_AFTER_DAYS    = 1
 
 VERBOSE                = True
-SHOW_DEBUG_BOOKS       = False
 
 # -------------------------- Helpers/Infra ------------------------------
 
@@ -81,7 +86,7 @@ def make_session():
     )
     ad = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
     s.mount("https://", ad); s.mount("http://", ad)
-    s.headers.update({"User-Agent": "coverage-bot/1.0"})
+    s.headers.update({"User-Agent": "coverage-bot/2.0"})
     return s
 
 SESSION = make_session()
@@ -179,7 +184,7 @@ def _dt(s):
     except Exception:
         return None
 
-def fetch_open_yesno_fast(limit=250, max_pages=2, days_back=0.1,
+def fetch_open_yesno_fast(limit=250, max_pages=1, days_back=0.1,
                           require_clob=True, session=SESSION, verbose=False):
     params = {
         "limit": limit, "order": "startDate",
@@ -212,7 +217,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=2, days_back=0.1,
                 s = [str(x).strip().lower() for x in lst]
                 return set(s) == {"yes","no"}
             if is_yesno(outs):
-                mid = m.get("id")
+                mid = m.get("id") or m.get("conditionId")
                 if mid not in seen_ids:
                     all_rows.append(m); seen_ids.add(mid); added += 1
         if verbose:
@@ -341,14 +346,54 @@ def simulate_take_from_asks(book: dict, dollars: float, entry_mult: float, price
     return (spent_eff, shares, avg_eff)
 
 class MakerOrder:
-    def __init__(self, price, dollars, fee_mult):
-        self.price = float(price)     # pre-fee quote
-        self.dollars = float(dollars) # budget at this rung
+    def __init__(self, order_id, price, dollars, fee_mult, placed_ts=None, remaining_shares=None):
+        self.order_id = order_id or str(uuid.uuid4())
+        self.price = float(price)           # pre-fee quote
         self.fee_mult = float(fee_mult)
-        self.shares = max(0.01, self.dollars / self.price)
-        self.remaining = self.shares
-        self.placed_ts = time.time()
+        self.dollars = float(dollars)
+        self.shares_init = max(0.01, self.dollars / self.price)
+        self.remaining = self.shares_init if remaining_shares is None else float(remaining_shares)
+        self.placed_ts = time.time() if placed_ts is None else float(placed_ts)
         self.last_refresh_ts = self.placed_ts
+        self.executed_trade_ids = set()     # idempotency per order
+
+    @property
+    def avg_eff_price(self):
+        return self.price * self.fee_mult
+
+# ----------------------- Trade API & cursors ---------------------------
+
+def fetch_recent_trades(token_id: str, since_ts: Optional[float], limit: int = 250):
+    """
+    Fetch recent trades for a token, newest first; filter by ts client-side.
+    Expected item shape (approx): {"id": "...", "price": "0.01", "size": "100.0", "ts": "..."}
+    """
+    _rate_limit()
+    params = {
+        "token_id": token_id,
+        "limit": limit
+    }
+    r = SESSION.get(DATA_TRADES, params=params, timeout=HTTP_TIMEOUT)
+    r.raise_for_status()
+    trades = r.json() or []
+    out = []
+    for t in trades:
+        try:
+            tid = str(t.get("id"))
+            px = float(t.get("price"))
+            sz = float(t.get("size"))
+            ts = _dt(t.get("ts"))
+            if tid and ts and px > 0 and sz > 0:
+                out.append({"id": tid, "price": px, "size": sz, "ts": ts.timestamp()})
+        except:
+            pass
+    if since_ts is not None:
+        out = [t for t in out if t["ts"] > since_ts]
+    # newest first (defensive)
+    out.sort(key=lambda x: x["ts"], reverse=True)
+    return out
+
+# --------------------------- Coverage Engine ---------------------------
 
 class CoverageEngine:
     def __init__(self,
@@ -385,6 +430,10 @@ class CoverageEngine:
         self.watch: Dict[str, dict] = {}     # cid -> state
         self.maker_orders: Dict[str, List[MakerOrder]] = {}  # cid -> ladder
 
+        # trade cursors (idempotency):
+        self.last_trade_cursor: Dict[str, float] = {}  # token_id -> last ts
+        self.seen_trade_ids: Dict[str, set] = {}       # token_id -> set(trade_id)
+
     def is_tradable(self, m):
         if not m.get("enableOrderBook"): return False
         toks = m.get("clobTokenIds")
@@ -410,15 +459,15 @@ class CoverageEngine:
                 "next_check": now + random.randint(0,2),
                 "fails": 0,
                 "last_seen_ts": now,
-                "ever_under_cap": False
             }
             self.created_ts[cid] = cts.timestamp()
             added += 1
         if added:
             vprint(f"[SEED] added {added} (watch={len(self.watch)})")
 
-    def ladder_prices(self, pre_fee_cap: float, best_bid: float) -> List[float]:
-        p0 = max(0.01, min(pre_fee_cap, (best_bid or 0.0) + TICK))
+    def ladder_prices(self, pre_fee_cap: float, best_bid: Optional[float]) -> List[float]:
+        bb = best_bid or 0.0
+        p0 = max(0.01, min(pre_fee_cap, bb + TICK))
         p1 = max(0.01, p0 - 0.02)
         p2 = max(0.01, p0 - 0.05)
         prices = sorted({price_floor_tick(p0), price_floor_tick(p1), price_floor_tick(p2)}, reverse=True)
@@ -430,8 +479,8 @@ class CoverageEngine:
             self.markets_entered += 1
             self.first_entry_ts.setdefault(cid, time.time())
 
-    def _log_trade(self, m, token_id, side, spent_after, shares, avg_eff_price, event):
-        append_jsonl(TRADE_LOG_BASE, {
+    def _log_trade(self, m, token_id, side, spent_after, shares, avg_eff_price, event, extra=None):
+        rec = {
             "ts": now_iso(),
             "market_id": m.get("conditionId"),
             "market_slug": m.get("slug"),
@@ -443,7 +492,52 @@ class CoverageEngine:
             "avg_price_eff": round(float(avg_eff_price), 6),
             "event": event,
             "bank_after": round(float(self.bank), 6)
-        })
+        }
+        if isinstance(extra, dict):
+            rec.update(extra)
+        append_jsonl(TRADE_LOG_BASE, rec)
+
+    def _trade_driven_fill(self, cid: str, token_id: str, mo: MakerOrder, book) -> float:
+        """
+        Return shares filled for this order based on NEW external traded volume at/above our price,
+        AFTER subtracting queue ahead at/above our price.
+        """
+        # 1) Load unseen trades for this token
+        since_ts = self.last_trade_cursor.get(token_id)
+        trades = fetch_recent_trades(token_id, since_ts=since_ts, limit=250)
+        if not trades:
+            return 0.0
+
+        newest_ts = max(t["ts"] for t in trades)
+        # Deduplicate per token:
+        seen_ids = self.seen_trade_ids.setdefault(token_id, set())
+        fresh = [t for t in trades if t["id"] not in seen_ids]
+        if not fresh:
+            # still advance cursor
+            self.last_trade_cursor[token_id] = max(newest_ts, since_ts or 0)
+            return 0.0
+
+        for t in fresh:
+            seen_ids.add(t["id"])
+        # Move cursor after we mark seen
+        self.last_trade_cursor[token_id] = max(newest_ts, since_ts or 0)
+
+        # 2) Aggregate traded volume that would reach our price
+        traded_at_or_above = sum(t["size"] for t in fresh if t["price"] >= mo.price)
+        if traded_at_or_above <= 0:
+            return 0.0
+
+        # 3) Estimate queue ahead from current book
+        bids = book.get("bids") or []
+        queue_ahead = sum(float(b["size"]) for b in bids if float(b.get("price",0)) > mo.price)
+        same_px_before_us = sum(float(b["size"]) for b in bids if abs(float(b.get("price",0)) - mo.price) < 1e-9)
+
+        fillable = max(0.0, traded_at_or_above - queue_ahead - same_px_before_us)
+        if fillable <= 0:
+            return 0.0
+
+        # interpret size as shares; cap by our remaining
+        return min(mo.remaining, fillable)
 
     def step_market(self, cid: str) -> Tuple[int,int]:
         """
@@ -457,83 +551,91 @@ class CoverageEngine:
         # 1) fetch book
         book = fetch_book(token, depth=BOOK_DEPTH)
         st["last_seen_ts"] = int(time.time())
+        best_bid, best_ask = best_of_book(book)
 
         # 2) micro-taker dust if best ask under taker cap (effective)
-        best_bid, best_ask = best_of_book(book)
-        if best_ask is not None:
-            if (best_ask * self.taker_mult) <= self.eff_cap and self.bank >= 0.01:
-                take_dollars = min(self.micro_taker_dust, self.per_market_budget)  # limit per-market
-                spent, shares, avg_eff = simulate_take_from_asks(
-                    book, take_dollars, entry_mult=self.taker_mult, price_cap_eff=self.eff_cap
-                )
-                if shares > 0:
+        if best_ask is not None and (best_ask * self.taker_mult) <= self.eff_cap and self.bank >= 0.01:
+            take_dollars = min(self.micro_taker_dust, self.per_market_budget)  # per-market limit
+            spent, shares, avg_eff = simulate_take_from_asks(
+                book, take_dollars, entry_mult=self.taker_mult, price_cap_eff=self.eff_cap
+            )
+            if shares > 0:
+                self.bank -= spent
+                entered_now = 1
+                self._mark_entered(cid)
+                self._log_trade(m, token, "NO", spent, shares, avg_eff, event="micro_taker_fill")
+
+        # 3) maker ladder with stable orders and trade-driven fills
+        allocated_here = 0.0
+        ladder = self.maker_orders.setdefault(cid, [])
+
+        # count currently resting remaining *value* at our eff price (approx)
+        for mo in ladder:
+            allocated_here += mo.remaining * mo.price * self.maker_mult
+
+        remaining_budget = max(0.0, self.per_market_budget - allocated_here)
+
+        # Build/refresh price targets
+        prices = self.ladder_prices(self.pre_fee_cap_maker, best_bid)
+
+        # Ensure ladder length <= len(maker_sizes)
+        while len(ladder) > len(self.maker_sizes):
+            ladder.pop()
+
+        # Place/replace rungs to match prices
+        for i, rung_usd in enumerate(self.maker_sizes):
+            if i >= len(prices): break
+            px = prices[i]
+            if i < len(ladder):
+                old = ladder[i]
+                if abs(old.price - px) > 1e-9:
+                    # carry remaining shares forward at new price, same order_id
+                    ladder[i] = MakerOrder(old.order_id, px, old.remaining * px, self.maker_mult,
+                                           placed_ts=old.placed_ts, remaining_shares=old.remaining)
+                    append_jsonl(DECISIONS_LOG_BASE, {
+                        "ts": now_iso(), "type": "maker_replace",
+                        "market_id": m.get("conditionId"), "side": "NO",
+                        "price_pre_fee_before": round(float(old.price),6),
+                        "price_pre_fee_after": round(float(px),6),
+                        "remaining_shares_carried": round(float(old.remaining),6),
+                        "order_id": old.order_id
+                    })
+                mo = ladder[i]
+            else:
+                # create new rung if we have room in per-market budget and global bank
+                mo = MakerOrder(None, px, rung_usd, self.maker_mult)
+                # no immediate spend (spend on fills); ensure bank is non-negative for future fills
+                ladder.append(mo)
+                append_jsonl(DECISIONS_LOG_BASE, {
+                    "ts": now_iso(), "type":"maker_quote",
+                    "market_id": m.get("conditionId"), "side":"NO",
+                    "price_pre_fee": round(float(px),6), "dollars": round(float(mo.dollars),2),
+                    "order_id": mo.order_id
+                })
+
+        # Trade-driven fills for each rung
+        for mo in ladder:
+            if mo.remaining <= 0:
+                continue
+            filled_shares = self._trade_driven_fill(cid, token, mo, book)
+            if filled_shares > 0:
+                spent = filled_shares * mo.price * self.maker_mult
+                if self.bank >= spent:
+                    remaining_before = mo.remaining
+                    mo.remaining -= filled_shares
                     self.bank -= spent
                     entered_now = 1
                     self._mark_entered(cid)
-                    self._log_trade(m, token, "NO", spent, shares, avg_eff, event="micro_taker_fill")
-
-        # 3) maker ladder if we still have budget to allocate at this market
-        allocated_here = 0.0
-        if cid in self.maker_orders:
-            for mo in self.maker_orders[cid]:
-                allocated_here += mo.price * mo.remaining * self.maker_mult
-        remaining_budget = max(0.0, self.per_market_budget - allocated_here)
-
-        if remaining_budget > 0.01 and self.bank > 0.01:
-            prices = self.ladder_prices(self.pre_fee_cap_maker, best_bid or 0.0)
-            # build/refresh a ladder of at most len(maker_sizes)
-            ladder = self.maker_orders.setdefault(cid, [])
-            # keep number of rungs <= len(maker_sizes)
-            while len(ladder) > len(self.maker_sizes):
-                ladder.pop()
-
-            # place/refresh rungs
-            for i, rung_usd in enumerate(self.maker_sizes):
-                if i >= len(prices): break
-                px = prices[i]
-                # if rung exists, maybe simulate a nibble; else create it
-                if i < len(ladder):
-                    mo = ladder[i]
-                    # replace if price drifted
-                    if abs(mo.price - px) > 1e-9:
-                        ladder[i] = MakerOrder(px, rung_usd, self.maker_mult)
-                        mo = ladder[i]
-                        append_jsonl(DECISIONS_LOG_BASE, {
-                            "ts": now_iso(), "type": "maker_replace",
-                            "market_id": m.get("conditionId"), "side":"NO",
-                            "price_pre_fee": round(float(px),6), "dollars": rung_usd
-                        })
-                    # simulate small probability fill nibble at resting price
-                    fill_prob = 0.15  # crude; tweak as desired
-                    if random.random() < fill_prob and mo.remaining > 0:
-                        nibble_shares = max(0.01, mo.remaining * 0.25)
-                        nibble_shares = min(nibble_shares, mo.remaining)
-                        spent = nibble_shares * mo.price * self.maker_mult
-                        if self.bank >= spent:
-                            self.bank -= spent
-                            mo.remaining -= nibble_shares
-                            entered_now = 1
-                            self._mark_entered(cid)
-                            self._log_trade(m, token, "NO", spent, nibble_shares, mo.price*self.maker_mult, event="maker_partial_fill")
-                else:
-                    # create new rung if budget allows
-                    mo = MakerOrder(px, rung_usd, self.maker_mult)
-                    # scale if bank insufficient
-                    needed = mo.shares * mo.price * self.maker_mult
-                    if self.bank < needed:
-                        if self.bank <= 0: break
-                        dollars_fit = self.bank / self.maker_mult
-                        if dollars_fit < 0.50: 
-                            break
-                        mo = MakerOrder(px, dollars_fit, self.maker_mult)
-                        needed = mo.shares * mo.price * self.maker_mult
-                    ladder.append(mo)
-                    self.bank -= 0.0  # no immediate spend; spend occurs on simulated fills
-                    append_jsonl(DECISIONS_LOG_BASE, {
-                        "ts": now_iso(), "type":"maker_quote",
-                        "market_id": m.get("conditionId"), "side":"NO",
-                        "price_pre_fee": round(float(px),6), "dollars": round(float(mo.dollars),2)
-                    })
+                    self._log_trade(
+                        m, token, "NO", spent, filled_shares, mo.avg_eff_price,
+                        event="maker_trade_fill",
+                        extra={
+                            "order_id": mo.order_id,
+                            "price_pre_fee": round(float(mo.price),6),
+                            "remaining_before": round(float(remaining_before),6),
+                            "remaining_after": round(float(mo.remaining),6)
+                        }
+                    )
 
         # schedule next check (faster after actions)
         st["next_check"] = int(time.time()) + (2 if entered_now else 5)
@@ -562,10 +664,11 @@ class CoverageEngine:
 # ------------------------------ Main ----------------------------------
 
 def main():
-    vprint(f"=== Coverage Tester ===\nRun ID: {RUN_ID}\nLog Dir: {LOG_DIR}")
-    vprint(f"P(NO)={P_NO_BASE:.3f}  settle_fee={SETTLE_FEE:.3f}  eff_cap={ev_effective_cap():.3f}")
-    vprint(f"taker pre-fee cap≈{pre_fee_cap_from_effective(ev_effective_cap(), 1+TAKER_ENTRY_FEE+TAKER_SLIP):.3f} "
-           f"maker pre-fee cap≈{pre_fee_cap_from_effective(ev_effective_cap(), 1+MAKER_ENTRY_FEE+MAKER_SLIP):.3f}")
+    vprint(f"=== Coverage Tester (Trade-Driven) ===\nRun ID: {RUN_ID}\nLog Dir: {LOG_DIR}")
+    eff_cap = ev_effective_cap()
+    vprint(f"P(NO)={P_NO_BASE:.3f}  settle_fee={SETTLE_FEE:.3f}  eff_cap={eff_cap:.3f}")
+    vprint(f"taker pre-fee cap≈{pre_fee_cap_from_effective(eff_cap, 1+TAKER_ENTRY_FEE+TAKER_SLIP):.3f} "
+           f"maker pre-fee cap≈{pre_fee_cap_from_effective(eff_cap, 1+MAKER_ENTRY_FEE+MAKER_SLIP):.3f}")
 
     eng = CoverageEngine()
     created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
