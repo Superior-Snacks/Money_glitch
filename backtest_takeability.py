@@ -69,10 +69,15 @@ def jloads_maybe(x):
         except: return None
     return None
 
-def parse_dt_any(s):
-    if not s: return None
-    try: return datetime.fromisoformat(s.replace("Z","+00:00")).astimezone(timezone.utc)
-    except: return None
+def parse_trade_dt(tr):
+    for k in ("timestamp","ts","time","created_at","createdAt"):
+        v = tr.get(k)
+        if v:
+            try:
+                return datetime.fromisoformat(v.replace("Z","+00:00")).astimezone(timezone.utc)
+            except Exception:
+                pass
+    return None
 
 def is_yesno(m):
     outs = jloads_maybe(m.get("outcomes")) or m.get("outcomes")
@@ -122,6 +127,10 @@ def normalize_winner(m):
 
     return ""
 
+def parse_dt_any(s):
+    if not s: return None
+    try: return datetime.fromisoformat(s.replace("Z","+00:00")).astimezone(timezone.utc)
+    except: return None
 # ============================
 # Fetchers
 # ============================
@@ -158,33 +167,51 @@ def fetch_closed_yesno_markets(days_back_starts, page_size, max_pages):
     return out
 
 def fetch_token_trades_range(token_id, start_iso, end_iso, limit_each=500):
-    out = []
-    next_start = start_iso
-    pulled = 0
-    while True:
-        if pulled >= MAX_TRADE_PULL: break
+    out, next_start, pulled = [], start_iso, 0
+    def _pull(params):
         _rate_limit()
-        params = {
-            "token_id": token_id,
-            "start_time": next_start,
-            "end_time": end_iso,
-            "sort": "asc",
-            "limit": min(limit_each, MAX_TRADE_PULL - pulled),
-        }
         r = SESSION.get(DATA_TRADES, params=params, timeout=20)
         r.raise_for_status()
-        rows = r.json() or []
-        if not rows: break
+        return r.json() or []
+
+    while pulled < MAX_TRADE_PULL and next_start < end_iso:
+        params = {
+            "token_id": token_id, "start_time": next_start, "end_time": end_iso,
+            "sort": "asc", "limit": min(limit_each, MAX_TRADE_PULL - pulled),
+        }
+        rows = _pull(params)
+        if not rows:
+            params2 = params.copy()
+            params2.pop("start_time"); params2.pop("end_time")
+            params2["start"] = next_start; params2["end"] = end_iso
+            rows = _pull(params2)
+            if not rows:
+                break
+
         out.extend(rows); pulled += len(rows)
-        last_ts = rows[-1].get("timestamp") or rows[-1].get("ts") or rows[-1].get("time")
-        if not last_ts: break
-        try:
-            dt = datetime.fromisoformat(last_ts.replace("Z","+00:00"))
-            next_start = (dt + timedelta(milliseconds=1)).isoformat()
-        except:
-            break
-        if next_start >= end_iso: break
+        last_dt = parse_trade_dt(rows[-1])
+        if not last_dt: break
+        next_start = (last_dt + timedelta(milliseconds=1)).isoformat()
     return out
+
+
+def first_no_trade_px_in_horizon(trades, start_dt, horizon=timedelta(minutes=30)):
+    """
+    Return the FIRST trade price within [start_dt, start_dt+horizon] or None.
+    """
+    end_dt = start_dt + horizon
+    first_dt, first_px = None, None
+    for t in trades:
+        dt = parse_trade_dt(t)
+        if not dt or not (start_dt <= dt <= end_dt):
+            continue
+        try:
+            px = float(t.get("price") or 0.0)
+        except Exception:
+            continue
+        if first_dt is None or dt < first_dt:
+            first_dt, first_px = dt, px
+    return first_px
 
 # ============================
 # Main backtest
@@ -197,16 +224,26 @@ def main():
     markets = fetch_closed_yesno_markets(DAYS_BACK_STARTS, PAGE_SIZE, MAX_PAGES)
     print(f"✅ closed yes/no markets considered: {len(markets)} (start >= last {DAYS_BACK_STARTS} days)")
 
-    # Prepare summary accumulators: {(thr,win): {tot, no_wins, take_any, take_no_wins}}
+    # summary accums: (thr, win_h) -> counters
     from collections import defaultdict
-    agg = defaultdict(lambda: {"tot":0, "no_wins":0, "take_any":0, "take_no_wins":0})
+    agg = defaultdict(lambda: {
+        "tot": 0,
+        "no_wins": 0,
+        "take_any": 0,          # markets with any NO trades in window
+        "take_no_wins": 0,      # NO winners that were takeable at thr
+        "instant_ge_095": 0,    # first 30m NO trade >= 0.95
+    })
 
-    # Detail CSV header
+    # dynamic columns for “time to first below threshold”
+    def ttfb_col(thr): return f"ttfb_{int(round(thr*100))}_sec"
+
     detail_fields = [
         "market_id","condition_id","question","start","closed","winner",
         "window_hours","threshold","min_no_price_in_window","takeable_no",
-        "no_trades_in_window"
-    ]
+        "no_trades_in_window",
+        "first_30m_no_px","first_30m_ge_095"
+    ] + [ttfb_col(t) for t in THRESHOLDS]
+
     with open(detail_path, "w", newline="", encoding="utf-8") as fdet:
         wr = csv.DictWriter(fdet, fieldnames=detail_fields)
         wr.writeheader()
@@ -217,10 +254,10 @@ def main():
             q   = m.get("question") or ""
             sd  = parse_dt_any(m.get("startDate") or m.get("createdAt"))
             cd  = parse_dt_any(m.get("closedTime") or m.get("umaEndDate") or m.get("endDate"))
-            if not (cid and sd and cd): 
+            if not (cid and sd and cd):
                 continue
 
-            # token ids
+            # NO token id
             try:
                 no_tok = outcome_map_from_market(m)["NO"]
             except Exception:
@@ -228,52 +265,61 @@ def main():
 
             winner = normalize_winner(m)
 
-            # We’ll reuse the NO trades for different windows (pull once for the max window we need)
+            # Pull trades once for max window
             max_win = max(LOOKBACK_HOURS_LIST)
             hard_end = min(sd + timedelta(hours=max_win), cd)
             if hard_end <= sd:
                 continue
 
-            trades = fetch_token_trades_range(no_tok, sd.isoformat(), hard_end.isoformat(), limit_each=500)
-            prices = []
-            ts = []
-            for t in trades:
-                try:
-                    px = float(t.get("price") or 0.0)
-                    tt = t.get("timestamp") or t.get("ts") or t.get("time")
-                    if px > 0 and tt:
-                        prices.append(px); ts.append(tt)
-                except: 
-                    pass
+            trades = fetch_token_trades_range(
+                no_tok, sd.isoformat(), hard_end.isoformat(), limit_each=500
+            )
 
-            # For each window and threshold, evaluate takeability
+            # Precompute first-30m price & boolean flag
+            px0_30m = first_no_trade_px_in_horizon(trades, sd, horizon=timedelta(minutes=30))
+            first_30m_ge_095_flag = int(px0_30m is not None and px0_30m >= 0.95)
+
             for win_h in LOOKBACK_HOURS_LIST:
                 end_w = min(sd + timedelta(hours=win_h), cd)
-                # slice trades within this smaller window
+
+                # collect prices inside this window, also track time-to-first-below per threshold
                 win_prices = []
-                if prices:
-                    for px, tstamp in zip(prices, ts):
-                        try:
-                            dt = datetime.fromisoformat(tstamp.replace("Z","+00:00")).astimezone(timezone.utc)
-                            if sd <= dt <= end_w:
-                                win_prices.append(px)
-                        except:
-                            pass
+                first_below_dt = {thr: None for thr in THRESHOLDS}
+
+                for t in trades:
+                    dt = parse_trade_dt(t)
+                    if not dt or not (sd <= dt <= end_w):
+                        continue
+                    try:
+                        px = float(t.get("price") or 0.0)
+                    except Exception:
+                        continue
+                    if px <= 0:
+                        continue
+                    win_prices.append(px)
+                    for thr in THRESHOLDS:
+                        if px <= thr and first_below_dt[thr] is None:
+                            first_below_dt[thr] = dt
 
                 min_no = min(win_prices) if win_prices else None
 
                 for thr in THRESHOLDS:
-                    agg[(thr, win_h)]["tot"] += 1
+                    # update agg
+                    a = agg[(thr, win_h)]
+                    a["tot"] += 1
                     if winner == "NO":
-                        agg[(thr, win_h)]["no_wins"] += 1
+                        a["no_wins"] += 1
+                    if win_prices:
+                        a["take_any"] += 1
+                    if first_30m_ge_095_flag:
+                        a["instant_ge_095"] += 1
 
                     takeable = (min_no is not None and min_no <= thr)
-                    if win_prices:
-                        agg[(thr, win_h)]["take_any"] += 1
                     if winner == "NO" and takeable:
-                        agg[(thr, win_h)]["take_no_wins"] += 1
+                        a["take_no_wins"] += 1
 
-                    wr.writerow({
+                    # build detail row
+                    row = {
                         "market_id": mid,
                         "condition_id": cid,
                         "question": q,
@@ -285,40 +331,61 @@ def main():
                         "min_no_price_in_window": f"{min_no:.4f}" if min_no is not None else "",
                         "takeable_no": int(bool(takeable)),
                         "no_trades_in_window": len(win_prices),
-                    })
+                        "first_30m_no_px": f"{px0_30m:.4f}" if px0_30m is not None else "",
+                        "first_30m_ge_095": first_30m_ge_095_flag,
+                    }
+                    # add TTFB per threshold in seconds (None -> "")
+                    for tthr in THRESHOLDS:
+                        dtfb = first_below_dt[tthr]
+                        row[ttfb_col(tthr)] = (
+                            int((dtfb - sd).total_seconds()) if dtfb else ""
+                        )
+
+                    wr.writerow(row)
 
             if i % 100 == 0:
                 print(f"… processed {i}/{len(markets)}")
 
-    # Build summary table
+    # Write summary
     with open(summary_path, "w", newline="", encoding="utf-8") as fs:
         fields = [
             "threshold","window_hours","markets","no_winners","pct_no_winners",
             "takeable_no_winners","pct_takeable_of_no_winners",
-            "markets_with_any_no_trades_in_window"
+            "markets_with_any_no_trades_in_window",
+            "pct_instant_ge_095_30m"
         ]
         wrs = csv.DictWriter(fs, fieldnames=fields); wrs.writeheader()
         print("\n================ SUMMARY (by threshold & window) ================")
-        combos = sorted(agg.keys(), key=lambda x:(x[1], x[0]))  # by window then threshold
-        for (thr, win_h) in combos:
+        for (thr, win_h) in sorted(agg.keys(), key=lambda x: (x[1], x[0])):
             a = agg[(thr, win_h)]
-            tot = a["tot"]
-            no_w = a["no_wins"]
+            tot   = a["tot"]
+            no_w  = a["no_wins"]
             tk_no = a["take_no_wins"]
-            any_tr = a["take_any"]
-            pct_no = (no_w/tot*100.0) if tot>0 else 0.0
-            pct_tk = (tk_no/no_w*100.0) if no_w>0 else 0.0
-            print(f"win={str(win_h).rjust(3)}h  thr={thr:0.2f}  markets={tot:5d}  NO_wins={no_w:5d} ({pct_no:5.1f}%)  "
-                  f"takeable_NO_wins={tk_no:5d} ({pct_tk:5.1f}%)  any_NO_trades={any_tr:5d}")
+            any_tr= a["take_any"]
+            inst  = a["instant_ge_095"]
+
+            pct_no  = (no_w/tot*100.0) if tot>0 else 0.0
+            pct_tk  = (tk_no/no_w*100.0) if no_w>0 else 0.0
+            pct_095 = (inst/tot*100.0) if tot>0 else 0.0
+
+            print(
+                f"win={str(win_h).rjust(3)}h  thr={thr:0.2f}  markets={tot:5d}  "
+                f"NO_wins={no_w:5d} ({pct_no:5.1f}%)  "
+                f"takeable_NO_wins={tk_no:5d} ({pct_tk:5.1f}%)  "
+                f"any_NO_trades={any_tr:5d}  "
+                f"instant>=0.95(30m)={inst:5d} ({pct_095:5.1f}%)"
+            )
+
             wrs.writerow({
                 "threshold": thr,
                 "window_hours": win_h,
                 "markets": tot,
                 "no_winners": no_w,
-                "pct_no_winners": round(pct_no,2),
+                "pct_no_winners": round(pct_no, 2),
                 "takeable_no_winners": tk_no,
-                "pct_takeable_of_no_winners": round(pct_tk,2),
+                "pct_takeable_of_no_winners": round(pct_tk, 2),
                 "markets_with_any_no_trades_in_window": any_tr,
+                "pct_instant_ge_095_30m": round(pct_095, 2),
             })
         print("=================================================================\n")
         print(f"Detail CSV : {os.path.join(OUT_DIR, DETAIL_CSV)}")
