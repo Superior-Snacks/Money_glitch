@@ -981,7 +981,7 @@ def _parse_day_from_filename(path):
     except Exception:
         return None
 
-def compress_and_prune_logs(log_dir="logs",
+def compress_and_prune_logs(log_dir=LOG_DIR,
                             retain_days=RETAIN_DAYS,
                             compress_after_days=COMPRESS_AFTER_DAYS):
     """Gzip old logs and delete very old ones. Safe to run during writes because files are opened per-append."""
