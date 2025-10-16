@@ -62,6 +62,102 @@ def _rate_limit():
 # ============================
 # Helpers
 # ============================
+
+CLOB_TRADES = "https://clob.polymarket.com/trades"
+
+def robust_fetch_trades(token_id, start_iso, end_iso, limit_each=500, max_pull=1500):
+    """
+    Try data-api with start_time/end_time, then start/end.
+    If still empty, try clob endpoint. Returns list of trades.
+    """
+    def _pull(url, params):
+        _rate_limit()
+        r = SESSION.get(url, params=params, timeout=20)
+        if r.status_code >= 400:
+            return []
+        try:
+            return r.json() or []
+        except Exception:
+            return []
+
+    out, next_start, pulled = [], start_iso, 0
+
+    while pulled < max_pull and next_start < end_iso:
+        # 1) data-api with start_time/end_time
+        params = {
+            "token_id": token_id,
+            "start_time": next_start,
+            "end_time": end_iso,
+            "sort": "asc",
+            "limit": min(limit_each, max_pull - pulled),
+        }
+        rows = _pull(DATA_TRADES, params)
+
+        # 2) fallback: data-api with start/end
+        if not rows:
+            params2 = {
+                "token_id": token_id,
+                "start": next_start,
+                "end": end_iso,
+                "sort": "asc",
+                "limit": min(limit_each, max_pull - pulled),
+            }
+            rows = _pull(DATA_TRADES, params2)
+
+        # 3) fallback: clob endpoint
+        if not rows:
+            params3 = {
+                "token_id": token_id,
+                "start_time": next_start,
+                "end_time": end_iso,
+                "sort": "asc",
+                "limit": min(limit_each, max_pull - pulled),
+            }
+            rows = _pull(CLOB_TRADES, params3)
+
+        if not rows:
+            break
+
+        out.extend(rows); pulled += len(rows)
+        last_dt = parse_trade_dt(rows[-1])
+        if not last_dt:
+            break
+        next_start = (last_dt + timedelta(milliseconds=1)).isoformat()
+
+    return out
+
+
+def min_no_price_from_both_sides(no_trades, yes_trades, start_dt, end_dt):
+    """
+    Compute the min NO price inside [start_dt, end_dt] using:
+      - NO trades directly (price_no)
+      - YES trades inverted: 1 - price_yes
+    Return (min_no, n_trades_considered)
+    """
+    def within(dt): return (start_dt <= dt <= end_dt)
+
+    vals = []
+    for t in no_trades:
+        dt = parse_trade_dt(t)
+        if not dt or not within(dt): continue
+        try:
+            px = float(t.get("price") or 0.0)
+            if px > 0: vals.append(px)
+        except: pass
+
+    for t in yes_trades:
+        dt = parse_trade_dt(t)
+        if not dt or not within(dt): continue
+        try:
+            py = float(t.get("price") or 0.0)
+            if 0 < py < 1:
+                vals.append(1.0 - py)
+        except: pass
+
+    if not vals:
+        return None, 0
+    return min(vals), len(vals)
+
 def jloads_maybe(x):
     if isinstance(x, list): return x
     if isinstance(x, str):
@@ -70,13 +166,35 @@ def jloads_maybe(x):
     return None
 
 def parse_trade_dt(tr):
+    """
+    Parse a trade timestamp from various formats:
+    - ISO strings (2025-10-15T18:00:00Z)
+    - Unix seconds (e.g. 1760635119)
+    - Unix milliseconds (e.g. 1760635119123)
+    """
     for k in ("timestamp","ts","time","created_at","createdAt"):
         v = tr.get(k)
-        if v:
+        if v is None:
+            continue
+
+        # numeric timestamp
+        if isinstance(v, (int, float)):
             try:
-                return datetime.fromisoformat(v.replace("Z","+00:00")).astimezone(timezone.utc)
+                # If it's > 1e12, it's ms; else s
+                if v > 1e12:
+                    return datetime.fromtimestamp(v / 1000, tz=timezone.utc)
+                else:
+                    return datetime.fromtimestamp(v, tz=timezone.utc)
             except Exception:
-                pass
+                continue
+
+        # ISO string
+        if isinstance(v, str):
+            try:
+                return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(timezone.utc)
+            except Exception:
+                continue
+
     return None
 
 def is_yesno(m):
@@ -224,24 +342,21 @@ def main():
     markets = fetch_closed_yesno_markets(DAYS_BACK_STARTS, PAGE_SIZE, MAX_PAGES)
     print(f"✅ closed yes/no markets considered: {len(markets)} (start >= last {DAYS_BACK_STARTS} days)")
 
-    # summary accums: (thr, win_h) -> counters
     from collections import defaultdict
     agg = defaultdict(lambda: {
         "tot": 0,
         "no_wins": 0,
-        "take_any": 0,          # markets with any NO trades in window
-        "take_no_wins": 0,      # NO winners that were takeable at thr
-        "instant_ge_095": 0,    # first 30m NO trade >= 0.95
+        "take_any": 0,
+        "take_no_wins": 0,
+        "instant_ge_095": 0,
     })
 
-    # dynamic columns for “time to first below threshold”
     def ttfb_col(thr): return f"ttfb_{int(round(thr*100))}_sec"
 
     detail_fields = [
         "market_id","condition_id","question","start","closed","winner",
         "window_hours","threshold","min_no_price_in_window","takeable_no",
-        "no_trades_in_window",
-        "first_30m_no_px","first_30m_ge_095"
+        "no_trades_in_window","first_30m_no_px","first_30m_ge_095"
     ] + [ttfb_col(t) for t in THRESHOLDS]
 
     with open(detail_path, "w", newline="", encoding="utf-8") as fdet:
@@ -257,59 +372,92 @@ def main():
             if not (cid and sd and cd):
                 continue
 
-            # NO token id
             try:
-                no_tok = outcome_map_from_market(m)["NO"]
+                om = outcome_map_from_market(m)
+                no_tok = om["NO"]
+                yes_tok = om["YES"]
             except Exception:
                 continue
 
             winner = normalize_winner(m)
 
-            # Pull trades once for max window
-            max_win = max(LOOKBACK_HOURS_LIST)
-            hard_end = min(sd + timedelta(hours=max_win), cd)
+            hard_end = min(sd + timedelta(hours=max(LOOKBACK_HOURS_LIST)), cd)
             if hard_end <= sd:
                 continue
 
-            trades = fetch_token_trades_range(
-                no_tok, sd.isoformat(), hard_end.isoformat(), limit_each=500
-            )
+            # Fetch trades for both sides
+            no_trades  = robust_fetch_trades(no_tok, sd.isoformat(), hard_end.isoformat(), limit_each=500)
+            yes_trades = robust_fetch_trades(yes_tok, sd.isoformat(), hard_end.isoformat(), limit_each=500)
 
-            # Precompute first-30m price & boolean flag
-            px0_30m = first_no_trade_px_in_horizon(trades, sd, horizon=timedelta(minutes=30))
+            # Skip if absolutely no trades
+            if not (no_trades or yes_trades):
+                continue
+
+            # --- FIX 1: Align analysis window to real trade timestamps ---
+            trade_dts = [parse_trade_dt(t) for t in (no_trades + yes_trades)]
+            trade_dts = [d for d in trade_dts if d]
+            if not trade_dts:
+                continue
+            first_trade_dt = min(trade_dts)
+            last_trade_dt  = max(trade_dts)
+            analysis_start = first_trade_dt
+            analysis_end   = min(last_trade_dt, cd)
+
+            # --- first 30m NO price ---
+            first_30m_end = analysis_start + timedelta(minutes=30)
+            mn_30, cnt_30 = min_no_price_from_both_sides(no_trades, yes_trades, analysis_start, first_30m_end)
+            px0_30m = mn_30
             first_30m_ge_095_flag = int(px0_30m is not None and px0_30m >= 0.95)
 
+            #window logic
             for win_h in LOOKBACK_HOURS_LIST:
-                end_w = min(sd + timedelta(hours=win_h), cd)
+                end_w = min(analysis_start + timedelta(hours=win_h), analysis_end)
 
-                # collect prices inside this window, also track time-to-first-below per threshold
-                win_prices = []
-                first_below_dt = {thr: None for thr in THRESHOLDS}
-
-                for t in trades:
+                # Build one merged stream of NO-prices inside [analysis_start, end_w]
+                merged = []  # list of (dt, p_no)
+                # NO side (direct)
+                for t in no_trades:
                     dt = parse_trade_dt(t)
-                    if not dt or not (sd <= dt <= end_w):
+                    if not dt or not (analysis_start <= dt <= end_w):
                         continue
                     try:
                         px = float(t.get("price") or 0.0)
-                    except Exception:
+                    except:
                         continue
-                    if px <= 0:
+                    if 0 < px < 1:
+                        merged.append((dt, px))
+                # YES side (invert)
+                for t in yes_trades:
+                    dt = parse_trade_dt(t)
+                    if not dt or not (analysis_start <= dt <= end_w):
                         continue
-                    win_prices.append(px)
+                    try:
+                        py = float(t.get("price") or 0.0)
+                    except:
+                        continue
+                    if 0 < py < 1:
+                        merged.append((dt, 1.0 - py))
+
+                merged.sort(key=lambda x: x[0])
+                n_considered = len(merged)
+                if n_considered == 0 and px0_30m is not None:
+                    print(f"[DEBUG] mismatch: have 30m px ({px0_30m}) but no trades in {win_h}h window for {mid} — {q[:70]}")
+                min_no = min((p for _, p in merged), default=None)
+
+                # --- compute TTFB in the same pass to avoid any mismatch ---
+                first_below_dt = {thr: None for thr in THRESHOLDS}
+                for dt, p_no in merged:
                     for thr in THRESHOLDS:
-                        if px <= thr and first_below_dt[thr] is None:
+                        if p_no <= thr and first_below_dt[thr] is None:
                             first_below_dt[thr] = dt
 
-                min_no = min(win_prices) if win_prices else None
-
+                # --- aggregate ---
                 for thr in THRESHOLDS:
-                    # update agg
                     a = agg[(thr, win_h)]
                     a["tot"] += 1
                     if winner == "NO":
                         a["no_wins"] += 1
-                    if win_prices:
+                    if n_considered > 0:
                         a["take_any"] += 1
                     if first_30m_ge_095_flag:
                         a["instant_ge_095"] += 1
@@ -318,7 +466,7 @@ def main():
                     if winner == "NO" and takeable:
                         a["take_no_wins"] += 1
 
-                    # build detail row
+                    # write row
                     row = {
                         "market_id": mid,
                         "condition_id": cid,
@@ -330,52 +478,40 @@ def main():
                         "threshold": thr,
                         "min_no_price_in_window": f"{min_no:.4f}" if min_no is not None else "",
                         "takeable_no": int(bool(takeable)),
-                        "no_trades_in_window": len(win_prices),
+                        "no_trades_in_window": n_considered,
                         "first_30m_no_px": f"{px0_30m:.4f}" if px0_30m is not None else "",
                         "first_30m_ge_095": first_30m_ge_095_flag,
                     }
-                    # add TTFB per threshold in seconds (None -> "")
                     for tthr in THRESHOLDS:
                         dtfb = first_below_dt[tthr]
-                        row[ttfb_col(tthr)] = (
-                            int((dtfb - sd).total_seconds()) if dtfb else ""
+                        row[f"ttfb_{int(round(tthr*100))}_sec"] = (
+                            int((dtfb - analysis_start).total_seconds()) if dtfb else ""
                         )
-
                     wr.writerow(row)
 
             if i % 100 == 0:
                 print(f"… processed {i}/{len(markets)}")
 
-    # Write summary
+    # --- Summary ---
     with open(summary_path, "w", newline="", encoding="utf-8") as fs:
         fields = [
             "threshold","window_hours","markets","no_winners","pct_no_winners",
             "takeable_no_winners","pct_takeable_of_no_winners",
-            "markets_with_any_no_trades_in_window",
-            "pct_instant_ge_095_30m"
+            "markets_with_any_no_trades_in_window","pct_instant_ge_095_30m"
         ]
-        wrs = csv.DictWriter(fs, fieldnames=fields); wrs.writeheader()
+        wrs = csv.DictWriter(fs, fieldnames=fields)
+        wrs.writeheader()
         print("\n================ SUMMARY (by threshold & window) ================")
         for (thr, win_h) in sorted(agg.keys(), key=lambda x: (x[1], x[0])):
             a = agg[(thr, win_h)]
-            tot   = a["tot"]
-            no_w  = a["no_wins"]
-            tk_no = a["take_no_wins"]
-            any_tr= a["take_any"]
-            inst  = a["instant_ge_095"]
-
+            tot, no_w, tk_no, any_tr, inst = a["tot"], a["no_wins"], a["take_no_wins"], a["take_any"], a["instant_ge_095"]
             pct_no  = (no_w/tot*100.0) if tot>0 else 0.0
             pct_tk  = (tk_no/no_w*100.0) if no_w>0 else 0.0
             pct_095 = (inst/tot*100.0) if tot>0 else 0.0
 
-            print(
-                f"win={str(win_h).rjust(3)}h  thr={thr:0.2f}  markets={tot:5d}  "
-                f"NO_wins={no_w:5d} ({pct_no:5.1f}%)  "
-                f"takeable_NO_wins={tk_no:5d} ({pct_tk:5.1f}%)  "
-                f"any_NO_trades={any_tr:5d}  "
-                f"instant>=0.95(30m)={inst:5d} ({pct_095:5.1f}%)"
-            )
-
+            print(f"win={str(win_h).rjust(3)}h  thr={thr:0.2f}  markets={tot:5d}  "
+                  f"NO_wins={no_w:5d} ({pct_no:5.1f}%)  takeable_NO_wins={tk_no:5d} ({pct_tk:5.1f}%)  "
+                  f"any_NO_trades={any_tr:5d}  instant>=0.95(30m)={inst:5d} ({pct_095:5.1f}%)")
             wrs.writerow({
                 "threshold": thr,
                 "window_hours": win_h,
@@ -390,6 +526,5 @@ def main():
         print("=================================================================\n")
         print(f"Detail CSV : {os.path.join(OUT_DIR, DETAIL_CSV)}")
         print(f"Summary CSV: {os.path.join(OUT_DIR, SUMMARY_CSV)}")
-
 if __name__ == "__main__":
     main()
