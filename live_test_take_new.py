@@ -17,7 +17,6 @@ BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
-LOG_DIR = f"logs_run_{int(time.time())}"
 TRADE_LOG_BASE = "trades_taken.jsonl"
 RUN_SNAP_BASE  = "run_snapshots.jsonl"
 DECISION_LOG_BASE = "decisions.jsonl"
@@ -27,6 +26,10 @@ SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets fo
 RETAIN_DAYS = 7           # delete logs older than this
 COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 _created_cutoff = None
+
+LOG_DIR = input("name log:")
+if len(LOG_DIR) < 1:
+    LOG_DIR = f"logs_run_{int(time.time())}"
 
 
 # ----------------------------------------------------------------------
