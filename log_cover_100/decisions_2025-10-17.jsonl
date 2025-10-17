@@ -1,0 +1,15 @@
+{"ts": "2025-10-17T11:21:34.983056+00:00", "type": "seed_backoff", "backoff_sec": 5}
+{"ts": "2025-10-17T11:21:46.189707+00:00", "type": "seed_backoff", "backoff_sec": 15}
+{"ts": "2025-10-17T11:22:01.307697+00:00", "type": "seed_backoff", "backoff_sec": 35}
+{"ts": "2025-10-17T11:22:36.442199+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:23:36.573615+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:24:36.701736+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:25:37.163021+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:26:37.342554+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:27:37.470686+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:28:37.685351+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:29:37.807636+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:30:37.945703+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:31:38.063283+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:32:38.204574+00:00", "type": "seed_backoff", "backoff_sec": 60}
+{"ts": "2025-10-17T11:33:38.306825+00:00", "type": "seed_backoff", "backoff_sec": 60}
