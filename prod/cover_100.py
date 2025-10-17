@@ -16,8 +16,10 @@ from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError as 
 # -------------------- Config --------------------
 GAMMA_URL = "https://gamma-api.polymarket.com/markets"
 BOOK_URL  = "https://clob.polymarket.com/book"
-RUN_ID    = f"prod_run_{int(time.time())}"
-LOG_DIR   = RUN_ID
+
+LOG_DIR = input("name log:")
+if len(LOG_DIR) < 1:
+    LOG_DIR = f"logs_run_{int(time.time())}"
 
 DRY_RUN   = True
 TARGET_MARKETS = 100
@@ -204,13 +206,13 @@ class Market:
         self.no_token=parse_outcomes(m)["NO"]
         self.created_ts=(dt(m.get("createdAt")) or datetime.now(timezone.utc)).timestamp()
         self.entered=False;self.order_id=None;self.order_px=None
-        self.seed_backoff = 0          # seconds; 0 means no backoff
-        self.seed_backoff_max = 60
 
 class CoverBot:
     def __init__(self):
         self.eff_cap=ev_cap();self.pre_cap=pre_cap(self.eff_cap)
         self.markets={};self.entered_count=0;self.bank_spent=0;self.stop=False
+        self.seed_backoff = 0          # seconds; 0 means no backoff
+        self.seed_backoff_max = 60
 
     def log_trade(self,mkt,event,price,shares,spent):
         append_jsonl(TRADE_LOG_BASE,{
