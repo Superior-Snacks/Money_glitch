@@ -59,7 +59,9 @@ TICK                   = 0.01
 
 # Logs
 RUN_ID                 = f"coverage_run_{int(time.time())}"
-LOG_DIR                = RUN_ID
+LOG_DIR = input("name log:")
+if len(LOG_DIR) < 1:
+    LOG_DIR = RUN_ID
 TRADE_LOG_BASE         = "trades.jsonl"
 DECISIONS_LOG_BASE     = "decisions.jsonl"
 SNAP_LOG_BASE          = "snapshots.jsonl"
