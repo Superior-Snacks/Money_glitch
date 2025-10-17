@@ -28,7 +28,7 @@ BASE_PHIST = "https://clob.polymarket.com/prices-history"
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": "pl-bot/1.0"})
-LOG_DIR = "logs_run_1760535417"
+LOG_DIR = input("name log to check:")
 TRADE_LOG_GLOB = os.path.join(LOG_DIR, "trades_taken_*.jsonl*")   # picks .jsonl and .jsonl.gz
 OUTPUT_ALL         = os.path.join(LOG_DIR, "pl_timeseries_all.jsonl")
 OUTPUT_NO_CRYPTO   = os.path.join(LOG_DIR, "pl_timeseries_no_crypto.jsonl")
