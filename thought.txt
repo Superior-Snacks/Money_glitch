@@ -465,3 +465,12 @@ Tradable Yes/No with quotes: 514
 [REFRESH] watch=384 entered=106
 [PROBE] under-cap markets in sample: 0/30
 [STEP] due=186 watch=384 entered=106
+
+[PAGE 0] got 250 raw, added 69 new, total 69
+[PAGE 1] got 192 raw, added 88 new, total 157
+[INFO] last page (short).
+✅ Total open Yes/No markets: 157
+[SEED] added 0 markets (watch size now 276)
+[REFRESH] watch=276 entered=199
+[PROBE] under-cap markets in sample: 0/30
+[STEP] due=243 watch=276 entered=199
