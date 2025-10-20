@@ -51,6 +51,28 @@ RETAIN_DAYS = 7           # delete logs older than this
 COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 _created_cutoff = None
 
+# ----- full-ticket helpers -----
+
+FULL_TICKET_DOLLARS = 100.0         # your per-market bet size
+VM_GRACE_SECONDS    = 2              # require best ask under limit this long before "fill"
+VM_LIMIT_PAD        = 1.00           # 1.00 = exactly at cap; e.g. 1.02 means 2% looser than cap (capped at 1.00)
+VM_TIMEOUT_SECONDS  = 60 * 45        # cancel virtual maker if not filled after this long
+
+# Reservations so we don't over-commit while an order is "waiting"
+reserved_by_cid = {}   # cid -> dollars reserved for the resting virtual maker
+
+def available_bank(bank: float) -> float:
+    return bank - sum(reserved_by_cid.values())
+
+def reserve_for_vm(cid: str, dollars: float):
+    reserved_by_cid[cid] = dollars
+
+def release_vm_reservation(cid: str):
+    reserved_by_cid.pop(cid, None)
+
+def vm_limit_from_cap(price_cap_inc_fee: float) -> float:
+    return min(1.0, price_cap_inc_fee * VM_LIMIT_PAD)
+
 
 # ----------------------------------------------------------------------
 #network helpers
@@ -101,6 +123,231 @@ def log_net_usage():
         "ts": datetime.now(timezone.utc).isoformat(),
         "bytes_in_total": bytes_in_total
     })
+
+# ----------------------------------------------------------------------
+# VirtualMaker: local simulation of maker bids
+# ----------------------------------------------------------------------
+class VirtualMaker:
+    def __init__(self, mode="optimistic", queue_grace_s=2.0):
+        """
+        mode: "optimistic" = fill as soon as best ask <= limit_inc (after grace)
+              "conservative" = fill only after cumulative sell volume >= your order
+        queue_grace_s: seconds best ask must stay <= your limit before we count it as filled
+        """
+        self.mode = mode
+        self.queue_grace_s = queue_grace_s
+        self.orders = {}  # cid -> dict(order info)
+
+    def place_no_bid(self, condition_id: str, token_id: str,
+                     limit_inc: float, budget_usd: float, now_dt):
+        """Register a simulated maker bid."""
+        if not condition_id or not token_id:
+            return False
+        ts = int(now_dt.timestamp())
+        self.orders[condition_id] = {
+            "token_id": token_id,
+            "limit_inc": limit_inc,
+            "budget_usd": budget_usd,
+            "placed_ts": ts,
+            "placed_iso": now_dt.isoformat(),
+            "first_seen_under": None,  # when best ask first dipped under limit
+            "filled": False,
+            "fill_ts": None,
+        }
+        return True
+
+    def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict=None):
+        """
+        Called each time we fetch a fresh book for a condition_id.
+        Returns a fill dict {fill_px, fill_shares, fill_cost} if the order
+        would have filled, otherwise None.
+        """
+        rec = self.orders.get(condition_id)
+        if not rec or rec.get("filled"):
+            return None
+
+        best_bid, best_ask = best_of_book(book)
+        if best_ask is None:
+            return None
+
+        # did market move through our limit?
+        if best_ask <= rec["limit_inc"]:
+            if rec["first_seen_under"] is None:
+                rec["first_seen_under"] = int(now_dt.timestamp())
+            elapsed = int(now_dt.timestamp()) - rec["first_seen_under"]
+            if elapsed >= self.queue_grace_s:
+                # mark as filled
+                rec["filled"] = True
+                rec["fill_ts"] = int(now_dt.timestamp())
+                fill_px = best_ask
+                fill_cost = rec["budget_usd"]
+                fill_shares = fill_cost / fill_px
+                return {
+                    "fill_px": fill_px,
+                    "fill_shares": fill_shares,
+                    "fill_cost": fill_cost,
+                    "mode": self.mode,
+                }
+        else:
+            # price went back above limit, reset grace timer
+            rec["first_seen_under"] = None
+        return None
+
+#---------------------------------------------------------------
+# vm
+#---------------------------------------------------------------
+def place_or_keep_vm_order(cid: str, market: dict, maker, mgr, desired_dollars: float):
+    """
+    Ensure exactly one resting VM order exists for the full ticket on this cid.
+    If not exist, place it and reserve funds. If already exists, do nothing.
+    """
+    if cid in maker.orders:
+        return  # already resting
+
+    no_tok = get_no_token_id(market)
+    if not no_tok:
+        return
+
+    limit_inc = vm_limit_from_cap(mgr.max_no_price)
+    ok = maker.place_no_bid(
+        condition_id=cid,
+        token_id=no_tok,
+        limit_inc=limit_inc,
+        budget_usd=desired_dollars,
+        now_dt=datetime.now(timezone.utc),
+    )
+    if ok:
+        reserve_for_vm(cid, desired_dollars)
+        vprint(f"    [VM] placed ${desired_dollars:.2f} @ {limit_inc:.4f} (inc fee)")
+
+
+def vm_maybe_fill_on_book(cid: str, market: dict, book: dict, maker, bank_ref):
+    """
+    Check if the virtual maker would have filled on this new book snapshot.
+    If so, deduct bank, create position (full ticket), log, and clean up reservation.
+    Returns True if a full-ticket fill was recorded.
+    """
+    vm_fill = maker.on_book(
+        condition_id=cid,
+        book=book,
+        now_dt=datetime.now(timezone.utc),
+        last_seen_under_dict=_last_under_seen,   # you already have this dict
+    )
+    if not vm_fill:
+        # optional timeout clean-up
+        rec = maker.orders.get(cid)
+        if rec and (int(datetime.now(timezone.utc).timestamp()) - rec["placed_ts"] >= VM_TIMEOUT_SECONDS):
+            vprint(f"    [VM] timeout → cancel ${rec['budget_usd']:.2f}")
+            maker.orders.pop(cid, None)
+            release_vm_reservation(cid)
+        return False
+
+    # ---- Full-ticket maker "fill" ----
+    spent_after = float(vm_fill["fill_cost"])
+    shares      = float(vm_fill["fill_shares"])
+    avg_price   = float(vm_fill["fill_px"])     # price (inc fee for maker if you included it in limit_inc)
+
+    # Bank/accounting
+    bank_ref["value"] -= spent_after
+    positions_by_id[cid] = {"shares": shares, "side": "NO", "cost": spent_after}
+    release_vm_reservation(cid)
+
+    # Peaks + snapshots (uses your existing helpers/globals)
+    global first_trade_dt, locked_now, peak_locked, peak_locked_time
+    if first_trade_dt is None:
+        first_trade_dt = datetime.now(timezone.utc)
+    locked_now = compute_locked_now()
+    if locked_now > peak_locked:
+        peak_locked = locked_now
+        peak_locked_time = datetime.now(timezone.utc)
+
+    # Logs
+    print(f"\n✅ ENTER NO (VM) | {market.get('question')}")
+    print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank_ref['value']:.2f} | locked_now={locked_now:.2f}")
+
+    # best-of-book for the log line
+    bb, ba = best_of_book(book or {})
+    append_jsonl(TRADE_LOG_BASE, {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "market_id": market.get("conditionId"),
+        "market_slug": market.get("slug"),
+        "question": market.get("question"),
+        "side": "NO",
+        "token_id": get_no_token_id(market),
+        "spent_after": round(spent_after, 6),
+        "shares": round(shares, 6),
+        "avg_price_eff": round(avg_price, 6),
+        "book_best_bid": bb, "book_best_ask": ba,
+        "locked_now": round(float(locked_now), 6),
+        "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
+        "bank_after_open": round(float(bank_ref["value"]), 6),
+        "fill_mode": "virtual_maker",
+    })
+
+    append_jsonl("virtual_fills.jsonl", {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "market_id": cid,
+        "question": market.get("question"),
+        "mode": "optimistic",   # or "conservative" depending on your VM config
+        "fill_px": avg_price,
+        "fill_shares": shares,
+        "fill_cost": spent_after,
+        "placed_iso": maker.orders[cid]["placed_iso"] if cid in maker.orders else None,
+        "fill_iso": datetime.now(timezone.utc).isoformat(),
+    })
+
+    # Clean VM state for this cid
+    maker.orders.pop(cid, None)
+    return True
+
+def open_position_fn_strict_full_ticket(cid, market, side, dollars, best_ask, book,
+                                        *, maker, mgr, bank_ref, fee, slip, price_cap):
+    """
+    Enforce all-or-nothing full ticket:
+      - Try TAKING the whole ticket now under cap (inc fee/slip).
+      - If not possible, place/keep a single VirtualMaker order for the FULL_TICKET_DOLLARS and return False.
+    `bank_ref` is a dict like {"value": <float>} so we can mutate it from closures.
+    """
+    if side != "NO":
+        return False
+
+    desired = float(FULL_TICKET_DOLLARS)
+
+    # Don't start new tickets if we don't have free cash after reservations
+    if available_bank(bank_ref["value"]) < desired - 1e-6:
+        vprint("    [SKIP] not enough available bank after reservations")
+        return False
+
+    # ---- TAKER attempt for the full ticket
+    spent_after, shares, avg_price = simulate_take_from_asks(
+        book, desired, fee=fee, slip=slip, price_cap=price_cap
+    )
+
+    if spent_after >= desired - 1e-6 and shares > 0:
+        # Full ticket filled instantly
+        bank_ref["value"] -= spent_after
+        positions_by_id[cid] = {"shares": shares, "side": "NO", "cost": spent_after}
+
+        global first_trade_dt, locked_now, peak_locked, peak_locked_time
+        if first_trade_dt is None:
+            first_trade_dt = datetime.now(timezone.utc)
+        locked_now = compute_locked_now()
+        if locked_now > peak_locked:
+            peak_locked = locked_now
+            peak_locked_time = datetime.now(timezone.utc)
+
+        print(f"\n✅ ENTER NO (TAKER) | {market.get('question')}")
+        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank_ref['value']:.2f} | locked_now={locked_now:.2f}")
+
+        log_open_trade(market, "NO", get_no_token_id(market), book_used=book,
+                       spent_after=spent_after, shares=shares,
+                       avg_price_eff=avg_price, bank_after_open=bank_ref["value"])
+
+        return True
+
+    # ---- Could not fill instantly → ensure a full-ticket VM order exists
+    place_or_keep_vm_order(cid, market, maker, mgr, desired)
+    return False
 
 # --------------------------------------------------------------------
 # Book fetch
@@ -292,13 +539,16 @@ class WatchlistManager:
         return takeable_ex, best_price, shares, reasons
 
     def step(self,
-             now_ts: int,
-             fetch_book_fn,
-             open_position_fn,
-             bet_size_fn,
-             max_checks_per_tick=200,
-             min_probe_when_idle=None,
-             probe_strategy="newest"):
+         now_ts: int,
+         fetch_book_fn,
+         open_position_fn,
+         bet_size_fn,
+         *,
+         maker=None,
+         bank_ref=None,
+         max_checks_per_tick=200,
+         min_probe_when_idle=None,
+         probe_strategy="newest"):
         """
         Returns (opened_count, checked_count).
         - If too few are due, we proactively probe a few more (min_probe_when_idle)
@@ -345,6 +595,13 @@ class WatchlistManager:
                 book = fetch_book_fn(st["no_token"])
                 st["last_quote"] = book
                 st["last_seen_ts"] = now_ts
+
+                if maker is not None and bank_ref is not None:
+                    if vm_maybe_fill_on_book(cid, m, book, maker, bank_ref):
+                        self.entered.add(cid)
+                        self.watch.pop(cid, None)
+                        vprint("    ✅ VM FILLED; removed from watch")
+                        continue
 
                 # 1) Build change signals
                 seq      = book.get("sequence") or book.get("version")
@@ -811,6 +1068,9 @@ def main():
     )
     mgr.seed_from_gamma(markets)
 
+    #maker
+    maker = VirtualMaker(mode="optimistic", queue_grace_s=VM_GRACE_SECONDS)
+
     # advance cutoff to the newest createdAt we saw (or “now” if none)
     seen_max = max((_dt(m.get("createdAt")) for m in recent if _dt(m.get("createdAt"))), default=datetime.now(timezone.utc))
     _created_cutoff = max(_created_cutoff, seen_max)
@@ -822,78 +1082,18 @@ def main():
     # --- trade sizing and fill simulation ---
     fee, slip, price_cap = mgr.fee, mgr.slip, mgr.max_no_price
 
+    bank_ref = {"value": bank}
+
     def bet_size_fn(takeable_notional):
         return float(min(desired_bet, takeable_notional))
 
     def open_position_fn(cid, market, side, dollars, best_ask, book):
-        nonlocal bank, total_trades_taken
-        # Declare globals BEFORE any use or assignment
-        global first_trade_dt, locked_now, peak_locked, peak_locked_time
-
-        vprint(f"    open_position_fn: side={side} dollars={dollars:.2f} bank={bank:.2f} best_ask={best_ask}")
-        if side != "NO" or dollars <= 0 or bank < dollars:
-            vprint("    open_position_fn: rejected (side/budget)")
-            return False
-
-        # Resolve NO token early so we can log with it
-        no_token_id = get_no_token_id(market)
-
-
-        # Simulate taking from asks
-        spent_after, shares, avg_price = simulate_take_from_asks(
-            book, dollars, fee=fee, slip=slip, price_cap=price_cap
+        # Enforce ALL-or-NOTHING $100:
+        return open_position_fn_strict_full_ticket(
+            cid, market, side, dollars, best_ask, book,
+            maker=maker, mgr=mgr, bank_ref=bank_ref,
+            fee=fee, slip=slip, price_cap=price_cap
         )
-        vprint(f"    simulate_take_from_asks → shares={shares:.4f} spent_after={spent_after:.2f} avg_price={avg_price:.4f}")
-
-        if shares <= 0:
-            vprint("    open_position_fn: no shares (book moved?)")
-            return False
-
-        # --- apply bookkeeping (update bank and locked BEFORE logging)
-        bank -= spent_after
-
-        # store position with cost so 'locked' = sum(costs)
-        positions_by_id[cid] = {"shares": shares, "side": side, "cost": spent_after}
-
-        # first trade timestamp
-        if first_trade_dt is None:
-            first_trade_dt = datetime.now(timezone.utc)
-
-        # recompute locked and update peak
-        locked_now = compute_locked_now()
-        if locked_now > peak_locked:
-            peak_locked = locked_now
-            peak_locked_time = datetime.now(timezone.utc)
-
-        print(f"\n✅ ENTER NO | {market.get('question')}")
-        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank:.2f} | locked_now={locked_now:.2f}")
-
-        # trade log (after updates so numbers are correct)
-        log_open_trade(market, "NO", no_token_id, book_used=book,
-                    spent_after=spent_after, shares=shares,
-                    avg_price_eff=avg_price, bank_after_open=bank)
-
-        # decision/analytics log for the fill
-        append_jsonl(DECISION_LOG_BASE, {
-            "ts": datetime.now(timezone.utc).isoformat(),
-            "type": "fill_sim",
-            "market_id": market.get("conditionId"),
-            "market_slug": market.get("slug"),
-            "question": market.get("question"),
-            "side": side,
-            "token_id": no_token_id,
-            "spent_after": round(float(spent_after), 6),
-            "shares": round(float(shares), 6),
-            "avg_price_eff": round(float(avg_price), 6),
-            "budget": round(float(dollars), 6),
-            "cap_inc_fee": round(float(price_cap), 6),
-            "bank_after_open": round(float(bank), 6),
-            "locked_now": round(float(locked_now), 6),
-            "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
-        })
-
-        total_trades_taken += 1
-        return True
 
     REFRESH_SEED_EVERY = 90  # re-fetch markets every 3 minutes
     last_seed = 0
@@ -925,11 +1125,14 @@ def main():
                     fetch_book_fn=fetch_book,
                     open_position_fn=open_position_fn,
                     bet_size_fn=bet_size_fn,
-                    max_checks_per_tick=200,     # was 200
-                    min_probe_when_idle=100,      # was 100
+                    maker=maker,                 # <-- add
+                    bank_ref=bank_ref,           # <-- add
+                    max_checks_per_tick=200,
+                    min_probe_when_idle=100,
                     probe_strategy="newest",
                 )
 
+                bank = bank_ref["value"]
                 log_run_snapshot(bank, total_trades_taken)
 
                 # --- every ~5 minutes, log network usage stats
@@ -1039,7 +1242,7 @@ def log_run_snapshot(bank, total_trades_count: int):
     if random.random() < DECISION_LOG_SNAPSHOT:
         append_jsonl(RUN_SNAP_BASE, snap)
     else:
-        print(f"[SNAPSHOT] | {snap["ts"]} | taken:{snap["total_trades_taken"]} | spnet:{snap["peak_locked"]}")
+        print(f"[SNAPSHOT] | {snap['ts']} | taken:{snap['total_trades_taken']} | spnet:{snap['peak_locked']}")
 
 def debug_show_books_for_market(market):
     try:
