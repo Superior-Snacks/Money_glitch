@@ -12,6 +12,14 @@ import os, json, time, math
 from datetime import datetime, timedelta, timezone
 import gzip
 import glob
+import time, traceback, sys
+import faulthandler, signal
+import os, sys, time, json, requests, signal, traceback
+import psutil
+from datetime import datetime, timezone, timedelta
+
+faulthandler.enable(open("faulthandler.log", "a"))
+signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -20,7 +28,7 @@ DATA_TRADES = "https://data-api.polymarket.com/trades"
 TRADE_LOG_BASE = "trades_taken.jsonl"
 RUN_SNAP_BASE  = "run_snapshots.jsonl"
 DECISION_LOG_BASE = "decisions.jsonl"
-DECISION_LOG_SAMPLE = 0.15  # 15% sampling
+DECISION_LOG_SAMPLE = 0.00001  # 15% sampling
 VERBOSE = True
 SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets for inspection
 RETAIN_DAYS = 7           # delete logs older than this
@@ -823,6 +831,17 @@ def main():
                 if now_ts % 600 < mgr.poll_every:   # ~every 10 minutes
                     compress_and_prune_logs()
 
+                if now_ts % 900 < mgr.poll_every:
+                    p = psutil.Process(os.getpid())
+                    print(f"[HEALTH] rss={p.memory_info().rss/1e6:.1f}MB "
+                        f"watch={len(mgr.watch)} orders={len(maker.orders)}")
+
+                # 🧹 optional housekeeping
+                if now_ts % 600 < mgr.poll_every:
+                    purge_housekeeping()
+
+                time.sleep(mgr.poll_every)
+
                 if opened == 0 and checked == 0:
                     time.sleep(mgr.poll_every)
                 else:
@@ -1006,7 +1025,7 @@ def _parse_day_from_filename(path):
     except Exception:
         return None
 
-def compress_and_prune_logs(log_dir="logs",
+def compress_and_prune_logs(log_dir=LOG_DIR,
                             retain_days=RETAIN_DAYS,
                             compress_after_days=COMPRESS_AFTER_DAYS):
     """Gzip old logs and delete very old ones. Safe to run during writes because files are opened per-append."""
@@ -1045,8 +1064,44 @@ def compress_and_prune_logs(log_dir="logs",
             except Exception as e:
                 print(f"[LOG WARN] delete failed for {path}: {e}")
 
+
+def purge_housekeeping():
+    # drop old keys from _last_under_seen
+    cutoff = time.time() - 24*3600
+    for k, t0 in list(_last_under_seen.items()):
+        if t0 < cutoff:
+            _last_under_seen.pop(k, None)
+    # trim maker.orders for markets already entered or closed
+    for cid in list(maker.orders.keys()):
+        if cid in mgr.entered or cid not in mgr.watch:
+            # if you want to keep pending for closed markets, skip
+            maker.orders.pop(cid, None)
+
+            
+def excepthook(exctype, value, tb):
+    with open("crash.log","a",encoding="utf-8") as f:
+        traceback.print_exception(exctype, value, tb, file=f)
+sys.excepthook = excepthook
+
+def run_forever():
+    backoff = 5
+    while True:
+        try:
+            main()
+        except Exception as e:
+            with open("crash.log", "a", encoding="utf-8") as f:
+                f.write("="*60 + "\n")
+                f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " UTC\n")
+                traceback.print_exc(file=f)
+            time.sleep(backoff)
+            backoff = min(backoff * 2, 300)  # max 5 min
+        else:
+            # main() returned normally — likely a KeyboardInterrupt
+            break
+
 if __name__ == "__main__":
     main()
+    run_forever()
 
 """
 issue partially fills right away
