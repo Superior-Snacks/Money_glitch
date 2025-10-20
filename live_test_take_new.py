@@ -18,8 +18,19 @@ import os, sys, time, json, requests, signal, traceback
 import psutil
 from datetime import datetime, timezone, timedelta
 
-faulthandler.enable(open("faulthandler.log", "a"))
-signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+# --- Crash tracing & signals (keep file handle open!) ---
+FAULT_FH = open("faulthandler.log", "a", buffering=1, encoding="utf-8")
+import faulthandler, signal, psutil, sys, os, time
+faulthandler.enable(FAULT_FH)
+
+# Graceful stop on SIGTERM (Linux/macOS). On Windows, use CTRL_BREAK_EVENT for services.
+try:
+    signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+except Exception:
+    pass  # not available on some platforms
+
+# One place to decide log directory (no blocking input)
+LOG_DIR = os.environ.get("LOG_DIR") or f"logs_run_{int(time.time())}"
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -34,10 +45,6 @@ SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets fo
 RETAIN_DAYS = 7           # delete logs older than this
 COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 _created_cutoff = None
-
-LOG_DIR = input("name log:")
-if len(LOG_DIR) < 1:
-    LOG_DIR = f"logs_run_{int(time.time())}"
 
 
 # ----------------------------------------------------------------------
@@ -151,6 +158,14 @@ def get_no_token_id(market: dict) -> str | None:
         return outcome_map_from_market(market)["NO"]
     except Exception:
         return None
+    
+def _dt(s):
+    try:
+        return datetime.fromisoformat(str(s).replace("Z","+00:00")).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+_last_under_seen = {}
 
 # --------------------------------------------------------------------
 # Watchlist Manager
@@ -834,13 +849,11 @@ def main():
                 if now_ts % 900 < mgr.poll_every:
                     p = psutil.Process(os.getpid())
                     print(f"[HEALTH] rss={p.memory_info().rss/1e6:.1f}MB "
-                        f"watch={len(mgr.watch)} orders={len(maker.orders)}")
+                        f"watch={len(mgr.watch)}")
 
                 # 🧹 optional housekeeping
                 if now_ts % 600 < mgr.poll_every:
-                    purge_housekeeping()
-
-                time.sleep(mgr.poll_every)
+                    purge_housekeeping(mgr, None, _last_under_seen)
 
                 if opened == 0 and checked == 0:
                     time.sleep(mgr.poll_every)
@@ -853,13 +866,6 @@ def main():
     except KeyboardInterrupt:
         print("\nStopped by user.")
         log_run_snapshot(bank, total_trades_taken)
-
-
-def _dt(s):
-    try:
-        return datetime.fromisoformat(str(s).replace("Z","+00:00")).astimezone(timezone.utc)
-    except Exception:
-        return None
 
 # ----------------------------------------------------------------------
 # log logic
@@ -1065,19 +1071,20 @@ def compress_and_prune_logs(log_dir=LOG_DIR,
                 print(f"[LOG WARN] delete failed for {path}: {e}")
 
 
-def purge_housekeeping():
-    # drop old keys from _last_under_seen
+def purge_housekeeping(mgr, maker, last_under_seen):
+    # drop old keys from last_under_seen
     cutoff = time.time() - 24*3600
-    for k, t0 in list(_last_under_seen.items()):
+    for k, t0 in list(last_under_seen.items()):
         if t0 < cutoff:
-            _last_under_seen.pop(k, None)
-    # trim maker.orders for markets already entered or closed
-    for cid in list(maker.orders.keys()):
-        if cid in mgr.entered or cid not in mgr.watch:
-            # if you want to keep pending for closed markets, skip
-            maker.orders.pop(cid, None)
+            last_under_seen.pop(k, None)
 
-            
+    # trim maker.orders for markets already entered or no longer watched
+    if maker is not None and hasattr(maker, "orders"):
+        for cid in list(maker.orders.keys()):
+            if cid in mgr.entered or cid not in mgr.watch:
+                maker.orders.pop(cid, None)
+
+
 def excepthook(exctype, value, tb):
     with open("crash.log","a",encoding="utf-8") as f:
         traceback.print_exception(exctype, value, tb, file=f)
@@ -1088,19 +1095,20 @@ def run_forever():
     while True:
         try:
             main()
-        except Exception as e:
+        except SystemExit:
+            # graceful exit (SIGTERM etc.)
+            raise
+        except Exception:
             with open("crash.log", "a", encoding="utf-8") as f:
                 f.write("="*60 + "\n")
-                f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " UTC\n")
+                f.write(time.strftime("%Y-%m-%d %H:%M:%S UTC\n", time.gmtime()))
                 traceback.print_exc(file=f)
             time.sleep(backoff)
-            backoff = min(backoff * 2, 300)  # max 5 min
+            backoff = min(backoff * 2, 300)  # cap at 5m
         else:
-            # main() returned normally — likely a KeyboardInterrupt
-            break
+            break  # main returned normally
 
 if __name__ == "__main__":
-    main()
     run_forever()
 
 """
