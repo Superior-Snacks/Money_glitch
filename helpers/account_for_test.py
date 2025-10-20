@@ -325,17 +325,14 @@ def write_yesno_progress_line(start_date: str, variant: str, positions: dict):
 # ----------------------------
 # positions + MTM
 # ----------------------------
-def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, include_crypto: bool) -> Dict[str, dict]:
-    """
-    Build NO-only positions from trades occurring at/after start_dt_utc.
-    Returns: market_id -> { 'shares': float, 'cost': float, 'side': 'NO', 'no_token_id': str }
-    """
-    pos: Dict[str, dict] = {}
+def build_positions_for_start(trades, start_dt_utc, include_crypto: bool):
+    pos = {}
     for rec in trades:
         if rec.get("side") != "NO":
             continue
         ts = rec.get("ts")
-        if not ts: continue
+        if not ts:
+            continue
         try:
             t_dt = parse_dt_iso(ts).astimezone(timezone.utc)
         except Exception:
@@ -345,18 +342,36 @@ def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, includ
         if not include_crypto and is_crypto_market(rec):
             continue
 
-        mid = rec.get("market_id")
+        mid    = rec.get("market_id")
         shares = float(rec.get("shares", 0.0) or 0.0)
         cost   = float(rec.get("spent_after", 0.0) or 0.0)
-        price = float(rec.get("avg_price_eff", 0.0) or 0.0)
-        tok    = rec.get("token_id")  # NO token in your logs
+        tok    = rec.get("token_id")
+
         if not (mid and tok) or shares <= 0 or cost < 0:
             continue
-        st = pos.setdefault(mid, {"question":None, "shares": 0.0, "cost": 0.0, "price":0.0, "side": "NO", "no_token_id": tok})
-        st["question"] = rec.get("question", None)
-        st["shares"] += shares
-        st["cost"]   += cost
-        st["price"] += price
+
+        st = pos.setdefault(mid, {
+            "question": None,
+            "shares": 0.0,
+            "cost": 0.0,
+            "side": "NO",
+            "no_token_id": tok,
+            # keep 'price' for backwards-compat (we'll set later to entry_avg)
+            "price": 0.0,
+        })
+        st["question"] = rec.get("question")
+        st["shares"]  += shares
+        st["cost"]    += cost
+
+    # finalize per-position averages for convenience & compat
+    for st in pos.values():
+        if st["shares"] > 0:
+            entry_avg = st["cost"] / st["shares"]
+        else:
+            entry_avg = 0.0
+        st["entry_avg"] = entry_avg
+        st["price"] = entry_avg   # <-- back-compat: if any code reads st["price"], it gets VWAP
+
     return pos
 
 
@@ -841,8 +856,14 @@ def test_single_market(mid):
     print(resolve_status(m))
 
 
+def compute_pl(cost, shares, price, eps=1e-6, ndp=4):
+    pnl = price * float(shares) - float(cost)
+    if abs(pnl) < eps:
+        pnl = 0.0
+    return round(pnl, ndp)
+
 def closed_no(market):
-    print(1)
+    # de-dup
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
         with open(CLOSED_NO, "r", encoding="utf-8") as f:
@@ -852,32 +873,33 @@ def closed_no(market):
                 except json.JSONDecodeError:
                     continue
                 if i.get("market_id") == market["no_token_id"]:
-                    print("Already logged, skipping")
-                    return None
+                    return
     except FileNotFoundError:
-        print("new")
+        pass
 
-    shares = float(market.get("shares", 0.0))
-    cost   = float(market.get("cost", 0.0))
-    price  = float(market.get("price", 0.0))
+    shares    = float(market.get("shares", 0.0))
+    cost      = float(market.get("cost", 0.0))
+    entry_avg = float(market.get("entry_avg", cost / shares if shares else 0.0))
+
+    exit_price = 1.0 - SETTLE_FEE              # settlement per share when NO wins
+    pl         = compute_pl(cost, shares, exit_price)
 
     data = {
         "cost": cost,
-        "price": price,
         "shares": shares,
-        "pl": cost - (price * shares),
-        "market": market["question"],
-        "market_id": market["no_token_id"]
+        "entry_avg": entry_avg,
+        "pl": pl,
+        "exit_price": exit_price,
+        "proceeds": round(exit_price * shares, 6),
+        "market_id": market["no_token_id"],
+        "market": market.get("question")
     }
-
-    print(data)
-    os.makedirs(LOG_DIR, exist_ok=True)
     with open(CLOSED_NO, "a", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 
 def closed_yes(market):
-    print(1)
+    # de-dup
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
         with open(CLOSED_YES, "r", encoding="utf-8") as f:
@@ -887,30 +909,29 @@ def closed_yes(market):
                 except json.JSONDecodeError:
                     continue
                 if i.get("market_id") == market["no_token_id"]:
-                    print("Already logged, skipping")
-                    return None
+                    return
     except FileNotFoundError:
-        print("new")
+        pass
 
-    shares = float(market.get("shares", 0.0))
-    cost   = float(market.get("cost", 0.0))
-    price  = float(market.get("price", 0.0))
+    shares    = float(market.get("shares", 0.0))
+    cost      = float(market.get("cost", 0.0))
+    entry_avg = float(market.get("entry_avg", cost / shares if shares else 0.0))
+
+    exit_price = 0.0                           # settlement per share when YES wins
+    pl         = compute_pl(cost, shares, exit_price)  # = -cost
 
     data = {
         "cost": cost,
-        "price": price,
         "shares": shares,
-        "pl": -cost,
-        "market": market["question"],
-        "market_id": market["no_token_id"]
+        "entry_avg": entry_avg,
+        "pl": pl,
+        "exit_price": exit_price,
+        "proceeds": 0.0,
+        "market_id": market["no_token_id"],
+        "market": market.get("question")
     }
-
-    print(data)
-    os.makedirs(LOG_DIR, exist_ok=True)
     with open(CLOSED_YES, "a", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
-
-
 
 
 def main():
