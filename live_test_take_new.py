@@ -30,7 +30,11 @@ except Exception:
     pass  # not available on some platforms
 
 # One place to decide log directory (no blocking input)
-LOG_DIR = os.environ.get("LOG_DIR") or f"logs_run_{int(time.time())}"
+name_log = input("name log: ")
+if name_log:
+    LOG_DIR = name_log
+else:
+    LOG_DIR = f"logs_run_{int(time.time())}"
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
