@@ -44,6 +44,7 @@ TRADE_LOG_BASE = "trades_taken.jsonl"
 RUN_SNAP_BASE  = "run_snapshots.jsonl"
 DECISION_LOG_BASE = "decisions.jsonl"
 DECISION_LOG_SAMPLE = 0.00001  # 15% sampling
+DECISION_LOG_SNAPSHOT = 0.0001
 VERBOSE = True
 SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets for inspection
 RETAIN_DAYS = 7           # delete logs older than this
@@ -181,7 +182,7 @@ def vprint(*a, **k):
 class WatchlistManager:
     def __init__(self,
                  max_no_price=0.40,
-                 min_notional=50.0,
+                 min_notional=20.0,
                  fee_bps=600, slip_bps=200,
                  dust_price=0.02, dust_min_notional=20.0,
                  poll_every=3,            # more aggressive for debugging
@@ -220,10 +221,12 @@ class WatchlistManager:
                 "next_check": now + random.randint(0, 2),
                 "fails": 0,
                 "last_quote": None,
-                "last_seen_ts": now,          # <-- add
-                "last_seq": None,             # <-- for book-change detection (used below)
+                "last_seen_ts": now,
+                "last_seq": None,
+                "last_book_sig": None,   # optional
+                "last_liq_sig": None,    # optional
                 "ever_under_cap": False,
-                "seeded_ts": now,      # <-- optional heuristic (explained below)
+                "seeded_ts": now,
             }
             added += 1
         vprint(f"[SEED] added {added} markets (watch size now {len(self.watch)})")
@@ -342,14 +345,30 @@ class WatchlistManager:
                 book = fetch_book_fn(st["no_token"])
                 st["last_quote"] = book
                 st["last_seen_ts"] = now_ts
-                seq = book.get("sequence") or book.get("version")
+
+                # 1) Build change signals
+                seq      = book.get("sequence") or book.get("version")
                 prev_seq = st.get("last_seq")
-                if seq and seq != prev_seq:
-                    st["last_seq"] = seq
-                    # reset backoff to probe sooner since there was fresh activity
+
+                curr_book_sig = book_fingerprint(book, depth=10)
+                curr_liq_sig  = liquidity_signature_under_cap(book, self.max_no_price, self.fee, self.slip)
+
+                prev_book_sig = st.get("last_book_sig")
+                prev_liq_sig  = st.get("last_liq_sig")
+
+                changed, reason = book_changed(prev_book_sig, curr_book_sig, prev_liq_sig, curr_liq_sig, prev_seq, seq)
+
+                # Persist signatures/seq for next tick
+                st["last_seq"]      = seq or prev_seq
+                st["last_book_sig"] = curr_book_sig
+                st["last_liq_sig"]  = curr_liq_sig
+
+                if changed:
                     st["fails"] = 0
                     st["next_check"] = now_ts + max(1, self.backoff_first // 2)
+                    vprint(f"    [BOOK UPDATE] reason={reason}")
 
+                # 2) Evaluate under-cap liquidity for this tick
                 takeable, best_ask, shares, reasons = self._valid_no_from_book(book)
                 if best_ask is not None and shares > 0:
                     st["ever_under_cap"] = True
@@ -364,6 +383,7 @@ class WatchlistManager:
                     result=None
                 )
 
+                # 3) Act if there’s takeable size
                 if takeable > 0:
                     dollars = bet_size_fn(takeable)
                     vprint(f"    TRY OPEN NO for ${dollars:.2f} (<= takeable)")
@@ -385,13 +405,12 @@ class WatchlistManager:
                             takeable, best_ask, shares, reasons,
                             result={"ok": False, "why": "open_position_fn_false"}
                         )
-                        # liquidity existed but we didn't fill (book moved, race, etc.) → QUICK RETRY
                         st["fails"] = 0
                         st["next_check"] = now_ts + max(1, self.backoff_first // 2)
                         vprint("    ⚠️ had_liquidity_but_no_fill → quick retry scheduled")
                         continue
 
-                # No takeable liquidity right now → backoff, but gently if we were close
+                # 4) No liquidity → backoff (fast if close)
                 st["fails"] += 1
                 fast = ("skipped_" in " ".join(reasons)) or ("no_asks" not in reasons)
                 next_in = max(1, (self.backoff_first if fast else self._backoff(st["fails"])))
@@ -424,6 +443,75 @@ class WatchlistManager:
 
         if stale:
             vprint(f"[PURGE] removed {len(stale)} stale markets (ttl={ttl_seconds}s)")
+
+
+def book_fingerprint(book: dict, depth: int = 10):
+    """
+    Return a deterministic fingerprint of top-N levels on both sides.
+    Use rounding to suppress micro-churn.
+    """
+    def norm_side(levels):
+        out = []
+        for lv in (levels or [])[:depth]:
+            try:
+                p = round(float(lv.get("price", 0.0)), 5)
+                s = round(float(lv.get("size",  0.0)), 6)
+                if p > 0 and s > 0:
+                    out.append((p, s))
+            except Exception:
+                continue
+        return tuple(out)
+
+    bids = norm_side(book.get("bids"))
+    asks = norm_side(book.get("asks"))
+    return (bids, asks)
+
+def liquidity_signature_under_cap(book: dict, cap_inc_fee: float, fee: float, slip: float):
+    """
+    Summarize only what's useful for your NO-taking:
+      - best ask under cap
+      - shares under cap
+      - notional ex-fee under cap
+    """
+    fee_mult = 1.0 + float(fee) + float(slip)
+    cap_ex = cap_inc_fee / fee_mult
+
+    best = None
+    shares = 0.0
+    notional_ex = 0.0
+
+    for a in (book.get("asks") or []):
+        try:
+            p = float(a.get("price", 0.0))
+            s = float(a.get("size",  0.0))
+        except Exception:
+            continue
+        if p <= 0 or s <= 0:
+            continue
+        if p <= cap_ex:
+            if best is None or p < best:
+                best = p
+            shares      += s
+            notional_ex += p * s
+
+    # round to stabilize the signature
+    best_r   = round(best, 5) if best is not None else None
+    shares_r = round(shares, 6)
+    ex_r     = round(notional_ex, 4)
+    return (best_r, shares_r, ex_r)
+
+def book_changed(prev_book_sig, curr_book_sig, prev_liq_sig, curr_liq_sig, prev_seq, curr_seq):
+    """
+    Decide whether to treat this as 'new info'.
+    Priority: sequence change OR liquidity-under-cap change OR whole-book change.
+    """
+    if curr_seq and (curr_seq != prev_seq):
+        return True, "sequence_changed"
+    if curr_liq_sig != prev_liq_sig:
+        return True, "liq_under_cap_changed"
+    if curr_book_sig != prev_book_sig:
+        return True, "top_depth_changed"
+    return False, ""
 
 
 def cap_for_raw(raw, fee_bps, slip_bps):
@@ -700,7 +788,7 @@ now = datetime.now(timezone.utc) #now = datetime.now(timezone.utc), none if days
 last_seed = 0
 def main():
     bank = 5_000_000.0
-    desired_bet = 100.0
+    desired_bet = 5.0 #100 for full
     total_trades_taken = 0
     global _created_cutoff
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
@@ -928,7 +1016,7 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
     }
     append_jsonl(TRADE_LOG_BASE, rec)
 
-def log_run_snapshot(bank, total_trades_count: int):
+def log_run_snapshot(bank, total_trades_count: int):    
     global locked_now, peak_locked, peak_locked_time
     # Recompute locked from positions to avoid drift
     locked_now = compute_locked_now()
@@ -948,7 +1036,10 @@ def log_run_snapshot(bank, total_trades_count: int):
         "first_trade_time": first_trade_dt.isoformat() if first_trade_dt else None,
         "last_settle_time": last_settle_dt.isoformat() if last_settle_dt else None,
     }
-    append_jsonl(RUN_SNAP_BASE, snap)
+    if random.random() < DECISION_LOG_SNAPSHOT:
+        append_jsonl(RUN_SNAP_BASE, snap)
+    else:
+        print("next")
 
 def debug_show_books_for_market(market):
     try:
@@ -1000,7 +1091,6 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 def maybe_log_decision(*args, **kwargs):
-    import random
     if random.random() < DECISION_LOG_SAMPLE:
         log_decision(*args, **kwargs)
 
