@@ -474,3 +474,6 @@ Tradable Yes/No with quotes: 514
 [REFRESH] watch=276 entered=199
 [PROBE] under-cap markets in sample: 0/30
 [STEP] due=243 watch=276 entered=199
+
+update acc til að gefa j/n trades og virði til að skilja betur bad trades
+update take new "pessimistic", rec seen fill

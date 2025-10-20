@@ -35,6 +35,8 @@ OUTPUT_NO_CRYPTO   = os.path.join(LOG_DIR, "pl_timeseries_no_crypto.jsonl")
 UPDATE_INTERVAL_S  = 3600   # run hourly
 BOOK_DEPTH = 1              # only need top of book to MTM at bid
 RPS_TARGET = 5.0            # gentle rate limit for /book
+CLOSED_NO = os.path.join(LOG_DIR, "closed_no.jsonl")
+CLOSED_YES = os.path.join(LOG_DIR, "closed_yes.jsonl")
 
 BASE_BOOK  = "https://clob.polymarket.com/book"
 
@@ -346,12 +348,15 @@ def build_positions_for_start(trades: List[dict], start_dt_utc: datetime, includ
         mid = rec.get("market_id")
         shares = float(rec.get("shares", 0.0) or 0.0)
         cost   = float(rec.get("spent_after", 0.0) or 0.0)
+        price = float(rec.get("avg_price_eff", 0.0) or 0.0)
         tok    = rec.get("token_id")  # NO token in your logs
         if not (mid and tok) or shares <= 0 or cost < 0:
             continue
-        st = pos.setdefault(mid, {"shares": 0.0, "cost": 0.0, "side": "NO", "no_token_id": tok})
+        st = pos.setdefault(mid, {"question":None, "shares": 0.0, "cost": 0.0, "price":0.0, "side": "NO", "no_token_id": tok})
+        st["question"] = rec.get("question", None)
         st["shares"] += shares
         st["cost"]   += cost
+        st["price"] += price
     return pos
 
 
@@ -663,8 +668,10 @@ def breakdown_pl(positions_by_market: dict[str, dict]) -> dict:
         if status.startswith("resolved"):
             if marks["status"] == "resolved_NO":
                 no_count += 1
+                closed_no(p)
             else:
                 yes_count += 1
+                closed_yes(p)
 
     stats["no"] = no_count
     stats["yes"] = yes_count
@@ -832,6 +839,35 @@ def test_single_market(mid):
     m = r.json()[0]
     print(m["question"], m.get("umaResolutionStatus"), m.get("umaResolutionStatuses"))
     print(resolve_status(m))
+
+
+def closed_yes(market):
+    #check if file exists
+    #check if market in file
+    #add market to file incl, got, spent
+    shares = float(market.get("shares", 0.0))
+    cost   = float(market.get("cost", 0.0))
+    price = float(market.get("price", 0.0))
+    print(market.keys())
+    print(f"some YES market closed, at a cost of {cost} and {shares} shares at a price of {price}")
+    data = f"cost: {cost} | price: {price} | shares {shares} | pl: -{cost} | {market["question"]}"
+    print(data)
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(CLOSED_YES, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
+def closed_no(market):
+    shares = float(market.get("shares", 0.0))
+    cost   = float(market.get("cost", 0.0))
+    price = float(market.get("price", 0.0))
+    print(f"some NO market closed, at a cost of {cost} and {shares} shares at a price of {price}")
+    data = f"cost: {cost} | price: {price} | shares {shares} | pl: -{cost - price * shares} | {market["question"]}"
+    print(data)
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(CLOSED_NO, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
+
+
+
 
 def main():
     import argparse
