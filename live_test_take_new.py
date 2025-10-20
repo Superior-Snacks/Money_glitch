@@ -1045,7 +1045,7 @@ now = datetime.now(timezone.utc) #now = datetime.now(timezone.utc), none if days
 last_seed = 0
 def main():
     bank = 5_000_000.0
-    desired_bet = 100.0 #100 for full
+    desired_bet = 10.0 #100 for full
     total_trades_taken = 0
     global _created_cutoff
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
