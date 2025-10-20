@@ -788,7 +788,7 @@ now = datetime.now(timezone.utc) #now = datetime.now(timezone.utc), none if days
 last_seed = 0
 def main():
     bank = 5_000_000.0
-    desired_bet = 5.0 #100 for full
+    desired_bet = 100.0 #100 for full
     total_trades_taken = 0
     global _created_cutoff
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
@@ -1039,7 +1039,7 @@ def log_run_snapshot(bank, total_trades_count: int):
     if random.random() < DECISION_LOG_SNAPSHOT:
         append_jsonl(RUN_SNAP_BASE, snap)
     else:
-        print("next")
+        print(f"[SNAPSHOT] | {snap["ts"]} | taken:{snap["total_trades_taken"]} | spnet:{snap["peak_locked"]}")
 
 def debug_show_books_for_market(market):
     try:
