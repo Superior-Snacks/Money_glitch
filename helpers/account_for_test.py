@@ -841,29 +841,73 @@ def test_single_market(mid):
     print(resolve_status(m))
 
 
-def closed_yes(market):
-    #check if file exists
-    #check if market in file
-    #add market to file incl, got, spent
-    shares = float(market.get("shares", 0.0))
-    cost   = float(market.get("cost", 0.0))
-    price = float(market.get("price", 0.0))
-    print(market.keys())
-    print(f"some YES market closed, at a cost of {cost} and {shares} shares at a price of {price}")
-    data = f"cost: {cost} | price: {price} | shares {shares} | pl: -{cost} | {market["question"]}"
-    print(data)
-    os.makedirs(LOG_DIR, exist_ok=True)
-    with open(CLOSED_YES, "a", encoding="utf-8") as f:
-        f.write(json.dumps(data, ensure_ascii=False) + "\n")
 def closed_no(market):
+    print(1)
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        with open(CLOSED_NO, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    i = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if i.get("market_id") == market["no_token_id"]:
+                    print("Already logged, skipping")
+                    return None
+    except FileNotFoundError:
+        print("new")
+
     shares = float(market.get("shares", 0.0))
     cost   = float(market.get("cost", 0.0))
-    price = float(market.get("price", 0.0))
-    print(f"some NO market closed, at a cost of {cost} and {shares} shares at a price of {price}")
-    data = f"cost: {cost} | price: {price} | shares {shares} | pl: -{cost - price * shares} | {market["question"]}"
+    price  = float(market.get("price", 0.0))
+
+    data = {
+        "cost": cost,
+        "price": price,
+        "shares": shares,
+        "pl": cost - (price * shares),
+        "market": market["question"],
+        "market_id": market["no_token_id"]
+    }
+
     print(data)
     os.makedirs(LOG_DIR, exist_ok=True)
     with open(CLOSED_NO, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
+
+
+def closed_yes(market):
+    print(1)
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        with open(CLOSED_YES, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    i = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if i.get("market_id") == market["no_token_id"]:
+                    print("Already logged, skipping")
+                    return None
+    except FileNotFoundError:
+        print("new")
+
+    shares = float(market.get("shares", 0.0))
+    cost   = float(market.get("cost", 0.0))
+    price  = float(market.get("price", 0.0))
+
+    data = {
+        "cost": cost,
+        "price": price,
+        "shares": shares,
+        "pl": -cost,
+        "market": market["question"],
+        "market_id": market["no_token_id"]
+    }
+
+    print(data)
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(CLOSED_YES, "a", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 
