@@ -1362,7 +1362,6 @@ def compress_and_prune_logs(log_dir=LOG_DIR,
             except Exception as e:
                 print(f"[LOG WARN] delete failed for {path}: {e}")
 
-
 def purge_housekeeping(mgr, maker, last_under_seen):
     # drop old keys from last_under_seen
     cutoff = time.time() - 24*3600
@@ -1375,7 +1374,6 @@ def purge_housekeeping(mgr, maker, last_under_seen):
         for cid in list(maker.orders.keys()):
             if cid in mgr.entered or cid not in mgr.watch:
                 maker.orders.pop(cid, None)
-
 
 def excepthook(exctype, value, tb):
     with open("crash.log","a",encoding="utf-8") as f:
