@@ -49,6 +49,11 @@ class SimMarket:
         for b in self.blocks:
             deep += 1
             print(deep)
+            p_no  = float(b.get("price_no", 0.0))
+            p_yes = float(b.get("price_yes", 0.0))
+            avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
+            blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
+            print(f"priceY:{p_yes}, priceN:{p_no}, shares:{blk_sh}, available no:{avail}")
             # time + side filter
             if b.get("side") != "no" or int(b.get("time", 0)) < t_from_ts:
                 continue
@@ -246,7 +251,7 @@ def main():
 
 def run_simple():
     bank = 5000.0
-    offset = 4811 + 9900 #pressent 21186
+    offset = 70000 #pressent 21186 4811 + 9900
     all_pl = 0.0
     all_bets = 0
     spent = 0.0
