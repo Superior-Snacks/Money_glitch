@@ -54,6 +54,14 @@ VM_GRACE_SECONDS    = 2              # require best ask under limit this long be
 VM_LIMIT_PAD        = 1.00           # 1.00 = exactly at cap; e.g. 1.02 means 2% looser than cap (capped at 1.00)
 VM_TIMEOUT_SECONDS  = 60 * 45        # cancel virtual maker if not filled after this long
 
+# --- Maker posting config (new) -------------------------------------
+MAKER_ENABLE            = True          # flip to False to disable posting
+MAKER_POST_RAW          = 0.50          # NO price you want to BID at (pre fee/slip)
+#MAKER_POST_RAW = min(0.50, 0.98 * (mgr.max_no_price / (1.0 + mgr.fee + mgr.slip)))
+MAKER_BUDGET_PER_CID    = 5.0          # $ posted per market as a resting maker order
+MAKER_POST_ONLY_IF_IDLE = True          # only post when no under-cap liquidity is present
+MAKER_SKIP_IF_RESERVE_LOW = True        # don't post if available_bank < budget
+
 # Reservations so we don't over-commit while an order is "waiting"
 reserved_by_cid = {}   # cid -> dollars reserved for the resting virtual maker
 
@@ -295,6 +303,10 @@ def vm_maybe_fill_on_book(cid: str, market: dict, book: dict, maker, bank_ref):
     # Clean VM state for this cid
     maker.orders.pop(cid, None)
     return True
+
+def vm_limit_from_raw(raw_price_pre_fee: float, fee: float, slip: float) -> float:
+    """Target maker limit including fees/slippage."""
+    return min(1.0, float(raw_price_pre_fee) * (1.0 + float(fee) + float(slip)))
 
 def open_position_fn_strict_full_ticket(cid, market, side, dollars, best_ask, book,
                                         *, maker, mgr, bank_ref, fee, slip, price_cap):
@@ -663,6 +675,32 @@ class WatchlistManager:
                         vprint("    ⚠️ had_liquidity_but_no_fill → quick retry scheduled")
                         continue
 
+                if MAKER_ENABLE and maker is not None and bank_ref is not None and takeable <= 0:
+                    # Only post on “idle” books if configured
+                    if (not MAKER_POST_ONLY_IF_IDLE) or ("no_asks_under_cap" in reasons or "no_asks" in reasons):
+                        # don't double-post & don't over-reserve
+                        already_resting = (cid in maker.orders)
+                        can_reserve = (not MAKER_SKIP_IF_RESERVE_LOW) or (available_bank(bank_ref["value"]) >= MAKER_BUDGET_PER_CID - 1e-6)
+
+                        if (not already_resting) and can_reserve:
+                            try:
+                                post_limit_inc = vm_limit_from_raw(MAKER_POST_RAW, self.fee, self.slip)
+                                ok = maker.place_no_bid(
+                                    condition_id=cid,
+                                    token_id=st["no_token"],
+                                    limit_inc=post_limit_inc,
+                                    budget_usd=float(MAKER_BUDGET_PER_CID),
+                                    now_dt=datetime.now(timezone.utc),
+                                )
+                                if ok:
+                                    reserve_for_vm(cid, float(MAKER_BUDGET_PER_CID))
+                                    vprint(f"    [POST] NO bid ${MAKER_BUDGET_PER_CID:.2f} @ {post_limit_inc:.4f} (inc fee) — resting")
+                                    # small, quick retry so vm_maybe_fill_on_book sees the next change soon
+                                    st["fails"] = 0
+                                    st["next_check"] = now_ts + max(1, self.backoff_first // 2)
+                            except Exception as e:
+                                vprint(f"    [POST-ERR] {e}")
+                                
                 # 4) No liquidity → backoff (fast if close)
                 st["fails"] += 1
                 fast = ("skipped_" in " ".join(reasons)) or ("no_asks" not in reasons)
