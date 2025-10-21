@@ -57,7 +57,6 @@ VM_TIMEOUT_SECONDS  = 60 * 45        # cancel virtual maker if not filled after 
 # --- Maker posting config (new) -------------------------------------
 MAKER_ENABLE            = True          # flip to False to disable posting
 MAKER_POST_RAW          = 0.50          # NO price you want to BID at (pre fee/slip)
-#MAKER_POST_RAW = min(0.50, 0.98 * (mgr.max_no_price / (1.0 + mgr.fee + mgr.slip)))
 MAKER_BUDGET_PER_CID    = 5.0          # $ posted per market as a resting maker order
 MAKER_POST_ONLY_IF_IDLE = True          # only post when no under-cap liquidity is present
 MAKER_SKIP_IF_RESERVE_LOW = True        # don't post if available_bank < budget
