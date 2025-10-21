@@ -1,26 +1,22 @@
 import json
 import time
 import requests
-from datetime import datetime, timezone
-import time, json, requests
+from datetime import datetime, timezone, timedelta
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import os
 import re
-import random, time
-import os, json, time, math
-from datetime import datetime, timedelta, timezone
+import random
+import math
 import gzip
 import glob
-import time, traceback, sys
+import traceback, sys
 import faulthandler, signal
-import os, sys, time, json, requests, signal, traceback
 import psutil
-from datetime import datetime, timezone, timedelta
 
 # --- Crash tracing & signals (keep file handle open!) ---
 FAULT_FH = open("faulthandler.log", "a", buffering=1, encoding="utf-8")
-import faulthandler, signal, psutil, sys, os, time
 faulthandler.enable(FAULT_FH)
 
 # Graceful stop on SIGTERM (Linux/macOS). On Windows, use CTRL_BREAK_EVENT for services.
@@ -1059,7 +1055,7 @@ def main():
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=cap_for_raw(0.8, 600, 200),
+        max_no_price=cap_for_raw(0.6, 600, 200),
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
