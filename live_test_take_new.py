@@ -1059,7 +1059,7 @@ def main():
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=cap_for_raw(0.55, 600, 200),
+        max_no_price=cap_for_raw(0.8, 600, 200),
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,

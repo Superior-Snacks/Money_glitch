@@ -29,7 +29,7 @@ try:
 except Exception:
     pass  # not available on some platforms
 start_date = input("time from: ")
-LOG_DIR = f"available_from{int(start_date)}"
+LOG_DIR = f"available_from_{start_date}"
 print(LOG_DIR)
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -1411,7 +1411,7 @@ def fetch_markets_from_startdate(start_date, limit=250, max_pages=10,
         "order": "startDate",
         "ascending": False,
     }
-    params["start_date_min"] = (start_date).isoformat()
+    params["start_date_min"] = start_date
     if require_clob:
         params["enableOrderBook"] = True
     if min_liquidity is not None:

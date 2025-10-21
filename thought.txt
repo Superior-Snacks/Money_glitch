@@ -478,3 +478,11 @@ Tradable Yes/No with quotes: 514
 update acc til að gefa j/n trades og virði til að skilja betur bad trades
 update take new "pessimistic", rec seen fill
 script til að telja markaði frá eih tíma, til að sja %enterd
+
+[SNAPSHOT] | 2025-10-21T15:06:46.591182+00:00 | taken:0 | spnet:8543.363654
+[SEED] added 0 markets (watch size now 452)
+[REFRESH] watch=452 entered=82
+[PROBE] under-cap markets in sample: 0/30
+[STEP] due=447 watch=452 entered=82
+
+ég er ekki að ná að entera markapina sem ég þarf að komast í, er besta mæalið bara að bidda á öllum mörkuðum?
