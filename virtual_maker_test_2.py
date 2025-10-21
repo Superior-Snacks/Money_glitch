@@ -49,6 +49,7 @@ _created_cutoff = None
 
 # ---- ONE SIZE TO RULE THEM ALL ----
 STAKE_USD = 10.0  # change this once to control ALL per-order sizes
+RAW_CAP_NO = 0.60
 
 # ----- full-ticket helpers -----
 
@@ -65,7 +66,8 @@ MAKER_POST_ONLY_IF_IDLE = True          # only post when no under-cap liquidity 
 MAKER_SKIP_IF_RESERVE_LOW = True        # don't post if available_bank < budget
 
 # --- Ladder maker config ---
-LADDER_INC_LEVELS = [0.48, 0.50, 0.52]  # inc-fee targets
+LADDER_OFFSETS = [-0.12, -0.10, -0.08]
+LADDER_INC_LEVELS = []
 LADDER_SIZE_USD   = STAKE_USD                 # dollars per rung
 LADDER_REPRICE_SEC = 180                 # cancel/repost every N seconds
 LADDER_JITTER_SEC  = 10                  # add small random jitter on schedule
@@ -682,7 +684,9 @@ class WatchlistManager:
                         # cancel previous rungs
                         maker.cancel_ladder_for(cid)
 
-                        inc_levels = clipped_inc_levels(self, LADDER_INC_LEVELS)[:LADDER_MAX_RUNGS]
+                        LADDER_OFFSETS = [-0.12, -0.10, -0.08]  # keep near config or module top
+                        raw_levels = [self.max_no_price + off for off in LADDER_OFFSETS]
+                        inc_levels = clipped_inc_levels(self, [max(0.05, x) for x in raw_levels])[:LADDER_MAX_RUNGS]
                         now_dt = datetime.now(timezone.utc)
                         posted = 0
                         for inc in inc_levels:
@@ -1095,6 +1099,7 @@ def main():
     desired_bet = STAKE_USD #100 for full
     total_trades_taken = 0
     global _created_cutoff
+    global LADDER_INC_LEVELS 
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
 
     # 1️⃣ Fetch initial markets
@@ -1106,7 +1111,7 @@ def main():
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=cap_for_raw(0.6, 600, 200),
+        max_no_price=cap_for_raw(RAW_CAP_NO, 600, 200),
         min_notional=50.0,
         fee_bps=600, slip_bps=200,
         dust_price=0.02, dust_min_notional=20.0,
@@ -1114,6 +1119,8 @@ def main():
         backoff_max=60, jitter=3
     )
     mgr.seed_from_gamma(markets)
+    LADDER_INC_LEVELS = [max(0.05, mgr.max_no_price + off) for off in LADDER_OFFSETS]
+    print(f"[LADDER] levels={LADDER_INC_LEVELS}")
 
     #maker
     maker = VirtualMaker(mode="optimistic", queue_grace_s=VM_GRACE_SECONDS)
@@ -1124,8 +1131,9 @@ def main():
 
     probe_under_cap_sample(mgr, n=30)
     fee_mult = 1.0 + mgr.fee + mgr.slip
-    print(f"[CAP] fee_mult={fee_mult:.4f} raw_cap=0.65 -> max_no_price={mgr.max_no_price:.4f} (=> p <= {mgr.max_no_price / fee_mult:.4f} pre-fee)")
-
+    print(f"[CAP] fee_mult={fee_mult:.4f} raw_cap={RAW_CAP_NO:.2f} -> "
+        f"max_no_price={mgr.max_no_price:.4f} "
+        f"(=> p <= {mgr.max_no_price / fee_mult:.4f} pre-fee)")
     # --- trade sizing and fill simulation ---
     fee, slip, price_cap = mgr.fee, mgr.slip, mgr.max_no_price
 
