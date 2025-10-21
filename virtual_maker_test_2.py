@@ -52,7 +52,6 @@ STAKE_USD = 100.0  # change this once to control ALL per-order sizes
 RAW_CAP_NO = 0.60
 
 # ----- full-ticket helpers -----
-
 FULL_TICKET_DOLLARS = STAKE_USD     # your per-market bet size
 VM_GRACE_SECONDS    = 2              # require best ask under limit this long before "fill"
 VM_LIMIT_PAD        = 1.00           # 1.00 = exactly at cap; e.g. 1.02 means 2% looser than cap (capped at 1.00)
