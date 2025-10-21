@@ -479,10 +479,10 @@ def resolve_status(m: dict) -> tuple[bool, str | None, str]:
         if y is not None and n is not None:
             if y >= 0.90 and n <= 0.10:
                 print(f"YES | {m["question"]}")
-                return True, "YES", "closed_price_hint_yes"
+                return True, "YES", "closed_price_hint_yes" #"closed_price_hint_yes"
             if n >= 0.90 and y <= 0.10:
                 print(f"NO | {m["question"]}")
-                return True, "NO",  "closed_price_hint_no"
+                return True, "NO",  "closed_price_hint_no" # "closed_price_hint_no"
 
     return False, None, "unresolved"
 
