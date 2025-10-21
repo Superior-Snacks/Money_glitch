@@ -477,3 +477,4 @@ Tradable Yes/No with quotes: 514
 
 update acc til að gefa j/n trades og virði til að skilja betur bad trades
 update take new "pessimistic", rec seen fill
+script til að telja markaði frá eih tíma, til að sja %enterd
