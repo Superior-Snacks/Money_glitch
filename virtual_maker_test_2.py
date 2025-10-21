@@ -70,16 +70,23 @@ LADDER_MOVE_DELTA  = 0.01                # reprice sooner if best ask shifts >= 
 LADDER_MAX_RUNGS   = 3                   # at most 3 rungs per market
 
 # Reservations so we don't over-commit while an order is "waiting"
-reserved_by_cid = {}   # cid -> dollars reserved for the resting virtual maker
+reserved_by_cid = {}   # cid -> total dollars reserved across all rungs
 
 def available_bank(bank: float) -> float:
-    return bank - sum(reserved_by_cid.values())
+    return float(bank) - sum(reserved_by_cid.values())
 
 def reserve_for_vm(cid: str, dollars: float):
-    reserved_by_cid[cid] = dollars
+    reserved_by_cid[cid] = reserved_by_cid.get(cid, 0.0) + float(dollars)
 
-def release_vm_reservation(cid: str):
-    reserved_by_cid.pop(cid, None)
+def release_vm_reservation(cid: str, dollars: float | None = None):
+    if dollars is None:
+        reserved_by_cid.pop(cid, None)
+        return
+    cur = reserved_by_cid.get(cid, 0.0) - float(dollars)
+    if cur <= 1e-9:
+        reserved_by_cid.pop(cid, None)
+    else:
+        reserved_by_cid[cid] = cur
 
 def vm_limit_from_cap(price_cap_inc_fee: float) -> float:
     return min(1.0, price_cap_inc_fee * VM_LIMIT_PAD)
@@ -215,12 +222,9 @@ class VirtualMaker:
 # vm
 #---------------------------------------------------------------
 def place_or_keep_vm_order(cid: str, market: dict, maker, mgr, desired_dollars: float):
-    """
-    Ensure exactly one resting VM order exists for the full ticket on this cid.
-    If not exist, place it and reserve funds. If already exists, do nothing.
-    """
-    if cid in maker.orders:
-        return  # already resting
+    # If any order exists for this cid, don't post another
+    if any(v.get("cid") == cid for v in maker.orders.values()):
+        return
 
     no_tok = get_no_token_id(market)
     if not no_tok:
@@ -238,85 +242,6 @@ def place_or_keep_vm_order(cid: str, market: dict, maker, mgr, desired_dollars: 
         reserve_for_vm(cid, desired_dollars)
         vprint(f"    [VM] placed ${desired_dollars:.2f} @ {limit_inc:.4f} (inc fee)")
 
-
-def vm_maybe_fill_on_book(cid: str, market: dict, book: dict, maker, bank_ref):
-    """
-    Check if the virtual maker would have filled on this new book snapshot.
-    If so, deduct bank, create position (full ticket), log, and clean up reservation.
-    Returns True if a full-ticket fill was recorded.
-    """
-    vm_fill = maker.on_book(
-        condition_id=cid,
-        book=book,
-        now_dt=datetime.now(timezone.utc),
-        last_seen_under_dict=_last_under_seen,   # you already have this dict
-    )
-    if not vm_fill:
-        # optional timeout clean-up
-        rec = maker.orders.get(cid)
-        if rec and (int(datetime.now(timezone.utc).timestamp()) - rec["placed_ts"] >= VM_TIMEOUT_SECONDS):
-            vprint(f"    [VM] timeout → cancel ${rec['budget_usd']:.2f}")
-            maker.orders.pop(cid, None)
-            release_vm_reservation(cid)
-        return False
-
-    # ---- Full-ticket maker "fill" ----
-    spent_after = float(vm_fill["fill_cost"])
-    shares      = float(vm_fill["fill_shares"])
-    avg_price   = float(vm_fill["fill_px"])     # price (inc fee for maker if you included it in limit_inc)
-
-    # Bank/accounting
-    bank_ref["value"] -= spent_after
-    positions_by_id[cid] = {"shares": shares, "side": "NO", "cost": spent_after}
-    release_vm_reservation(cid)
-
-    # Peaks + snapshots (uses your existing helpers/globals)
-    global first_trade_dt, locked_now, peak_locked, peak_locked_time
-    if first_trade_dt is None:
-        first_trade_dt = datetime.now(timezone.utc)
-    locked_now = compute_locked_now()
-    if locked_now > peak_locked:
-        peak_locked = locked_now
-        peak_locked_time = datetime.now(timezone.utc)
-
-    # Logs
-    print(f"\n✅ ENTER NO (VM) | {market.get('question')}")
-    print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank_ref['value']:.2f} | locked_now={locked_now:.2f}")
-
-    # best-of-book for the log line
-    bb, ba = best_of_book(book or {})
-    append_jsonl(TRADE_LOG_BASE, {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "market_id": market.get("conditionId"),
-        "market_slug": market.get("slug"),
-        "question": market.get("question"),
-        "side": "NO",
-        "token_id": get_no_token_id(market),
-        "spent_after": round(spent_after, 6),
-        "shares": round(shares, 6),
-        "avg_price_eff": round(avg_price, 6),
-        "book_best_bid": bb, "book_best_ask": ba,
-        "locked_now": round(float(locked_now), 6),
-        "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
-        "bank_after_open": round(float(bank_ref["value"]), 6),
-        "fill_mode": "virtual_maker",
-    })
-
-    append_jsonl("virtual_fills.jsonl", {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "market_id": cid,
-        "question": market.get("question"),
-        "mode": "optimistic",   # or "conservative" depending on your VM config
-        "fill_px": avg_price,
-        "fill_shares": shares,
-        "fill_cost": spent_after,
-        "placed_iso": maker.orders[cid]["placed_iso"] if cid in maker.orders else None,
-        "fill_iso": datetime.now(timezone.utc).isoformat(),
-    })
-
-    # Clean VM state for this cid
-    maker.orders.pop(cid, None)
-    return True
 
 def vm_limit_from_raw(raw_price_pre_fee: float, fee: float, slip: float) -> float:
     """Target maker limit including fees/slippage."""
@@ -638,7 +563,7 @@ class WatchlistManager:
                                 "cost":   prev["cost"]   + spent_after,
                                 "side":   "NO",
                             }
-                            release_vm_reservation(cid)
+                            release_vm_reservation(cid, float(spent_after))
 
                             # log
                             bb, ba = best_of_book(book or {})
@@ -730,7 +655,7 @@ class WatchlistManager:
                         continue
 
                 # ---------- C) ladder post/reprice when idle (maker path) ----------
-                if maker is not None and bank_ref is not None and takeable <= 0:
+                if MAKER_ENABLE and maker is not None and bank_ref is not None and takeable <= 0:
                     # init state if missing
                     if "ladder_last_post" not in st:
                         st["ladder_last_post"] = 0
@@ -1164,7 +1089,7 @@ now = datetime.now(timezone.utc) #now = datetime.now(timezone.utc), none if days
 last_seed = 0
 def main():
     bank = 5_000_000.0
-    desired_bet = 10.0 #100 for full
+    desired_bet = 100.0 #100 for full
     total_trades_taken = 0
     global _created_cutoff
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
