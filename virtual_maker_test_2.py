@@ -47,9 +47,12 @@ RETAIN_DAYS = 7           # delete logs older than this
 COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 _created_cutoff = None
 
+# ---- ONE SIZE TO RULE THEM ALL ----
+STAKE_USD = 10.0  # change this once to control ALL per-order sizes
+
 # ----- full-ticket helpers -----
 
-FULL_TICKET_DOLLARS = 100.0         # your per-market bet size
+FULL_TICKET_DOLLARS = STAKE_USD     # your per-market bet size
 VM_GRACE_SECONDS    = 2              # require best ask under limit this long before "fill"
 VM_LIMIT_PAD        = 1.00           # 1.00 = exactly at cap; e.g. 1.02 means 2% looser than cap (capped at 1.00)
 VM_TIMEOUT_SECONDS  = 60 * 45        # cancel virtual maker if not filled after this long
@@ -57,13 +60,13 @@ VM_TIMEOUT_SECONDS  = 60 * 45        # cancel virtual maker if not filled after 
 # --- Maker posting config (new) -------------------------------------
 MAKER_ENABLE            = True          # flip to False to disable posting
 MAKER_POST_RAW          = 0.50          # NO price you want to BID at (pre fee/slip)
-MAKER_BUDGET_PER_CID    = 5.0          # $ posted per market as a resting maker order
+MAKER_BUDGET_PER_CID    = STAKE_USD          # $ posted per market as a resting maker order
 MAKER_POST_ONLY_IF_IDLE = True          # only post when no under-cap liquidity is present
 MAKER_SKIP_IF_RESERVE_LOW = True        # don't post if available_bank < budget
 
 # --- Ladder maker config ---
 LADDER_INC_LEVELS = [0.48, 0.50, 0.52]  # inc-fee targets
-LADDER_SIZE_USD   = 10.0                 # dollars per rung
+LADDER_SIZE_USD   = STAKE_USD                 # dollars per rung
 LADDER_REPRICE_SEC = 180                 # cancel/repost every N seconds
 LADDER_JITTER_SEC  = 10                  # add small random jitter on schedule
 LADDER_MOVE_DELTA  = 0.01                # reprice sooner if best ask shifts >= 1c
@@ -258,7 +261,7 @@ def open_position_fn_strict_full_ticket(cid, market, side, dollars, best_ask, bo
     if side != "NO":
         return False
 
-    desired = float(FULL_TICKET_DOLLARS)
+    desired = float(dollars)
 
     # Don't start new tickets if we don't have free cash after reservations
     if available_bank(bank_ref["value"]) < desired - 1e-6:
@@ -1089,7 +1092,7 @@ now = datetime.now(timezone.utc) #now = datetime.now(timezone.utc), none if days
 last_seed = 0
 def main():
     bank = 5_000_000.0
-    desired_bet = 100.0 #100 for full
+    desired_bet = STAKE_USD #100 for full
     total_trades_taken = 0
     global _created_cutoff
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
