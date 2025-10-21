@@ -45,7 +45,10 @@ class SimMarket:
         shares = 0.0
         fills = []
 
+        deep = 0
         for b in self.blocks:
+            deep += 1
+            print(deep)
             # time + side filter
             if b.get("side") != "no" or int(b.get("time", 0)) < t_from_ts:
                 continue
