@@ -61,6 +61,14 @@ MAKER_BUDGET_PER_CID    = 5.0          # $ posted per market as a resting maker 
 MAKER_POST_ONLY_IF_IDLE = True          # only post when no under-cap liquidity is present
 MAKER_SKIP_IF_RESERVE_LOW = True        # don't post if available_bank < budget
 
+# --- Ladder maker config ---
+LADDER_INC_LEVELS = [0.48, 0.50, 0.52]  # inc-fee targets
+LADDER_SIZE_USD   = 10.0                 # dollars per rung
+LADDER_REPRICE_SEC = 180                 # cancel/repost every N seconds
+LADDER_JITTER_SEC  = 10                  # add small random jitter on schedule
+LADDER_MOVE_DELTA  = 0.01                # reprice sooner if best ask shifts >= 1c
+LADDER_MAX_RUNGS   = 3                   # at most 3 rungs per market
+
 # Reservations so we don't over-commit while an order is "waiting"
 reserved_by_cid = {}   # cid -> dollars reserved for the resting virtual maker
 
@@ -132,69 +140,76 @@ def log_net_usage():
 # ----------------------------------------------------------------------
 class VirtualMaker:
     def __init__(self, mode="optimistic", queue_grace_s=2.0):
-        """
-        mode: "optimistic" = fill as soon as best ask <= limit_inc (after grace)
-              "conservative" = fill only after cumulative sell volume >= your order
-        queue_grace_s: seconds best ask must stay <= your limit before we count it as filled
-        """
         self.mode = mode
         self.queue_grace_s = queue_grace_s
-        self.orders = {}  # cid -> dict(order info)
+        self.orders = {}  # key -> dict(order info), key is f"{cid}::{limit_inc:.4f}"
 
+    # --- ladder helpers ---
+    def _key(self, cid: str, limit_inc: float) -> str:
+        return f"{cid}::{float(limit_inc):.4f}"
+
+    def cancel_ladder_for(self, cid: str):
+        for k in list(self.orders.keys()):
+            if self.orders[k].get("cid") == cid:
+                self.orders.pop(k, None)
+
+    def ladder_keys_for(self, cid: str):
+        return [k for k, v in self.orders.items() if v.get("cid") == cid]
+
+    # --- place one rung ---
     def place_no_bid(self, condition_id: str, token_id: str,
                      limit_inc: float, budget_usd: float, now_dt):
-        """Register a simulated maker bid."""
-        if not condition_id or not token_id:
+        if not condition_id or not token_id or budget_usd <= 0 or limit_inc <= 0:
             return False
+        k = self._key(condition_id, limit_inc)
         ts = int(now_dt.timestamp())
-        self.orders[condition_id] = {
+        self.orders[k] = {
+            "cid": condition_id,
             "token_id": token_id,
-            "limit_inc": limit_inc,
-            "budget_usd": budget_usd,
+            "limit_inc": float(limit_inc),
+            "budget_usd": float(budget_usd),
             "placed_ts": ts,
             "placed_iso": now_dt.isoformat(),
-            "first_seen_under": None,  # when best ask first dipped under limit
+            "first_seen_under": None,
             "filled": False,
             "fill_ts": None,
+            "last_best_ask": None,
         }
         return True
 
+    # --- check book and return zero or more fills for this cid ---
     def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict=None):
-        """
-        Called each time we fetch a fresh book for a condition_id.
-        Returns a fill dict {fill_px, fill_shares, fill_cost} if the order
-        would have filled, otherwise None.
-        """
-        rec = self.orders.get(condition_id)
-        if not rec or rec.get("filled"):
-            return None
-
+        fills = []
         best_bid, best_ask = best_of_book(book)
         if best_ask is None:
-            return None
+            return fills
 
-        # did market move through our limit?
-        if best_ask <= rec["limit_inc"]:
-            if rec["first_seen_under"] is None:
-                rec["first_seen_under"] = int(now_dt.timestamp())
-            elapsed = int(now_dt.timestamp()) - rec["first_seen_under"]
-            if elapsed >= self.queue_grace_s:
-                # mark as filled
-                rec["filled"] = True
-                rec["fill_ts"] = int(now_dt.timestamp())
-                fill_px = best_ask
-                fill_cost = rec["budget_usd"]
-                fill_shares = fill_cost / fill_px
-                return {
-                    "fill_px": fill_px,
-                    "fill_shares": fill_shares,
-                    "fill_cost": fill_cost,
-                    "mode": self.mode,
-                }
-        else:
-            # price went back above limit, reset grace timer
-            rec["first_seen_under"] = None
-        return None
+        for k, rec in list(self.orders.items()):
+            if rec.get("cid") != condition_id or rec.get("filled"):
+                continue
+            limit_inc = rec["limit_inc"]
+            rec["last_best_ask"] = best_ask
+
+            if best_ask <= limit_inc:
+                if rec["first_seen_under"] is None:
+                    rec["first_seen_under"] = int(now_dt.timestamp())
+                elapsed = int(now_dt.timestamp()) - rec["first_seen_under"]
+                if elapsed >= self.queue_grace_s:
+                    rec["filled"] = True
+                    rec["fill_ts"] = int(now_dt.timestamp())
+                    fill_px = best_ask
+                    fill_cost = rec["budget_usd"]
+                    fill_shares = fill_cost / fill_px if fill_px > 0 else 0.0
+                    fills.append((k, {
+                        "fill_px": fill_px,
+                        "fill_shares": fill_shares,
+                        "fill_cost": fill_cost,
+                        "mode": self.mode,
+                    }))
+            else:
+                rec["first_seen_under"] = None
+
+        return fills
 
 #---------------------------------------------------------------
 # vm
@@ -356,6 +371,11 @@ def open_position_fn_strict_full_ticket(cid, market, side, dollars, best_ask, bo
     place_or_keep_vm_order(cid, market, maker, mgr, desired)
     return False
 
+def clipped_inc_levels(mgr, levels):
+    # Keep rungs at/under the global cap
+    cap = float(mgr.max_no_price)
+    return [min(cap, float(x)) for x in levels]
+
 # --------------------------------------------------------------------
 # Book fetch
 # --------------------------------------------------------------------
@@ -481,6 +501,9 @@ class WatchlistManager:
                 "last_liq_sig": None,    # optional
                 "ever_under_cap": False,
                 "seeded_ts": now,
+                "ladder_last_post": 0,
+                "ladder_best_ask_at_post": None,
+                "ladder_active": False,
             }
             added += 1
         vprint(f"[SEED] added {added} markets (watch size now {len(self.watch)})")
@@ -558,29 +581,23 @@ class WatchlistManager:
          probe_strategy="newest"):
         """
         Returns (opened_count, checked_count).
-        - If too few are due, we proactively probe a few more (min_probe_when_idle)
-          so you can chew through a 3-day backlog quickly.
         """
         due = self.due_ids(now_ts)
-        # Prioritize newest markets (and most-recently created) first
         due.sort(key=lambda cid: (
             self.watch[cid].get("seeded_ts", 0),
             self.watch[cid]["m"].get("startDate") or self.watch[cid]["m"].get("createdAt") or ""
         ), reverse=True)
+
         if min_probe_when_idle is None:
             min_probe_when_idle = max(40, min(200, len(self.watch)//5))
-        # If backlog is large but not many due, force-probe a slice:
         if len(due) < min_probe_when_idle:
-            # pick some IDs deterministically
             all_ids = list(self.watch.keys())
-            # strategy: "newest" or "oldest" by startDate
             if probe_strategy in ("newest", "oldest"):
                 def sd(cid):
                     m = self.watch[cid]["m"]
                     return (m.get("startDate") or m.get("createdAt") or "")
                 all_ids.sort(key=sd, reverse=(probe_strategy == "newest"))
             probe_ids = [cid for cid in all_ids if cid not in self.entered][:min_probe_when_idle]
-            # mark them due “now”
             for cid in probe_ids:
                 self.watch[cid]["next_check"] = now_ts
             due = self.due_ids(now_ts)
@@ -588,8 +605,9 @@ class WatchlistManager:
         opened = 0
         checked = 0
         due.sort(key=lambda cid: (not self.watch[cid].get("ever_under_cap", False),
-                          self.watch[cid].get("next_check", 0)))
+                        self.watch[cid].get("next_check", 0)))
         vprint(f"[STEP] due={len(due)} watch={len(self.watch)} entered={len(self.entered)}")
+
         for cid in due[:max_checks_per_tick]:
             st = self.watch.get(cid)
             if not st:
@@ -603,14 +621,52 @@ class WatchlistManager:
                 st["last_quote"] = book
                 st["last_seen_ts"] = now_ts
 
+                # ---------- D) consume multiple VM ladder fills ----------
                 if maker is not None and bank_ref is not None:
-                    if vm_maybe_fill_on_book(cid, m, book, maker, bank_ref):
+                    fills = maker.on_book(condition_id=cid, book=book, now_dt=datetime.now(timezone.utc))
+                    if fills:
+                        for key, vm_fill in fills:
+                            spent_after = float(vm_fill["fill_cost"])
+                            shares      = float(vm_fill["fill_shares"])
+                            avg_price   = float(vm_fill["fill_px"])
+
+                            # accounting
+                            bank_ref["value"] -= spent_after
+                            prev = positions_by_id.get(cid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
+                            positions_by_id[cid] = {
+                                "shares": prev["shares"] + shares,
+                                "cost":   prev["cost"]   + spent_after,
+                                "side":   "NO",
+                            }
+                            release_vm_reservation(cid)
+
+                            # log
+                            bb, ba = best_of_book(book or {})
+                            append_jsonl(TRADE_LOG_BASE, {
+                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "market_id": m.get("conditionId"),
+                                "market_slug": m.get("slug"),
+                                "question": m.get("question"),
+                                "side": "NO",
+                                "token_id": st["no_token"],
+                                "spent_after": round(spent_after, 6),
+                                "shares": round(shares, 6),
+                                "avg_price_eff": round(avg_price, 6),
+                                "book_best_bid": bb, "book_best_ask": ba,
+                                "locked_now": round(float(compute_locked_now()), 6),
+                                "bank_after_open": round(float(bank_ref["value"]), 6),
+                                "fill_mode": "virtual_maker_ladder",
+                            })
+                            print(f"\n✅ ENTER NO (VM ladder) | {m.get('question')}  "
+                                f"spent={spent_after:.2f} shares={shares:.3f} px={avg_price:.4f}")
+
+                        # after any rung fill, treat market as entered and stop watching
                         self.entered.add(cid)
                         self.watch.pop(cid, None)
-                        vprint("    ✅ VM FILLED; removed from watch")
+                        vprint("    ✅ VM LADDER FILLED; removed from watch")
                         continue
 
-                # 1) Build change signals
+                # ---------- 1) book-change signals ----------
                 seq      = book.get("sequence") or book.get("version")
                 prev_seq = st.get("last_seq")
 
@@ -622,7 +678,6 @@ class WatchlistManager:
 
                 changed, reason = book_changed(prev_book_sig, curr_book_sig, prev_liq_sig, curr_liq_sig, prev_seq, seq)
 
-                # Persist signatures/seq for next tick
                 st["last_seq"]      = seq or prev_seq
                 st["last_book_sig"] = curr_book_sig
                 st["last_liq_sig"]  = curr_liq_sig
@@ -632,22 +687,22 @@ class WatchlistManager:
                     st["next_check"] = now_ts + max(1, self.backoff_first // 2)
                     vprint(f"    [BOOK UPDATE] reason={reason}")
 
-                # 2) Evaluate under-cap liquidity for this tick
-                takeable, best_ask, shares, reasons = self._valid_no_from_book(book)
-                if best_ask is not None and shares > 0:
+                # ---------- 2) evaluate taker liquidity ----------
+                takeable, best_ask, shares_cap, reasons = self._valid_no_from_book(book)
+                if best_ask is not None and shares_cap > 0:
                     st["ever_under_cap"] = True
-                vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares:.2f}")
+                vprint(f"    best_ask={best_ask} | takeable=${takeable:.2f} | shares_at_cap={shares_cap:.2f}")
 
                 if SHOW_DEBUG_BOOKS and (best_ask is None or "no_asks_under_cap" in reasons):
                     debug_show_books_for_market(m)
 
                 maybe_log_decision(
                     m, self.max_no_price, bet_size_fn(takeable), book,
-                    takeable, best_ask, shares, reasons,
+                    takeable, best_ask, shares_cap, reasons,
                     result=None
                 )
 
-                # 3) Act if there’s takeable size
+                # ---------- 3) taker try ----------
                 if takeable > 0:
                     dollars = bet_size_fn(takeable)
                     vprint(f"    TRY OPEN NO for ${dollars:.2f} (<= takeable)")
@@ -655,7 +710,7 @@ class WatchlistManager:
                     if ok:
                         maybe_log_decision(
                             m, self.max_no_price, dollars, book,
-                            takeable, best_ask, shares, reasons,
+                            takeable, best_ask, shares_cap, reasons,
                             result={"ok": True}
                         )
                         self.entered.add(cid)
@@ -666,7 +721,7 @@ class WatchlistManager:
                     else:
                         maybe_log_decision(
                             m, self.max_no_price, dollars, book,
-                            takeable, best_ask, shares, reasons,
+                            takeable, best_ask, shares_cap, reasons,
                             result={"ok": False, "why": "open_position_fn_false"}
                         )
                         st["fails"] = 0
@@ -674,33 +729,64 @@ class WatchlistManager:
                         vprint("    ⚠️ had_liquidity_but_no_fill → quick retry scheduled")
                         continue
 
-                if MAKER_ENABLE and maker is not None and bank_ref is not None and takeable <= 0:
-                    # Only post on “idle” books if configured
-                    if (not MAKER_POST_ONLY_IF_IDLE) or ("no_asks_under_cap" in reasons or "no_asks" in reasons):
-                        # don't double-post & don't over-reserve
-                        already_resting = (cid in maker.orders)
-                        can_reserve = (not MAKER_SKIP_IF_RESERVE_LOW) or (available_bank(bank_ref["value"]) >= MAKER_BUDGET_PER_CID - 1e-6)
+                # ---------- C) ladder post/reprice when idle (maker path) ----------
+                if maker is not None and bank_ref is not None and takeable <= 0:
+                    # init state if missing
+                    if "ladder_last_post" not in st:
+                        st["ladder_last_post"] = 0
+                        st["ladder_best_ask_at_post"] = None
+                        st["ladder_active"] = False
 
-                        if (not already_resting) and can_reserve:
-                            try:
-                                post_limit_inc = vm_limit_from_raw(MAKER_POST_RAW, self.fee, self.slip)
-                                ok = maker.place_no_bid(
-                                    condition_id=cid,
-                                    token_id=st["no_token"],
-                                    limit_inc=post_limit_inc,
-                                    budget_usd=float(MAKER_BUDGET_PER_CID),
-                                    now_dt=datetime.now(timezone.utc),
-                                )
-                                if ok:
-                                    reserve_for_vm(cid, float(MAKER_BUDGET_PER_CID))
-                                    vprint(f"    [POST] NO bid ${MAKER_BUDGET_PER_CID:.2f} @ {post_limit_inc:.4f} (inc fee) — resting")
-                                    # small, quick retry so vm_maybe_fill_on_book sees the next change soon
-                                    st["fails"] = 0
-                                    st["next_check"] = now_ts + max(1, self.backoff_first // 2)
-                            except Exception as e:
-                                vprint(f"    [POST-ERR] {e}")
-                                
-                # 4) No liquidity → backoff (fast if close)
+                    need_reprice = False
+                    if not st.get("ladder_active"):
+                        need_reprice = True
+                    else:
+                        # time-based
+                        if now_ts - int(st.get("ladder_last_post", 0)) >= (LADDER_REPRICE_SEC + random.randint(0, LADDER_JITTER_SEC)):
+                            need_reprice = True
+                        # event-based (best-ask moved)
+                        ba = best_of_book(book)[1]
+                        prev_ba = st.get("ladder_best_ask_at_post")
+                        if ba is not None and prev_ba is not None and abs(ba - prev_ba) >= LADDER_MOVE_DELTA:
+                            need_reprice = True
+
+                    if need_reprice:
+                        # cancel previous rungs
+                        maker.cancel_ladder_for(cid)
+
+                        inc_levels = clipped_inc_levels(self, LADDER_INC_LEVELS)[:LADDER_MAX_RUNGS]
+                        now_dt = datetime.now(timezone.utc)
+                        posted = 0
+                        for inc in inc_levels:
+                            if available_bank(bank_ref["value"]) < LADDER_SIZE_USD:
+                                break
+                            okp = maker.place_no_bid(
+                                condition_id=cid,
+                                token_id=st["no_token"],
+                                limit_inc=float(inc),
+                                budget_usd=float(LADDER_SIZE_USD),
+                                now_dt=now_dt,
+                            )
+                            if okp:
+                                reserve_for_vm(cid, float(LADDER_SIZE_USD))
+                                posted += 1
+
+                        st["ladder_last_post"] = now_ts
+                        st["ladder_best_ask_at_post"] = best_of_book(book)[1]
+                        st["ladder_active"] = posted > 0
+
+                        if posted:
+                            append_jsonl("ladder_actions.jsonl", {
+                                "ts": now_dt.isoformat(),
+                                "cid": cid,
+                                "question": m.get("question"),
+                                "rungs_inc": inc_levels[:posted],
+                                "size_per_rung": LADDER_SIZE_USD,
+                                "reason": "reprice" if st.get("ladder_active") else "init",
+                            })
+                            vprint(f"    [LADDER] posted {posted} rungs @ {inc_levels[:posted]}")
+
+                # ---------- 4) backoff ----------
                 st["fails"] += 1
                 fast = ("skipped_" in " ".join(reasons)) or ("no_asks" not in reasons)
                 next_in = max(1, (self.backoff_first if fast else self._backoff(st["fails"])))
