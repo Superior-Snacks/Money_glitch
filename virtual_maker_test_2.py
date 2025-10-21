@@ -48,7 +48,7 @@ COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 _created_cutoff = None
 
 # ---- ONE SIZE TO RULE THEM ALL ----
-STAKE_USD = 10.0  # change this once to control ALL per-order sizes
+STAKE_USD = 100.0  # change this once to control ALL per-order sizes
 RAW_CAP_NO = 0.60
 
 # ----- full-ticket helpers -----
