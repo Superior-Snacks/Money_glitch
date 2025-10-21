@@ -1398,5 +1398,75 @@ def run_forever():
         else:
             break  # main returned normally
 
+
+def count_available_markets(date):
+    count = len(fetch_markets_from_startdate(date))
+    print(count)
+
+def fetch_markets_from_startdate(start_date, limit=250, max_pages=10,
+                          require_clob=True, min_liquidity=None, min_volume=None,
+                          session=SESSION, verbose=True):
+    params = {
+        "limit": limit,
+        "order": "startDate",
+        "ascending": False,
+    }
+    params["start_date_min"] = (start_date).isoformat()
+    if require_clob:
+        params["enableOrderBook"] = True
+    if min_liquidity is not None:
+        params["liquidity_num_min"] = float(min_liquidity)
+    if min_volume is not None:
+        params["volume_num_min"] = float(min_volume)
+
+    all_rows, seen_ids = [], set()
+    offset, pages = 0, 0
+
+    while pages < max_pages:
+        q = dict(params, offset=offset)
+        try:
+            r = session.get(BASE_GAMMA, params=q, timeout=20)
+            r.raise_for_status()
+        except Exception as e:
+            if verbose: print(f"[WARN] fetch failed at offset {offset} with {q}: {e}")
+            break
+
+        page = r.json() or []
+        if not page:
+            if verbose: print("[INFO] empty page; done.")
+            break
+
+        added = 0
+        for m in page:
+            outs = m.get("outcomes")
+            if isinstance(outs, str):
+                try: outs = json.loads(outs)
+                except: outs = None
+            def is_yesno(lst):
+                if not isinstance(lst, list) or len(lst) != 2: return False
+                s = [str(x).strip().lower() for x in lst]
+                return set(s) == {"yes", "no"}
+            if is_yesno(outs):
+                mid = m.get("id")
+                if mid not in seen_ids:
+                    all_rows.append(m)
+                    seen_ids.add(mid)
+                    added += 1
+
+        if verbose:
+            print(f"[PAGE {pages}] got {len(page)} raw, added {added} new, total {len(all_rows)}")
+
+        if len(page) < limit:
+            if verbose: print("[INFO] last page (short).")
+            break
+        pages += 1
+        offset += limit
+
+    # sort newest → oldest by startDate or createdAt
+    all_rows.sort(key=lambda m: (m.get("startDate") or m.get("createdAt") or ""), reverse=True)
+    if verbose:
+        print(f"✅ Total open Yes/No markets: {len(all_rows)}")
+    return all_rows
+
 if __name__ == "__main__":
-    run_forever()
+    count_available_markets(input("date:"))
