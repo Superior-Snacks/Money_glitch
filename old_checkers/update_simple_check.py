@@ -34,70 +34,114 @@ class SimMarket:
         self.fee = fee_bps/10000.0
         self.slip = slip_bps/10000.0
 
-    def take_first_no(self, t_from, dollars=100.0, max_no_price=None):
-        # normalize t_from to epoch seconds
+    def take_first_no(self, t_from, dollars=100.0, max_no_price=None, require_full_instant=True):
+        # normalize t_from
         if isinstance(t_from, datetime):
             t_from_ts = int(t_from.replace(tzinfo=timezone.utc).timestamp())
         else:
             t_from_ts = int(t_from)
 
-        spent_pre = 0.0
-        shares = 0.0
-        fills = []
+        fee_mult = 1.0 + self.fee + self.slip
+        spent_ex = 0.0     # pre-fee dollars
+        shares   = 0.0
+        fills    = []
 
-        deep = 0
+        # if we must fill instantly, only consider the **first** eligible block cluster at one price
+        # (closest to “one book snapshot”)
+        first_cluster_price = None
+        first_cluster_time  = None
+
         for b in self.blocks:
-            deep += 1
-            print(deep)
-            p_no  = float(b.get("price_no", 0.0))
-            p_yes = float(b.get("price_yes", 0.0))
-            avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
-            blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
-            print(f"priceY:{p_yes}, priceN:{p_no}, shares:{blk_sh}, available no:{avail}")
-            # time + side filter
+            # only NO-side blocks after t_from
             if b.get("side") != "no" or int(b.get("time", 0)) < t_from_ts:
                 continue
 
-            p_no  = float(b.get("price_no", 0.0))
-            p_yes = float(b.get("price_yes", 0.0))
-            avail = float(b.get("notional_no", 0.0))   # available notional $ for NO in this block
-            blk_sh = float(b.get("shares", 0.0))       # total shares in this block (for this side)
+            p_no   = float(b.get("price_no", 0.0))       # raw price
+            avail  = float(b.get("notional_no", 0.0))    # pre-fee dollars available in this block
+            blk_sh = float(b.get("shares", 0.0))
 
-            # optional price cap (skip too-expensive NO)
-            if max_no_price is not None and p_no > max_no_price:
-                continue
-
-            # robust guards
             if avail <= 0.0 or blk_sh <= 0.0:
                 continue
 
-            need = dollars - spent_pre
-            if need <= 0.0:
+            # fee-inclusive per-level price check (optional)
+            if max_no_price is not None and p_no * fee_mult > max_no_price:
+                continue
+
+            # If instant-only, lock to the first cluster (time & price)
+            if require_full_instant:
+                if first_cluster_price is None:
+                    first_cluster_price = p_no
+                    first_cluster_time  = b["time"]
+                # Only accept same snapped price and within a tiny window (~one block)
+                if p_no != first_cluster_price or abs(int(b["time"]) - int(first_cluster_time)) > 1:
+                    break
+
+            need_after = float(dollars)                          # target **after** fees
+            need_ex    = need_after / fee_mult                   # convert to pre-fee budget
+
+            budget_left_ex = max(0.0, need_ex - spent_ex)
+            if budget_left_ex <= 0.0:
                 break
 
-            # proportional allocation: no division by p_no
-            take = min(need, avail)                # $ notional we take from this block
-            ratio = take / avail                   # fraction of block taken
-            add_shares = blk_sh * ratio            # shares corresponding to that fraction
+            # Try to take up to avail, but keep VWAP_inc ≤ cap
+            # New totals if we take x_ex pre-fee dollars at price p_no:
+            #   new_spent_ex = spent_ex + x_ex
+            #   new_shares   = shares + x_ex / p_no
+            #   vwap_inc     = (new_spent_ex / new_shares) * fee_mult
+            # We need vwap_inc ≤ max_no_price  => (new_spent_ex / new_shares) ≤ max_no_price / fee_mult
+            target_ex = (max_no_price / fee_mult) if max_no_price is not None else 1.0
+            denom     = 1.0 - (target_ex / p_no)
+            rhs       = target_ex * shares - spent_ex
 
+            # If denom <= 0, adding any amount at this price makes VWAP worse than cap
+            if denom <= 0:
+                # If instant required, we fail this market
+                if require_full_instant:
+                    spent_ex = shares = 0.0
+                    fills = []
+                continue
+
+            x_cap = max(0.0, rhs / denom)               # max pre-fee dollars we can add at p_no
+            x_ex  = min(avail, budget_left_ex, x_cap)
+            if x_ex <= 1e-8:
+                # cannot add without breaking VWAP cap
+                if require_full_instant:
+                    spent_ex = shares = 0.0
+                    fills = []
+                continue
+
+            add_shares = x_ex / p_no
+            spent_ex  += x_ex
+            shares    += add_shares
             fills.append({
                 "time": b["time"],
                 "side": "no",
                 "price_no": p_no,
-                "price_yes": p_yes,
-                "take_notional_pre_fee": take,
+                "take_notional_pre_fee": x_ex,
                 "take_shares": add_shares,
                 "block": b,
             })
 
-            spent_pre += take
-            shares    += add_shares
+            # If we require full immediate ticket, ensure we hit the target at once
+            if require_full_instant:
+                if spent_ex * fee_mult + 1e-9 >= dollars:
+                    break
+            else:
+                # streaming mode: allow accumulating across blocks
+                if spent_ex * fee_mult + 1e-9 >= dollars:
+                    break
 
-            if spent_pre >= dollars:
-                break
+        if shares <= 0.0:
+            return 0.0, 0.0, 0.0, []
 
-        if shares == 0.0:
-            return 0.0, 0.0, 0.0, []   # no fill
+        spent_after = spent_ex * fee_mult
+        avg_no = spent_after / shares
+
+        # If we asked for an instant full ticket but didn’t reach the target, discard
+        if require_full_instant and spent_after + 1e-9 < dollars:
+            return 0.0, 0.0, 0.0, []
+
+        return shares, spent_after, avg_no, fills   # no fill
 
         # apply frictions once on total notional
         spent_after = spent_pre * (1.0 + self.fee + self.slip)
@@ -170,6 +214,12 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
     Runs through up to `limit` markets starting at `offset`, placing a NO bet per market.
     Returns (pnl_sum, bank, next_offset).
     """
+    RAW_CAP_NO = 0.60     # your intuitive cap
+    FEE_BPS    = 600
+    SLIP_BPS   = 200
+    fee_mult   = 1 + FEE_BPS/10000 + SLIP_BPS/10000
+    CAP_INC    = RAW_CAP_NO * fee_mult
+
     pnl_sum = 0.0
     markets = filter_markets(fetch_markets(limit, offset))
     next_offset = offset + len(markets)
@@ -194,8 +244,8 @@ def rolling_markets(bank, check, limit=50, offset=4811, max_price_cap=None, fee_
             t_from = trades[0]["time"]
             if check == "no":
                 shares, spent_after, avg_, fills = sim.take_first_no(
-                    t_from, dollars=bet, max_no_price=max_price_cap
-                )
+                    t_from, dollars=bet, max_no_price=CAP_INC, require_full_instant=True
+            )   
             elif check == "yes":
                 shares, spent_after, avg_, fills = sim.take_first_yes(
                     t_from, dollars=bet, max_yes_price=max_price_cap
