@@ -357,18 +357,19 @@ def open_position_fn_hybrid(
     # 2) Decide if we still want to complete to the desired dollars
     remainder = desired - spent_after
     if remainder >= min_remainder_usd:
-        # If we have free cash after reservations, post a VM for the remainder
         if available_bank(bank_ref["value"]) >= remainder - 1e-6:
+            # housekeeping: replace any previous ladder with a single VM for the remainder
+            maker.cancel_ladder_for(cid)
             place_or_keep_vm_order(cid, market, maker, mgr, remainder)
-            # Reserve so we don't overspend while waiting
             reserve_for_vm(cid, remainder)
-            # Return False so mgr keeps watching this market and lets VM fill later
             return False
         else:
             vprint("    [SKIP VM] not enough available bank after reservations for remainder")
 
     # 3) Fully filled immediately? then we're done
     if remainder <= 1e-6:
+        # housekeeping: nuke any leftover ladder/VM state for this cid
+        cancel_all_maker_for(maker, cid)
         return True
 
     # Nothing takable at all and we didn't reserve VM (or couldn't): place VM for full desired if possible
@@ -385,6 +386,15 @@ def clipped_inc_levels(mgr, levels):
     # Keep rungs at/under the global cap
     cap = float(mgr.max_no_price)
     return [min(cap, float(x)) for x in levels]
+
+def cancel_all_maker_for(maker, cid: str):
+    """Cancel any resting VM/ladder rungs and clear reservations for this market."""
+    try:
+        maker.cancel_ladder_for(cid)
+    except Exception:
+        pass
+    # Clear any reserved dollars left for this cid (just in case)
+    release_vm_reservation(cid, None)
 
 # --------------------------------------------------------------------
 # Book fetch
@@ -674,6 +684,7 @@ class WatchlistManager:
                         self.entered.add(cid)
                         self.watch.pop(cid, None)
                         vprint("    ✅ VM LADDER FILLED; removed from watch")
+                        cancel_all_maker_for(maker, cid)
                         continue
 
                 # ---------- 1) book-change signals ----------
