@@ -47,8 +47,8 @@ DECISION_LOG_SAMPLE = 0.001  # 15% sampling
 DECISION_LOG_SNAPSHOT = 0.001
 VERBOSE = True
 SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets for inspection
-RETAIN_DAYS = 7           # delete logs older than this
-COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
+RETAIN_DAYS = 79           # delete logs older than this
+COMPRESS_AFTER_DAYS = 91   # gzip logs older than this (but not today's)
 _created_cutoff = None
 
 # ----- full-ticket helpers -----
