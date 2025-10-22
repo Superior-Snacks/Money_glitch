@@ -65,6 +65,7 @@ MAKER_POST_ONLY_IF_IDLE = True          # only post when no under-cap liquidity 
 MAKER_SKIP_IF_RESERVE_LOW = True        # don't post if available_bank < budget
 
 # --- Ladder maker config ---
+LADDER_LOG_ENABLE = False
 LADDER_OFFSETS = [-0.12, -0.10, -0.08]
 LADDER_INC_LEVELS = []
 LADDER_SIZE_USD   = STAKE_USD                 # dollars per rung
@@ -706,7 +707,7 @@ class WatchlistManager:
                         st["ladder_best_ask_at_post"] = best_of_book(book)[1]
                         st["ladder_active"] = posted > 0
 
-                        if posted:
+                        if posted and LADDER_LOG_ENABLE:
                             append_jsonl("ladder_actions.jsonl", {
                                 "ts": now_dt.isoformat(),
                                 "cid": cid,
