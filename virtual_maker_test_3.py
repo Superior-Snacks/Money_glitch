@@ -1224,7 +1224,7 @@ def main():
 
     def open_position_fn(cid, market, side, dollars, best_ask, book):
         # Enforce ALL-or-NOTHING $100:
-        return open_position_fn_strict_full_ticket(
+        return open_position_fn_hybrid(
             cid, market, side, dollars, best_ask, book,
             maker=maker, mgr=mgr, bank_ref=bank_ref,
             fee=fee, slip=slip, price_cap=price_cap
