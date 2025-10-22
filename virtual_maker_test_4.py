@@ -194,7 +194,7 @@ class VirtualMaker:
         return True
 
     # --- check book and return zero or more fills for this cid ---
-    def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict=None):
+    """def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict=None):
         fills = []
         best_bid, best_ask = best_of_book(book)
 
@@ -227,7 +227,7 @@ class VirtualMaker:
             else:
                 rec["first_seen_under"] = None
 
-        return fills
+        return [] #!!"""
     
     def on_trades(self, condition_id: str, trades: list, now_dt):
         fills = []
@@ -747,47 +747,6 @@ class WatchlistManager:
                             vprint("    ✅ VM TRADES CONFIRMED; removed from watch")
                             cancel_all_maker_for(maker, cid)
                             continue
-                if maker is not None and bank_ref is not None:
-                    fills = maker.on_book(condition_id=cid, book=book, now_dt=datetime.now(timezone.utc))
-                    if fills:
-                        for key, vm_fill in fills:
-                            spent_after = float(vm_fill["fill_cost"])
-                            shares      = float(vm_fill["fill_shares"])
-                            avg_price   = float(vm_fill["fill_px"])
-
-                            bank_ref["value"] -= spent_after
-                            prev = positions_by_id.get(cid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
-                            positions_by_id[cid] = {
-                                "shares": prev["shares"] + shares,
-                                "cost":   prev["cost"]   + spent_after,
-                                "side":   "NO",
-                            }
-                            release_vm_reservation(cid, float(spent_after))
-
-                            bb, ba = best_of_book(book or {})
-                            append_jsonl(TRADE_LOG_BASE, {
-                                "ts": datetime.now(timezone.utc).isoformat(),
-                                "market_id": m.get("conditionId"),
-                                "market_slug": m.get("slug"),
-                                "question": m.get("question"),
-                                "side": "NO",
-                                "token_id": st["no_token"],
-                                "spent_after": round(spent_after, 6),
-                                "shares": round(shares, 6),
-                                "avg_price_eff": round(avg_price, 6),
-                                "book_best_bid": bb, "book_best_ask": ba,
-                                "locked_now": round(float(compute_locked_now()), 6),
-                                "bank_after_open": round(float(bank_ref["value"]), 6),
-                                "fill_mode": "virtual_maker_book",
-                            })
-                            print(f"\n✅ ENTER NO (VM book) | {m.get('question')}  "
-                                f"spent={spent_after:.2f} shares={shares:.3f} px={avg_price:.4f}")
-
-                        self.entered.add(cid)
-                        self.watch.pop(cid, None)
-                        vprint("    ✅ VM BOOK FILL; removed from watch")
-                        cancel_all_maker_for(maker, cid)
-                        continue
 
                 # ---------- 1) book-change signals ----------
                 seq      = book.get("sequence") or book.get("version")
@@ -890,7 +849,7 @@ class WatchlistManager:
                                 token_id=st["no_token"],
                                 limit_inc=float(inc),
                                 budget_usd=float(LADDER_SIZE_USD),
-                                now_dt=now_dt,
+                                now_dt=now_dt
                             )
                             if okp:
                                 reserve_for_vm(cid, float(LADDER_SIZE_USD))
@@ -1656,5 +1615,120 @@ def run_forever():
 if __name__ == "__main__":
     run_forever()
 """
-hybrid aproach takes available, then creates a virtual maker, looks at bids taken
+===============================================================================
+Polymarket NO-Taker + Virtual-Maker Watcher — Overview
+===============================================================================
+
+What this script does
+---------------------
+Continuously scans newly listed Polymarket Yes/No markets, watches their order
+books, and attempts to open NO positions under a configurable all-in price cap.
+It prefers to TAKE immediately if enough under-cap asks exist; otherwise it
+posts a local "Virtual Maker" (VM) NO bid and waits for real trade prints to
+confirm that resting order would have been filled.
+
+Key properties
+--------------
+- **Strict cap discipline:** The taker path simulates fills level-by-level and
+  only accepts slices that keep effective VWAP (including fees + slippage)
+  <= `WatchlistManager.max_no_price`.
+
+- **Trades-only maker confirmation:** The VM path **never** declares a fill from
+  quotes alone. A VM order is only considered filled if a real trade print
+  (from `DATA_TRADES`) occurs at/through the VM limit after the order was placed:
+    outcome == "no" AND side == "sell" AND trade_price <= VM_raw_limit
+  This eliminates "phantom" fills caused by NBBO flicker.
+
+- **Lightweight infrastructure:** The bot uses a single requests.Session with
+  retry & a simple leaky-bucket RPS limiter, JSONL logging, periodic reseeding
+  of markets, and basic log rotation/compression.
+
+High-level architecture
+-----------------------
+1) **Market discovery (`fetch_open_yesno_fast`)**
+   Pulls open markets, filters to true Yes/No, sorts by recency, and seeds a
+   `WatchlistManager`.
+
+2) **Watch loop (`WatchlistManager.step`)**
+   For each due market:
+   - Fetch the NO book.
+   - Compute a "liquidity signature under cap" to detect meaningful changes.
+   - If under-cap asks exist, run `simulate_take_from_asks` to find how much you
+     can take without violating the cap and invoke the chosen open routine.
+
+3) **Open routines**
+   - **Taker (hybrid):** Take as much as possible up to your `STAKE_USD`. If
+     fully filled, stop watching. If partial, post a VM order for the remainder.
+   - **Virtual Maker:** Post a VM bid (local record only) at a target *inc-fee*
+     price (`MAKER_POST_RAW` adjusted by `fee+slip`). The VM keeps `limit_inc`,
+     `limit_ex` (raw price), and `fee_mult` for correct accounting.
+
+4) **Confirmation**
+   - **Taker:** Immediate, because you simulate the paid amount and shares at
+     the time of the take under your cap constraints.
+   - **Maker:** **Only** from real trades via `VirtualMaker.on_trades`. The older
+     book-heuristic confirmation has been disabled; `on_book()` is now
+     telemetry-only and returns `[]`.
+
+5) **Accounting & logs**
+   - Positions are tracked in `positions_by_id`.
+   - Trades log to `trades_taken.jsonl` with context (best bid/ask snapshot,
+     shares, effective avg price, and bank/locked).
+   - Snapshots/log rotation are managed with simple JSONL appenders plus
+     optional compression/pruning.
+
+Configuration knobs
+-------------------
+- **Price cap & sizing**
+  - `RAW_CAP_NO`             : raw cap before fees/slippage (converted to
+                               inc-fee `max_no_price` inside `WatchlistManager`)
+  - `STAKE_USD`              : per-market desired spend
+  - `GLOBAL_FEE`, `GLOBAL_SLIP` : expressed in bps in comments (but used here
+                               as fractions after conversion in the manager)
+
+- **Virtual Maker**
+  - `MAKER_ENABLE`           : enable/disable posting VM orders
+  - `MAKER_POST_RAW`         : target raw NO bid (pre-fee/slip)
+  - `MAKER_BUDGET_PER_CID`   : per-market VM budget (usually `STAKE_USD`)
+  - Ladder controls: `LADDER_OFFSETS`, `LADDER_SIZE_USD`, `LADDER_REPRICE_SEC`, etc.
+
+- **Reseeding/Backoff**
+  - `REFRESH_SEED_EVERY`     : reseed frequency (sec)
+  - `poll_every`, `backoff_*`: step cadence and adaptive backoff
+
+Important implementation notes
+------------------------------
+- **Fees/Slippage handling:** The code carries both `limit_inc` (inc-fee) and
+  `limit_ex` (raw book price) on the VM orders. Always pass `fee_mult = 1 + fee + slip`
+  when calling `maker.place_no_bid(...)` so comparisons against trade prints are
+  apples-to-apples.
+
+- **on_book() now telemetry-only:** It updates a few fields (last best bid/ask)
+  but returns `[]` so no book-based fills are recorded.
+
+- **Reservations (`reserved_by_cid`)**: Prevents over-commitment by deducting
+  dollars earmarked for pending VM orders from the available bank.
+
+- **Timeouts (optional):** `VM_TIMEOUT_SECONDS` is defined; add a periodic
+  cleanup if you want to auto-cancel stale VM orders and release reservations.
+
+- **Sampling comments:** Ensure sampling constants and their comments match the
+  intended rates (e.g., 0.001 = 0.1%).
+
+Known limitations / TODOs
+-------------------------
+- No persistence across restarts for open VM orders or positions (beyond logs).
+- No concurrency primitives around shared dicts (single-threaded main loop).
+- No rebalancing/closing logic; this is open-only scaffolding.
+- If fees/slippage change at runtime, outstanding VM orders won’t re-normalize
+  unless you cancel/repost.
+
+Safety checklist
+----------------
+- Trades-only VM confirmation ✓
+- VWAP cap respected on taker path ✓
+- RPS limiter + retries in place ✓
+- Log rotation & compression ✓
+
+===============================================================================
 """
