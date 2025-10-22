@@ -51,6 +51,9 @@ RETAIN_DAYS = 79           # delete logs older than this
 COMPRESS_AFTER_DAYS = 91   # gzip logs older than this (but not today's)
 _created_cutoff = None
 
+GLOBAL_FEE = 0.0   # 600 for 6.00%
+GLOBAL_SLIP = 0.0  # 200 for 2.00%
+
 # ----- full-ticket helpers -----
 
 FULL_TICKET_DOLLARS = 100.0         # your per-market bet size
@@ -1061,7 +1064,7 @@ def main():
     mgr = WatchlistManager(
         max_no_price=cap_for_raw(0.8, 600, 200),
         min_notional=50.0,
-        fee_bps=600, slip_bps=200,
+        fee_bps=GLOBAL_FEE, slip_bps=GLOBAL_SLIP,
         dust_price=0.02, dust_min_notional=20.0,
         poll_every=3, backoff_first=3, backoff_base=6,
         backoff_max=60, jitter=3
