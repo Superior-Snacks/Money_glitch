@@ -37,7 +37,11 @@ from urllib3.util.retry import Retry
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
 DATA_TRADES  = "https://data-api.polymarket.com/trades"
 
-STATE_PATH   = "trades_only_state.json"   # <-- single continuously updated file
+name_log = input("name log: ")
+if name_log:
+    STATE_PATH = os.path.join("logs", name_log)
+else:
+    STATE_PATH = os.path.join("logs", f"trades_only_state.json")
 
 # Fee/slip as FRACTIONS (not bps)
 FEE  = 0.00
