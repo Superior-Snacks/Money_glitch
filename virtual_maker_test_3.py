@@ -301,6 +301,86 @@ def open_position_fn_strict_full_ticket(cid, market, side, dollars, best_ask, bo
     place_or_keep_vm_order(cid, market, maker, mgr, desired)
     return False
 
+
+def open_position_fn_hybrid(
+    cid, market, side, dollars, best_ask, book,
+    *, maker, mgr, bank_ref, fee, slip, price_cap,
+    min_remainder_usd=1.00
+):
+    """
+    Hybrid fill:
+      - Try to TAKE as much as possible right now under the cap (up to `dollars`).
+      - If fully filled -> return True (mgr will stop watching).
+      - If partially filled -> place a VM order for the remainder and return False (keep watching).
+      - If nothing takable -> place/keep a VM order for the full amount and return False.
+    """
+    if side != "NO":
+        return False
+
+    desired = float(dollars)
+
+    # 1) Try a taker sweep under the cap
+    spent_after, shares, avg_price = simulate_take_from_asks(
+        book, desired, fee=fee, slip=slip, price_cap=price_cap
+    )
+
+    # If we took anything, account + log it
+    if shares > 0 and spent_after > 0:
+        # bank + position accounting
+        bank_ref["value"] -= spent_after
+        prev = positions_by_id.get(cid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
+        positions_by_id[cid] = {
+            "shares": prev["shares"] + shares,
+            "cost":   prev["cost"]   + spent_after,
+            "side":   "NO",
+        }
+
+        # track lock/peaks
+        global first_trade_dt, locked_now, peak_locked, peak_locked_time
+        if first_trade_dt is None:
+            first_trade_dt = datetime.now(timezone.utc)
+        locked_now = compute_locked_now()
+        if locked_now > peak_locked:
+            peak_locked = locked_now
+            peak_locked_time = datetime.now(timezone.utc)
+
+        print(f"\n✅ ENTER NO (TAKER partial/total) | {market.get('question')}")
+        print(f"   spent(after)={spent_after:.2f} | shares={shares:.2f} | avg_price={avg_price:.4f} | bank={bank_ref['value']:.2f} | locked_now={locked_now:.2f}")
+
+        # log the taker slice
+        log_open_trade(
+            market, "NO", get_no_token_id(market), book_used=book,
+            spent_after=spent_after, shares=shares,
+            avg_price_eff=avg_price, bank_after_open=bank_ref["value"]
+        )
+
+    # 2) Decide if we still want to complete to the desired dollars
+    remainder = desired - spent_after
+    if remainder >= min_remainder_usd:
+        # If we have free cash after reservations, post a VM for the remainder
+        if available_bank(bank_ref["value"]) >= remainder - 1e-6:
+            place_or_keep_vm_order(cid, market, maker, mgr, remainder)
+            # Reserve so we don't overspend while waiting
+            reserve_for_vm(cid, remainder)
+            # Return False so mgr keeps watching this market and lets VM fill later
+            return False
+        else:
+            vprint("    [SKIP VM] not enough available bank after reservations for remainder")
+
+    # 3) Fully filled immediately? then we're done
+    if remainder <= 1e-6:
+        return True
+
+    # Nothing takable at all and we didn't reserve VM (or couldn't): place VM for full desired if possible
+    if shares == 0:
+        if available_bank(bank_ref["value"]) >= desired - 1e-6:
+            place_or_keep_vm_order(cid, market, maker, mgr, desired)
+            reserve_for_vm(cid, desired)
+        return False
+
+    # Partial taken but remainder tiny or could not reserve VM → keep watching with False
+    return False
+
 def clipped_inc_levels(mgr, levels):
     # Keep rungs at/under the global cap
     cap = float(mgr.max_no_price)
