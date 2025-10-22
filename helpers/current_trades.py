@@ -307,16 +307,24 @@ def compute_stats_from_trades(trades):
 def load_state(path=STATE_PATH):
     if not os.path.exists(path):
         return {}
+    state = {}
     with open(path, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except Exception:
-            return {}
+        for line in f:
+            try:
+                rec = json.loads(line)
+                mid = rec.get("market_id")
+                if mid:
+                    state[mid] = rec
+            except Exception:
+                continue
+    return state
 
 def save_state(state, path=STATE_PATH):
+    """Rewrites the entire state dict as JSONL (1 line per market)."""
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2, sort_keys=True)
+        for rec in state.values():
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     os.replace(tmp, path)
 
 MISS_LIMIT_TO_CLOSE = 3  # how many consecutive refreshes a market can be "missing" before we mark it closed
