@@ -48,7 +48,7 @@ FEE_MULT = 1.0 + FEE + SLIP
 CAP_INC_FEE = 0.40
 
 # Budgets to evaluate (USD notional, using raw trade prices in the window)
-TARGET_BUDGETS = [25, 50, 100, 250, 500]
+TARGET_BUDGETS = [5, 10, 50, 100, 200]
 
 # Pull cadence
 MARKET_REFRESH_SEC   = 15 * 60    # refresh market list every 15 min
