@@ -486,3 +486,6 @@ script til að telja markaði frá eih tíma, til að sja %enterd
 [STEP] due=447 watch=452 entered=82
 
 ég er ekki að ná að entera markapina sem ég þarf að komast í, er besta mæalið bara að bidda á öllum mörkuðum?
+
+skriif script til að kaupa einn markað með code,
+svo skrifa maker script
