@@ -1,0 +1,9 @@
+{
+  "files.watcherExclude": {
+    "**/logs/**": true
+  },
+  "search.exclude": {
+    "**/logs/**": true
+  },
+  "explorer.excludeGitIgnore": false
+}
