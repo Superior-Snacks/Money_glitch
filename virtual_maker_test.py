@@ -28,7 +28,7 @@ COMPRESS_AFTER_DAYS = 1   # gzip logs older than this (but not today's)
 
 LOG_DIR = input("name log:")
 if len(LOG_DIR) < 1:
-    LOG_DIR = f"logs_run_{int(time.time())}"
+    LOG_DIR = os.path.join("logs", f"logs_run_{int(time.time())}")
 
 
 # ----------------------------------------------------------------------

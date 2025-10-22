@@ -32,9 +32,9 @@ except Exception:
 # One place to decide log directory (no blocking input)
 name_log = input("name log: ")
 if name_log:
-    LOG_DIR = name_log
+    LOG_DIR = os.path.join("logs", name_log)
 else:
-    LOG_DIR = f"logs_run_{int(time.time())}"
+    LOG_DIR = os.path.join("logs", f"logs_run_{int(time.time())}")
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"

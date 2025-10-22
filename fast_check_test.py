@@ -58,7 +58,7 @@ HTTP_TIMEOUT           = 15
 TICK                   = 0.01
 
 # Logs
-RUN_ID                 = f"coverage_run_{int(time.time())}"
+RUN_ID = f"coverage_run_{int(time.time())}"
 LOG_DIR = input("name log:")
 if len(LOG_DIR) < 1:
     LOG_DIR = RUN_ID
