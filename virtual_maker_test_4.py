@@ -170,9 +170,9 @@ class VirtualMaker:
     def ladder_keys_for(self, cid: str):
         return [k for k, v in self.orders.items() if v.get("cid") == cid]
 
-    # --- place one rung ---
     def place_no_bid(self, condition_id: str, token_id: str,
-                     limit_inc: float, budget_usd: float, now_dt):
+                 limit_inc: float, budget_usd: float, now_dt,
+                 fee_mult: float = 1.0):
         if not condition_id or not token_id or budget_usd <= 0 or limit_inc <= 0:
             return False
         k = self._key(condition_id, limit_inc)
@@ -180,8 +180,10 @@ class VirtualMaker:
         self.orders[k] = {
             "cid": condition_id,
             "token_id": token_id,
-            "limit_inc": float(limit_inc),
-            "budget_usd": float(budget_usd),
+            "limit_inc": float(limit_inc),         # inc-fee
+            "limit_ex":  float(limit_inc) / fee_mult,  # raw book price equivalent
+            "fee_mult":  float(fee_mult),
+            "budget_usd": float(budget_usd),       # inc-fee dollars
             "placed_ts": ts,
             "placed_iso": now_dt.isoformat(),
             "first_seen_under": None,
@@ -193,12 +195,6 @@ class VirtualMaker:
 
     # --- check book and return zero or more fills for this cid ---
     def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict=None):
-        """
-        Maker logic for a resting NO **bid**:
-        We consider ourselves filled when the **best bid** reaches or exceeds our
-        posted price for a short grace window (queue time). This is a heuristic.
-        For precise fills, also use the trades-based confirm in patch #2.
-        """
         fills = []
         best_bid, best_ask = best_of_book(book)
 
@@ -206,40 +202,34 @@ class VirtualMaker:
             if rec.get("cid") != condition_id or rec.get("filled"):
                 continue
 
-            limit_inc = rec["limit_inc"]
-            rec["last_best_ask"] = best_ask
-            rec["last_best_bid"] = best_bid = best_bid  # store for debug
+            limit_ex = rec["limit_ex"]
+            fee_mult = rec["fee_mult"]
 
-            # For bids, we care about **best_bid >= our limit**
-            if best_bid is not None and best_bid >= limit_inc:
+            rec["last_best_ask"] = best_ask
+            rec["last_best_bid"] = best_bid
+
+            if best_bid is not None and best_bid >= limit_ex:
                 if rec["first_seen_under"] is None:
                     rec["first_seen_under"] = int(now_dt.timestamp())
                 elapsed = int(now_dt.timestamp()) - rec["first_seen_under"]
                 if elapsed >= self.queue_grace_s:
                     rec["filled"] = True
                     rec["fill_ts"] = int(now_dt.timestamp())
-                    # fill at the tighter of (our limit, current best bid)
-                    fill_px = min(best_bid, limit_inc)
-                    fill_cost = rec["budget_usd"]
-                    fill_shares = fill_cost / fill_px if fill_px > 0 else 0.0
+                    fill_px = min(best_bid, limit_ex)  # raw price
+                    fill_cost_inc = rec["budget_usd"]  # inc-fee dollars
+                    fill_shares = (fill_cost_inc / fee_mult) / fill_px if fill_px > 0 else 0.0
                     fills.append((k, {
                         "fill_px": fill_px,
                         "fill_shares": fill_shares,
-                        "fill_cost": fill_cost,
+                        "fill_cost": fill_cost_inc,
                         "mode": self.mode,
                     }))
             else:
                 rec["first_seen_under"] = None
 
         return fills
-
+    
     def on_trades(self, condition_id: str, trades: list, now_dt):
-        """
-        Confirm maker fills using real prints.
-        A resting NO bid at price L fills if we see a trade with:
-        outcome == 'no', side == 'sell', price <= L, timestamp >= placed_ts
-        Returns list of fills (same shape as on_book).
-        """
         fills = []
         if not trades:
             return fills
@@ -248,34 +238,36 @@ class VirtualMaker:
             if rec.get("cid") != condition_id or rec.get("filled"):
                 continue
 
-            L = float(rec["limit_inc"])
+            L_ex      = float(rec["limit_ex"])       # raw threshold
+            fee_mult  = float(rec["fee_mult"])
             placed_ts = int(rec.get("placed_ts", 0))
 
             for tr in trades:
                 try:
-                    if str(tr.get("outcome","")).lower() != "no": 
+                    if str(tr.get("outcome","")).lower() != "no":  # NO market
                         continue
-                    if str(tr.get("side","")).lower() != "sell":
+                    if str(tr.get("side","")).lower() != "sell":   # seller hits our bid
                         continue
-                    px = float(tr["price"])
-                    ts = int(tr["timestamp"])
+                    px = float(tr["price"])                        # raw trade price
+                    raw_ts = tr.get("timestamp") or tr.get("time") or tr.get("ts")
+                    raw_ts = float(raw_ts)
+                    ts = int(raw_ts / 1000) if raw_ts > 1e12 else int(raw_ts)
                 except Exception:
                     continue
 
-                if ts >= placed_ts and px <= L:
-                    # Confirm a fill
+                if ts >= placed_ts and px <= L_ex:
                     rec["filled"] = True
                     rec["fill_ts"] = int(now_dt.timestamp())
-                    fill_px = min(px, L)
-                    fill_cost = rec["budget_usd"]
-                    fill_shares = fill_cost / fill_px if fill_px > 0 else 0.0
+                    fill_px = min(px, L_ex)
+                    fill_cost_inc = rec["budget_usd"]
+                    fill_shares = (fill_cost_inc / fee_mult) / fill_px if fill_px > 0 else 0.0
                     fills.append((k, {
                         "fill_px": fill_px,
                         "fill_shares": fill_shares,
-                        "fill_cost": fill_cost,
+                        "fill_cost": fill_cost_inc,
                         "mode": (self.mode + "+trades"),
                     }))
-                    break  # one print is enough to confirm this order
+                    break
 
         return fills
 
@@ -283,22 +275,23 @@ class VirtualMaker:
 #---------------------------------------------------------------
 # vm
 #---------------------------------------------------------------
-def place_or_keep_vm_order(cid: str, market: dict, maker, mgr, desired_dollars: float):
-    # If any order exists for this cid, don't post another
+def place_or_keep_vm_order(cid, market, maker, mgr, desired_dollars: float):
     if any(v.get("cid") == cid for v in maker.orders.values()):
         return
-
     no_tok = get_no_token_id(market)
     if not no_tok:
         return
 
-    limit_inc = vm_limit_from_cap(mgr.max_no_price)
+    limit_inc = vm_limit_from_raw(MAKER_POST_RAW, mgr.fee, mgr.slip)
+    fee_mult  = 1.0 + mgr.fee + mgr.slip
+
     ok = maker.place_no_bid(
         condition_id=cid,
         token_id=no_tok,
         limit_inc=limit_inc,
         budget_usd=desired_dollars,
         now_dt=datetime.now(timezone.utc),
+        fee_mult=fee_mult,                # <— new
     )
     if ok:
         reserve_for_vm(cid, desired_dollars)
@@ -418,7 +411,6 @@ def open_position_fn_hybrid(
             # housekeeping: replace any previous ladder with a single VM for the remainder
             maker.cancel_ladder_for(cid)
             place_or_keep_vm_order(cid, market, maker, mgr, remainder)
-            reserve_for_vm(cid, remainder)
             return False
         else:
             vprint("    [SKIP VM] not enough available bank after reservations for remainder")
@@ -433,7 +425,6 @@ def open_position_fn_hybrid(
     if shares == 0:
         if available_bank(bank_ref["value"]) >= desired - 1e-6:
             place_or_keep_vm_order(cid, market, maker, mgr, desired)
-            reserve_for_vm(cid, desired)
         return False
 
     # Partial taken but remainder tiny or could not reserve VM → keep watching with False
@@ -756,6 +747,47 @@ class WatchlistManager:
                             vprint("    ✅ VM TRADES CONFIRMED; removed from watch")
                             cancel_all_maker_for(maker, cid)
                             continue
+                if maker is not None and bank_ref is not None:
+                    fills = maker.on_book(condition_id=cid, book=book, now_dt=datetime.now(timezone.utc))
+                    if fills:
+                        for key, vm_fill in fills:
+                            spent_after = float(vm_fill["fill_cost"])
+                            shares      = float(vm_fill["fill_shares"])
+                            avg_price   = float(vm_fill["fill_px"])
+
+                            bank_ref["value"] -= spent_after
+                            prev = positions_by_id.get(cid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
+                            positions_by_id[cid] = {
+                                "shares": prev["shares"] + shares,
+                                "cost":   prev["cost"]   + spent_after,
+                                "side":   "NO",
+                            }
+                            release_vm_reservation(cid, float(spent_after))
+
+                            bb, ba = best_of_book(book or {})
+                            append_jsonl(TRADE_LOG_BASE, {
+                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "market_id": m.get("conditionId"),
+                                "market_slug": m.get("slug"),
+                                "question": m.get("question"),
+                                "side": "NO",
+                                "token_id": st["no_token"],
+                                "spent_after": round(spent_after, 6),
+                                "shares": round(shares, 6),
+                                "avg_price_eff": round(avg_price, 6),
+                                "book_best_bid": bb, "book_best_ask": ba,
+                                "locked_now": round(float(compute_locked_now()), 6),
+                                "bank_after_open": round(float(bank_ref["value"]), 6),
+                                "fill_mode": "virtual_maker_book",
+                            })
+                            print(f"\n✅ ENTER NO (VM book) | {m.get('question')}  "
+                                f"spent={spent_after:.2f} shares={shares:.3f} px={avg_price:.4f}")
+
+                        self.entered.add(cid)
+                        self.watch.pop(cid, None)
+                        vprint("    ✅ VM BOOK FILL; removed from watch")
+                        cancel_all_maker_for(maker, cid)
+                        continue
 
                 # ---------- 1) book-change signals ----------
                 seq      = book.get("sequence") or book.get("version")
