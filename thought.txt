@@ -501,4 +501,4 @@ af náðu gömul script að kaupa á svo lágu verði?
 2025-09,20553,5978,14575,29.086,70.914,17294,49207,26.006,73.994
 2025-10,6943,1754,5189,25.263,74.737,19048,54396,25.935,74.065
 
-updatea current_trades til að taka öll historic trades, gefa summary 
+updatea current_trades til að taka öll historic trades, gefa summary (geta sim, hvað ef x bid á öll )
