@@ -489,3 +489,6 @@ script til að telja markaði frá eih tíma, til að sja %enterd
 
 skriif script til að kaupa einn markað með code,
 svo skrifa maker script
+
+skrifa script sem safnar öllum mörkuðum og fylgist með hversu gott no verð hægt er að fá 
+af náðu gömul script að kaupa á svo lágu verði?
