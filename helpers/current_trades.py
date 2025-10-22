@@ -319,6 +319,31 @@ def save_state(state, path=STATE_PATH):
         json.dump(state, f, ensure_ascii=False, indent=2, sort_keys=True)
     os.replace(tmp, path)
 
+MISS_LIMIT_TO_CLOSE = 3  # how many consecutive refreshes a market can be "missing" before we mark it closed
+
+def mark_open(state, cid, now_iso_str):
+    st = state.setdefault(cid, {})
+    st["status"] = "open"
+    st["misses"] = 0
+    st["last_seen_open_at"] = now_iso_str
+
+def mark_closed_if_missing(state, open_ids, now_iso_str):
+    """
+    For any market in state that's not in `open_ids`, increment a 'misses' counter.
+    If it reaches MISS_LIMIT_TO_CLOSE, mark status='closed' and set closed_at (once).
+    """
+    for cid, st in state.items():
+        if st.get("status") == "closed":
+            continue
+        if cid not in open_ids:
+            st["misses"] = int(st.get("misses", 0)) + 1
+            if st["misses"] >= MISS_LIMIT_TO_CLOSE:
+                st["status"] = "closed"
+                st.setdefault("closed_at", now_iso_str)
+        else:
+            # is open this cycle; make sure it's reset (defensive)
+            st["misses"] = 0
+
 # ----------------- Main loop -----------------
 def main():
     # ask when to start
@@ -338,6 +363,10 @@ def main():
                 markets = fetch_open_yesno_fast()
                 last_market_pull = now_s
                 print(f"[MKT] loaded {len(markets)} markets @ {dt_iso()}")
+                # NEW: mark missing markets as closed if absent repeatedly
+                open_ids = {m.get("conditionId") or m.get("id") for m in markets}
+                mark_closed_if_missing(state, open_ids, dt_iso())
+                save_state(state)
             except Exception as e:
                 print(f"[WARN markets] {e}; keeping previous list")
                 time.sleep(5)
@@ -366,7 +395,8 @@ def main():
                         "budgets": stats["budgets"],
                         "under_cap": (stats["min_trade_px_inc"] <= CAP_INC_FEE)
                     }
-                    state[cid] = entry
+                    state[cid] = {**state.get(cid, {}), **entry}
+                    mark_open(state, cid, entry["updated_at"])
                     save_state(state)
                     total += 1
                     under += 1 if entry["under_cap"] else 0
@@ -389,12 +419,17 @@ def main():
                 time.sleep(2)
 
         # -------- Report after full pass --------
+        open_count   = sum(1 for st in state.values() if st.get("status") != "closed")
+        closed_count = sum(1 for st in state.values() if st.get("status") == "closed")
+
         print("\n===== PASS REPORT =====")
-        print(f"Time:           {dt_iso()}")
-        print(f"Markets seen:   {len(markets)}")
-        print(f"Markets updated:{total}")
+        print(f"Time:               {dt_iso()}")
+        print(f"Open markets seen:  {len(markets)}")
+        print(f"Open markets in DB: {open_count}")
+        print(f"Closed in DB:       {closed_count}")
+        print(f"Markets updated:    {total}")
         print(f"Under cap (≤{CAP_INC_FEE:.2f} inc): {under}")
-        print(f"Over cap:       {over}")
+        print(f"Over cap:           {over}")
         print("=======================\n")
 
         # rest before starting again
