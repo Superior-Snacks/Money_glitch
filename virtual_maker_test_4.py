@@ -193,25 +193,33 @@ class VirtualMaker:
 
     # --- check book and return zero or more fills for this cid ---
     def on_book(self, condition_id: str, book: dict, now_dt, last_seen_under_dict=None):
+        """
+        Maker logic for a resting NO **bid**:
+        We consider ourselves filled when the **best bid** reaches or exceeds our
+        posted price for a short grace window (queue time). This is a heuristic.
+        For precise fills, also use the trades-based confirm in patch #2.
+        """
         fills = []
         best_bid, best_ask = best_of_book(book)
-        if best_ask is None:
-            return fills
 
         for k, rec in list(self.orders.items()):
             if rec.get("cid") != condition_id or rec.get("filled"):
                 continue
+
             limit_inc = rec["limit_inc"]
             rec["last_best_ask"] = best_ask
+            rec["last_best_bid"] = best_bid = best_bid  # store for debug
 
-            if best_ask <= limit_inc:
+            # For bids, we care about **best_bid >= our limit**
+            if best_bid is not None and best_bid >= limit_inc:
                 if rec["first_seen_under"] is None:
                     rec["first_seen_under"] = int(now_dt.timestamp())
                 elapsed = int(now_dt.timestamp()) - rec["first_seen_under"]
                 if elapsed >= self.queue_grace_s:
                     rec["filled"] = True
                     rec["fill_ts"] = int(now_dt.timestamp())
-                    fill_px = best_ask
+                    # fill at the tighter of (our limit, current best bid)
+                    fill_px = min(best_bid, limit_inc)
                     fill_cost = rec["budget_usd"]
                     fill_shares = fill_cost / fill_px if fill_px > 0 else 0.0
                     fills.append((k, {
@@ -224,6 +232,53 @@ class VirtualMaker:
                 rec["first_seen_under"] = None
 
         return fills
+
+    def on_trades(self, condition_id: str, trades: list, now_dt):
+        """
+        Confirm maker fills using real prints.
+        A resting NO bid at price L fills if we see a trade with:
+        outcome == 'no', side == 'sell', price <= L, timestamp >= placed_ts
+        Returns list of fills (same shape as on_book).
+        """
+        fills = []
+        if not trades:
+            return fills
+
+        for k, rec in list(self.orders.items()):
+            if rec.get("cid") != condition_id or rec.get("filled"):
+                continue
+
+            L = float(rec["limit_inc"])
+            placed_ts = int(rec.get("placed_ts", 0))
+
+            for tr in trades:
+                try:
+                    if str(tr.get("outcome","")).lower() != "no": 
+                        continue
+                    if str(tr.get("side","")).lower() != "sell":
+                        continue
+                    px = float(tr["price"])
+                    ts = int(tr["timestamp"])
+                except Exception:
+                    continue
+
+                if ts >= placed_ts and px <= L:
+                    # Confirm a fill
+                    rec["filled"] = True
+                    rec["fill_ts"] = int(now_dt.timestamp())
+                    fill_px = min(px, L)
+                    fill_cost = rec["budget_usd"]
+                    fill_shares = fill_cost / fill_px if fill_px > 0 else 0.0
+                    fills.append((k, {
+                        "fill_px": fill_px,
+                        "fill_shares": fill_shares,
+                        "fill_cost": fill_cost,
+                        "mode": (self.mode + "+trades"),
+                    }))
+                    break  # one print is enough to confirm this order
+
+        return fills
+
 
 #---------------------------------------------------------------
 # vm
@@ -465,6 +520,16 @@ def _dt(s):
         return datetime.fromisoformat(str(s).replace("Z","+00:00")).astimezone(timezone.utc)
     except Exception:
         return None
+    
+def fetch_trades_recent(cid: str, limit: int = 80):
+    """
+    Get recent trades for a market (conditionId).
+    We'll filter by timestamp ourselves (>= placed_ts).
+    """
+    _rate_limit()
+    r = SESSION.get(DATA_TRADES, params={"market": cid, "sort": "desc", "limit": limit}, timeout=15)
+    r.raise_for_status()
+    return r.json() or []
 
 _last_under_seen = {}
 
@@ -643,51 +708,54 @@ class WatchlistManager:
                 st["last_quote"] = book
                 st["last_seen_ts"] = now_ts
 
-                # ---------- D) consume multiple VM ladder fills ----------
+                # --- TRADES-CONFIRMED VM fills (optional) ---
                 if maker is not None and bank_ref is not None:
-                    fills = maker.on_book(condition_id=cid, book=book, now_dt=datetime.now(timezone.utc))
-                    if fills:
-                        for key, vm_fill in fills:
-                            spent_after = float(vm_fill["fill_cost"])
-                            shares      = float(vm_fill["fill_shares"])
-                            avg_price   = float(vm_fill["fill_px"])
+                    # only poll trades if we actually have VM orders for this cid
+                    has_any_vm = any(v.get("cid")==cid and not v.get("filled") for v in maker.orders.values())
+                    if has_any_vm:
+                        try:
+                            trades = fetch_trades_recent(m.get("conditionId"), limit=80)
+                        except Exception:
+                            trades = []
+                        fills_tr = maker.on_trades(condition_id=cid, trades=trades, now_dt=datetime.now(timezone.utc))
+                        if fills_tr:
+                            for key, vm_fill in fills_tr:
+                                spent_after = float(vm_fill["fill_cost"])
+                                shares      = float(vm_fill["fill_shares"])
+                                avg_price   = float(vm_fill["fill_px"])
+                                bank_ref["value"] -= spent_after
+                                prev = positions_by_id.get(cid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
+                                positions_by_id[cid] = {
+                                    "shares": prev["shares"] + shares,
+                                    "cost":   prev["cost"]   + spent_after,
+                                    "side":   "NO",
+                                }
+                                release_vm_reservation(cid, float(spent_after))
+                                bb, ba = best_of_book(book or {})
+                                append_jsonl(TRADE_LOG_BASE, {
+                                    "ts": datetime.now(timezone.utc).isoformat(),
+                                    "market_id": m.get("conditionId"),
+                                    "market_slug": m.get("slug"),
+                                    "question": m.get("question"),
+                                    "side": "NO",
+                                    "token_id": st["no_token"],
+                                    "spent_after": round(spent_after, 6),
+                                    "shares": round(shares, 6),
+                                    "avg_price_eff": round(avg_price, 6),
+                                    "book_best_bid": bb, "book_best_ask": ba,
+                                    "locked_now": round(float(compute_locked_now()), 6),
+                                    "bank_after_open": round(float(bank_ref["value"]), 6),
+                                    "fill_mode": "virtual_maker_trades",
+                                })
+                                print(f"\n✅ ENTER NO (VM trades) | {m.get('question')}  "
+                                    f"spent={spent_after:.2f} shares={shares:.3f} px={avg_price:.4f}")
 
-                            # accounting
-                            bank_ref["value"] -= spent_after
-                            prev = positions_by_id.get(cid, {"shares": 0.0, "cost": 0.0, "side": "NO"})
-                            positions_by_id[cid] = {
-                                "shares": prev["shares"] + shares,
-                                "cost":   prev["cost"]   + spent_after,
-                                "side":   "NO",
-                            }
-                            release_vm_reservation(cid, float(spent_after))
-
-                            # log
-                            bb, ba = best_of_book(book or {})
-                            append_jsonl(TRADE_LOG_BASE, {
-                                "ts": datetime.now(timezone.utc).isoformat(),
-                                "market_id": m.get("conditionId"),
-                                "market_slug": m.get("slug"),
-                                "question": m.get("question"),
-                                "side": "NO",
-                                "token_id": st["no_token"],
-                                "spent_after": round(spent_after, 6),
-                                "shares": round(shares, 6),
-                                "avg_price_eff": round(avg_price, 6),
-                                "book_best_bid": bb, "book_best_ask": ba,
-                                "locked_now": round(float(compute_locked_now()), 6),
-                                "bank_after_open": round(float(bank_ref["value"]), 6),
-                                "fill_mode": "virtual_maker_ladder",
-                            })
-                            print(f"\n✅ ENTER NO (VM ladder) | {m.get('question')}  "
-                                f"spent={spent_after:.2f} shares={shares:.3f} px={avg_price:.4f}")
-
-                        # after any rung fill, treat market as entered and stop watching
-                        self.entered.add(cid)
-                        self.watch.pop(cid, None)
-                        vprint("    ✅ VM LADDER FILLED; removed from watch")
-                        cancel_all_maker_for(maker, cid)
-                        continue
+                            # once any VM rung is confirmed, treat as entered and stop watching this market
+                            self.entered.add(cid)
+                            self.watch.pop(cid, None)
+                            vprint("    ✅ VM TRADES CONFIRMED; removed from watch")
+                            cancel_all_maker_for(maker, cid)
+                            continue
 
                 # ---------- 1) book-change signals ----------
                 seq      = book.get("sequence") or book.get("version")
