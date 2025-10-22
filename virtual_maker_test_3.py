@@ -49,7 +49,7 @@ _created_cutoff = None
 
 # ---- ONE SIZE TO RULE THEM ALL ----
 STAKE_USD = 100.0  # change this once to control ALL per-order sizes
-RAW_CAP_NO = 0.60
+RAW_CAP_NO = 0.70
 GLOBAL_FEE = 0.0   # 600 for 6.00%
 GLOBAL_SLIP = 0.0  # 200 for 2.00%
 
