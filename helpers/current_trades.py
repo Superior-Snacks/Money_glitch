@@ -131,9 +131,11 @@ def dt_iso():
     return datetime.now(timezone.utc).isoformat()
 
 # ----------------- Market + Trades fetch -----------------
-def fetch_yesno_markets(limit=250, max_pages=4, include_closed=True):
+def fetch_yesno_markets(since, offset=0, limit=250, max_pages=4, include_closed=True):
     params = {
         "limit": limit,
+        "start_date_min": since,
+        "offset":offset,
         "order": "startDate",
         "ascending": False,
         # omit "closed": False so we can fetch both
@@ -420,7 +422,7 @@ def main():
         # refresh markets list periodically
         if (now_s - last_market_pull >= MARKET_REFRESH_SEC) or not markets:
             try:
-                markets = fetch_yesno_markets()
+                markets = fetch_yesno_markets(since_epoch)
                 last_market_pull = now_s
                 print(f"[MKT] loaded {len(markets)} markets @ {dt_iso()}")
                 # NEW: mark missing markets as closed if absent repeatedly
