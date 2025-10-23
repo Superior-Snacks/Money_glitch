@@ -131,19 +131,25 @@ def dt_iso():
     return datetime.now(timezone.utc).isoformat()
 
 # ----------------- Market + Trades fetch -----------------
-def fetch_open_yesno_fast(limit=250, max_pages=4):
+def fetch_yesno_markets(limit=250, max_pages=4, include_closed=True):
     params = {
-        "limit": limit, "order": "startDate", "ascending": False,
-        "closed": False, "enableOrderBook": True
+        "limit": limit,
+        "order": "startDate",
+        "ascending": False,
+        # omit "closed": False so we can fetch both
+        "enableOrderBook": True,
     }
     seen, out = set(), []
     offset = 0
     for _ in range(max_pages):
         q = dict(params, offset=offset)
         _rate_limit()
-        r = SESSION.get(BASE_GAMMA, params=q, timeout=20); r.raise_for_status()
+        r = SESSION.get(BASE_GAMMA, params=q, timeout=20)
+        r.raise_for_status()
         data = r.json() or []
-        if not data: break
+        if not data:
+            break
+
         for m in data:
             outs = m.get("outcomes")
             if isinstance(outs, str):
@@ -151,12 +157,15 @@ def fetch_open_yesno_fast(limit=250, max_pages=4):
                 except: outs = None
             if isinstance(outs, list) and len(outs) == 2:
                 names = {str(x).strip().lower() for x in outs}
-                if names == {"yes","no"}:
+                if names == {"yes", "no"}:
                     mid = m.get("conditionId") or m.get("id")
                     if mid and mid not in seen:
                         out.append(m); seen.add(mid)
-        if len(data) < limit: break
+
+        if len(data) < limit:
+            break
         offset += limit
+
     return out
 
 def fetch_trades_page(cid: str, limit=250, starting_before=None, offset=None):
@@ -306,6 +315,46 @@ def compute_stats_from_trades(trades):
             }
     return res
 
+def _parse_iso_utc(s):
+    if not s:
+        return None
+    try:
+        return int(datetime.fromisoformat(str(s).replace("Z","+00:00"))
+                   .astimezone(timezone.utc).timestamp())
+    except Exception:
+        return None
+
+def winner_from_market(m):
+    # Try common keys Polymarket (or mirrors) expose
+    for k in ["winningOutcome", "resolvedOutcome", "winner", "resolveOutcome", "resolution", "outcome"]:
+        v = m.get(k)
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s in ("yes", "no"):
+                return s.upper()
+    # Some payloads embed a result object
+    res = m.get("result") or m.get("resolutionData") or {}
+    if isinstance(res, dict):
+        for k in ["winner", "winningOutcome", "outcome"]:
+            v = res.get(k)
+            if isinstance(v, str) and v.strip().lower() in ("yes", "no"):
+                return v.strip().upper()
+    return None
+
+def resolved_ts_from_market(m):
+    # Prefer explicit resolved time, else closed/end dates as fallback
+    for k in ["resolvedTime", "resolveTime", "resolutionTime", "closedTime", "endDate", "closeTime"]:
+        ts = _parse_iso_utc(m.get(k))
+        if ts:
+            return ts
+    return None
+
+def is_closed_market(m):
+    if m.get("closed") is True:  # some feeds send a boolean
+        return True
+    # treat as closed if we can see a winner
+    return winner_from_market(m) is not None
+
 # ----------------- State I/O -----------------
 def load_state(path=STATE_PATH):
     if not os.path.exists(path):
@@ -371,7 +420,7 @@ def main():
         # refresh markets list periodically
         if (now_s - last_market_pull >= MARKET_REFRESH_SEC) or not markets:
             try:
-                markets = fetch_open_yesno_fast()
+                markets = fetch_yesno_markets()
                 last_market_pull = now_s
                 print(f"[MKT] loaded {len(markets)} markets @ {dt_iso()}")
                 # NEW: mark missing markets as closed if absent repeatedly
@@ -382,19 +431,31 @@ def main():
                 print(f"[WARN markets] {e}; keeping previous list")
                 time.sleep(5)
 
-        total = 0
-        under = 0
-        over  = 0
-
         # one full pass
         for m in markets:
             cid = m.get("conditionId") or m.get("id")
             question = m.get("question")
             slug = m.get("slug") or m.get("market_slug")
 
+            closed  = is_closed_market(m)
+            winner  = winner_from_market(m)  # "YES", "NO", or None
+            res_ts  = resolved_ts_from_market(m)
+
+            trades = fetch_all_trades_since(cid, since_epoch)
+
+            # Convert to pre-resolution for closed YES winners to avoid post-resolution drift to ~0
+            if closed and winner == "YES" and res_ts:
+                trimmed = []
+                for t in trades:
+                    tts = _to_epoch(t.get("timestamp") or t.get("time") or t.get("ts"))
+                    if tts is not None and tts <= res_ts:
+                        trimmed.append(t)
+                trades_for_stats = trimmed
+            else:
+                trades_for_stats = trades
+
             try:
-                trades = fetch_all_trades_since(cid, since_epoch)
-                stats = compute_stats_from_trades(trades)
+                stats = compute_stats_from_trades(trades_for_stats)
                 if stats:
                     entry = {
                         "market_id": cid,
@@ -404,21 +465,22 @@ def main():
                         "min_trade_px_raw": stats["min_trade_px_raw"],
                         "min_trade_px_inc": stats["min_trade_px_inc"],
                         "budgets": stats["budgets"],
-                        "under_cap": (stats["min_trade_px_inc"] <= CAP_INC_FEE)
+                        "status": "closed" if closed else "open",
+                        "winner": winner,                 # "YES" | "NO" | None
+                        "resolved_at": res_ts,            # epoch seconds or None
                     }
+                    entry["under_cap"] = (entry["min_trade_px_inc"] <= CAP_INC_FEE)
                     state[cid] = {**state.get(cid, {}), **entry}
-                    mark_open(state, cid, entry["updated_at"])
                     save_state(state)
-                    total += 1
-                    under += 1 if entry["under_cap"] else 0
-                    over  += 1 if not entry["under_cap"] else 0
                 else:
-                    # no trades found; keep a minimal placeholder
                     state[cid] = {
                         "market_id": cid,
                         "question": question,
                         "slug": slug,
                         "updated_at": dt_iso(),
+                        "status": "closed" if closed else "open",
+                        "winner": winner,
+                        "resolved_at": res_ts,
                         "no_trades": True
                     }
                     save_state(state)
@@ -429,37 +491,56 @@ def main():
                 print(f"[WARN {cid[:8]}] {e}")
                 time.sleep(2)
 
-        # -------- Report after full pass --------
-        open_count   = sum(1 for st in state.values() if st.get("status") != "closed")
-        closed_count = sum(1 for st in state.values() if st.get("status") == "closed")
+        # Build grouped counts from the entire DB
+        groups = {
+            "open": {"under":0, "over":0, "unknown":0, "count":0},
+            "closed_yes": {"under":0, "over":0, "unknown":0, "count":0},
+            "closed_no":  {"under":0, "over":0, "unknown":0, "count":0},
+            "all": {"under":0, "over":0, "unknown":0, "count":0},
+        }
+        cap_inc = CAP_INC_FEE  # your inclusive cap (already inc fee/slip)
 
-        # Classify ALL open markets in the DB snapshot, not just ones updated this pass
-        under_cap = 0
-        over_cap  = 0
-        unknown   = 0
+        for row in state.values():
+            px = row.get("min_trade_px_inc")
+            status = (row.get("status") or "open").lower()
+            win = (row.get("winner") or "").upper()
 
-        for st in state.values():
-            if st.get("status") == "closed":
-                continue
-            px = st.get("min_trade_px_inc")
-            if px is None:
-                unknown += 1
-            elif float(px) <= float(CAP_INC_FEE) + 1e-12:
-                under_cap += 1
+            # choose bucket
+            if status == "closed" and win == "YES":
+                bucket = "closed_yes"
+            elif status == "closed" and win == "NO":
+                bucket = "closed_no"
+            elif status == "closed":
+                # closed but unknown winner → tally only in 'all'
+                bucket = None
             else:
-                over_cap += 1
+                bucket = "open"
+
+            # update a helper to tally
+            def _tally(bucket_name):
+                g = groups[bucket_name]
+                g["count"] += 1
+                if px is None:
+                    g["unknown"] += 1
+                elif float(px) <= float(cap_inc) + 1e-12:
+                    g["under"] += 1
+                else:
+                    g["over"] += 1
+
+            # tally in specific bucket (if any) and in 'all'
+            if bucket:
+                _tally(bucket)
+            _tally("all")
 
         print("===== PASS REPORT =====")
-        print(f"Time:                 {datetime.now(timezone.utc).isoformat()}")
-        print(f"Open markets seen:    {len(markets)}")
-        print(f"Open markets in DB:   {open_count}")
-        print(f"Closed in DB:         {closed_count}")
-        # If you want 'Markets updated', count during the loop:
-        #   increment updated_this_pass whenever you wrote a stats entry
-        print(f"Markets updated:      {total}")   # or use a dedicated 'updated_this_pass' counter
-        print(f"Under cap (≤{CAP_INC_FEE:.2f} inc): {under_cap}")
-        print(f"Over cap:             {over_cap}")
-        print(f"No data yet:          {unknown}")
+        print(f"Time:                     {dt_iso()}")
+        print(f"Markets in DB:            {len(state)}")
+        print("")
+        print(f"OPEN         → total:{groups['open']['count']:4d}  under:{groups['open']['under']:4d}  over:{groups['open']['over']:4d}  unknown:{groups['open']['unknown']:4d}")
+        print(f"CLOSED (YES) → total:{groups['closed_yes']['count']:4d}  under:{groups['closed_yes']['under']:4d}  over:{groups['closed_yes']['over']:4d}  unknown:{groups['closed_yes']['unknown']:4d}")
+        print(f"CLOSED (NO)  → total:{groups['closed_no']['count']:4d}   under:{groups['closed_no']['under']:4d}   over:{groups['closed_no']['over']:4d}   unknown:{groups['closed_no']['unknown']:4d}")
+        print("—")
+        print(f"ALL          → total:{groups['all']['count']:4d}  under:{groups['all']['under']:4d}  over:{groups['all']['over']:4d}  unknown:{groups['all']['unknown']:4d}")
         print("=======================")
 
         # rest before starting again
