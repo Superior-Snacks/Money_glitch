@@ -216,67 +216,187 @@ def fetch_yesno_markets_full(since_epoch: int, page_limit=250, include_closed=Tr
     # sort newest → oldest just for consistent logging
     return sorted(by_key.values(), key=_market_time_epoch or (lambda _: 0), reverse=True)
 
-def fetch_trades_page(cid: str, limit=250, starting_before=None, offset=None):
+def fetch_trades_page_ms(cid: str, limit=250, starting_before_s=None, offset=None):
+    """
+    Trades API helper: passes starting_before in **milliseconds** if provided.
+    Keeps your retry/RPS behavior via SESSION and _rate_limit().
+    """
     _rate_limit()
-    params = {"market": cid, "sort": "desc", "limit": limit}
-    if starting_before is not None:
-        # pass ms to be safe
-        params["starting_before"] = int(starting_before * 1000)
+    params = {"market": cid, "sort": "desc", "limit": int(limit)}
+    if starting_before_s is not None:
+        params["starting_before"] = int(starting_before_s * 1000)  # ms
     if offset is not None:
         params["offset"] = int(offset)
     r = SESSION.get(DATA_TRADES, params=params, timeout=20)
     r.raise_for_status()
     return r.json() or []
 
-def fetch_all_trades_since(cid: str, since_epoch: int, page_limit=250, slow_delay=SLEEP_BETWEEN_PAGES):
+def fetch_all_trades_since_slow(cid: str, since_epoch_s: int, page_limit=250, slow_delay=SLEEP_BETWEEN_PAGES):
     """
-    Slowly page backward in time to since_epoch.
-    Use starting_before when possible; if we see no progress, try offset paging.
-    Returns list of trade dicts.
+    Backfills slowly to since_epoch (seconds). Timestamp-paging first, then offset.
+    De-duplicates trades.
     """
     out = []
     starting_before = None
     last_len = None
-    # Timestamp-paging attempt
-    for _ in range(10_000):  # practically unbounded; rely on time cutoff
-        data = fetch_trades_page(cid, limit=page_limit, starting_before=starting_before)
+
+    # timestamp-paging (preferred)
+    for _ in range(10_000):
+        data = fetch_trades_page_ms(cid, limit=page_limit, starting_before_s=starting_before)
         if not data:
             break
         out.extend(data)
-        oldest_ts = min(_to_epoch(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-        if oldest_ts <= since_epoch:
-            break
-        # prepare next page
-        starting_before = oldest_ts
-        if slow_delay: time.sleep(slow_delay)
 
-        # detect no progress
-        if last_len == len(data):
+        # compute oldest seen (seconds)
+        oldest_ts = min(_to_epoch(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
+        if oldest_ts <= since_epoch_s:
+            break
+
+        starting_before = oldest_ts  # keep seconds here; ms conversion happens in fetch_trades_page_ms
+        if slow_delay:
+            time.sleep(slow_delay)
+
+        if last_len == len(data):   # no progress, stop timestamp pass
             break
         last_len = len(data)
 
-    # If we didn’t reach since_epoch and got very few pages, try offset paging as fallback
-    if (not out) or (min((_to_epoch(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out) > since_epoch):
+    # fallback: offset paging if we didn't reach since_epoch
+    if (not out) or (min((_to_epoch(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out) > since_epoch_s):
         offset = 0
         for _ in range(2000):
-            data = fetch_trades_page(cid, limit=page_limit, offset=offset)
+            data = fetch_trades_page_ms(cid, limit=page_limit, offset=offset)
             if not data:
                 break
             out.extend(data)
             oldest_ts = min(_to_epoch(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-            if oldest_ts <= since_epoch:
+            if oldest_ts <= since_epoch_s:
                 break
             offset += len(data)
-            if slow_delay: time.sleep(slow_delay)
+            if slow_delay:
+                time.sleep(slow_delay)
 
-    # Deduplicate by (id or (ts, price, size, side, outcome))
-    seen = set()
-    uniq = []
+    # de-dup
+    seen, uniq = set(), []
     for t in out:
         key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
-        if key in seen: continue
+        if key in seen: 
+            continue
         seen.add(key); uniq.append(t)
     return uniq
+
+def process_one_market(state: dict, m: dict, since_epoch_s: int, cap_inc_fee: float, fee_mult: float) -> bool:
+    """
+    Handles a single market:
+      - extracts fields,
+      - fetches trades (if conditionId present),
+      - trims post-resolution drift for YES winners,
+      - computes stats,
+      - updates state in-memory.
+    Returns True if state was updated.
+    """
+    fields = safe_market_fields(m)
+    cid = fields["cid"]
+    question, slug = fields["question"], fields["slug"]
+    closed, winner, res_ts = fields["closed"], fields["winner"], fields["resolved_at"]
+
+    # If no conditionId, record minimal info and skip trades (counts in reports)
+    if not cid:
+        key = m.get("id") or f"legacy:{random.randint(1, 1_000_000)}"
+        state[key] = {
+            "market_id": key,
+            "question": question,
+            "slug": slug,
+            "updated_at": dt_iso(),
+            "status": "closed" if closed else "open",
+            "winner": winner,
+            "resolved_at": res_ts,
+            "no_trades": True,
+            "note": "missing conditionId; skipped trade fetch"
+        }
+        return True
+
+    # Fetch trades slowly back to since_epoch
+    trades = fetch_all_trades_since_slow(cid, since_epoch_s)
+
+    # For closed YES winners, cut post-resolution drift (yes→$1, no→$0 drift after resolve)
+    trades_for_stats = trades
+    if closed and winner == "YES" and res_ts:
+        trimmed = []
+        for t in trades:
+            tts = _to_epoch(t.get("timestamp") or t.get("time") or t.get("ts"))
+            if tts is not None and tts <= res_ts:
+                trimmed.append(t)
+        trades_for_stats = trimmed
+
+    stats = compute_stats_from_trades(trades_for_stats)
+    entry = {
+        "market_id": cid,
+        "question": question,
+        "slug": slug,
+        "updated_at": dt_iso(),
+        "status": "closed" if closed else "open",
+        "winner": winner,
+        "resolved_at": res_ts,
+    }
+
+    if stats:
+        entry.update({
+            "min_trade_px_raw": stats["min_trade_px_raw"],
+            "min_trade_px_inc": stats["min_trade_px_inc"],
+            "budgets": stats["budgets"],
+            "under_cap": (stats["min_trade_px_inc"] <= cap_inc_fee)
+        })
+    else:
+        entry.update({
+            "no_trades": True
+        })
+
+    state[cid] = {**state.get(cid, {}), **entry}
+    return True
+
+def save_state_periodic(state: dict, counter: int, every: int, path=STATE_PATH):
+    """Save to disk only every N updates to reduce I/O."""
+    if counter % every == 0:
+        save_state(state, path)
+
+def tally_groups(state: dict, cap_inc_fee: float):
+    """Build grouped counts for report."""
+    groups = {
+        "open": {"under":0, "over":0, "unknown":0, "count":0},
+        "closed_yes": {"under":0, "over":0, "unknown":0, "count":0},
+        "closed_no":  {"under":0, "over":0, "unknown":0, "count":0},
+        "all": {"under":0, "over":0, "unknown":0, "count":0},
+    }
+
+    for row in state.values():
+        px = row.get("min_trade_px_inc")
+        status = (row.get("status") or "open").lower()
+        win = (row.get("winner") or "").upper()
+
+        if status == "closed" and win == "YES":
+            bucket = "closed_yes"
+        elif status == "closed" and win == "NO":
+            bucket = "closed_no"
+        elif status == "closed":
+            bucket = None
+        else:
+            bucket = "open"
+
+        def _tally(bn):
+            g = groups[bn]
+            g["count"] += 1
+            if px is None:
+                g["unknown"] += 1
+            elif float(px) <= float(cap_inc_fee) + 1e-12:
+                g["under"] += 1
+            else:
+                g["over"] += 1
+
+        if bucket:
+            _tally(bucket)
+        _tally("all")
+
+    return groups
 
 # ----------------- Analytics -----------------
 def cap_for_raw(raw, fee_bps, slip_bps):
@@ -399,6 +519,55 @@ def is_closed_market(m):
     # treat as closed if we can see a winner
     return winner_from_market(m) is not None
 
+def safe_market_fields(m: dict):
+    """Extract commonly used fields safely."""
+    cid = m.get("conditionId")
+    mid = m.get("id")
+    question = m.get("question")
+    slug = m.get("slug") or m.get("market_slug")
+
+    # winner / closed / resolved time helpers
+    def _parse_iso_utc(s):
+        if not s: return None
+        try:
+            return int(datetime.fromisoformat(str(s).replace("Z","+00:00"))
+                       .astimezone(timezone.utc).timestamp())
+        except Exception:
+            return None
+
+    def _winner(m):
+        for k in ["winningOutcome", "resolvedOutcome", "winner", "resolveOutcome", "resolution", "outcome"]:
+            v = m.get(k)
+            if isinstance(v, str) and v.strip().lower() in ("yes","no"):
+                return v.strip().upper()
+        res = m.get("result") or m.get("resolutionData") or {}
+        if isinstance(res, dict):
+            for k in ["winner", "winningOutcome", "outcome"]:
+                v = res.get(k)
+                if isinstance(v, str) and v.strip().lower() in ("yes","no"):
+                    return v.strip().upper()
+        return None
+
+    def _resolved_ts(m):
+        for k in ["resolvedTime", "resolveTime", "resolutionTime", "closedTime", "endDate", "closeTime"]:
+            ts = _parse_iso_utc(m.get(k))
+            if ts: return ts
+        return None
+
+    win = _winner(m)
+    closed = bool(m.get("closed") is True or win is not None)
+    res_ts = _resolved_ts(m)
+
+    return {
+        "cid": cid,
+        "mid": mid,
+        "question": question,
+        "slug": slug,
+        "winner": win,         # "YES" | "NO" | None
+        "closed": closed,
+        "resolved_at": res_ts  # epoch seconds or None
+    }
+
 # ----------------- State I/O -----------------
 def load_state(path=STATE_PATH):
     if not os.path.exists(path):
@@ -458,10 +627,14 @@ def main():
     state = load_state()
     markets = []
     last_market_pull = 0
-    offset = 0
+
+    SAVE_EVERY = 25
+    updates = 0  # total updates across runs
 
     while True:
         now_s = int(time.time())
+
+        # refresh full yes/no market list (open + closed) back to since_epoch
         if (now_s - last_market_pull >= MARKET_REFRESH_SEC) or not markets:
             try:
                 markets = fetch_yesno_markets_full(since_epoch, page_limit=250, include_closed=True)
@@ -469,126 +642,37 @@ def main():
                 print(f"[MKT] loaded {len(markets)} markets back to start @ {dt_iso()}")
                 open_ids = {m.get("conditionId") or m.get("id") for m in markets if not is_closed_market(m)}
                 mark_closed_if_missing(state, open_ids, dt_iso())
-                save_state(state)
+                save_state(state)  # quick persist after refresh
             except Exception as e:
                 print(f"[WARN markets] {e}; keeping previous list")
                 time.sleep(5)
 
-        # one full pass
-        for m in markets:
-            cid = m.get("conditionId")  # IMPORTANT: trades API needs conditionId
-            if not cid:
-                # keep a minimal row so it counts in reports, but don't try trades
-                state[m.get("id") or f"legacy:{random.randint(1,1_000_000)}"] = {
-                    "market_id": m.get("id"),
-                    "question": question,
-                    "slug": slug,
-                    "updated_at": dt_iso(),
-                    "status": "closed" if is_closed_market(m) else "open",
-                    "winner": winner_from_market(m),
-                    "resolved_at": resolved_ts_from_market(m),
-                    "no_trades": True,
-                    "note": "missing conditionId; skipped trade fetch"
-                }
-                continue
-            question = m.get("question")
-            slug = m.get("slug") or m.get("market_slug")
-
-            closed  = is_closed_market(m)
-            winner  = winner_from_market(m)  # "YES", "NO", or None
-            res_ts  = resolved_ts_from_market(m)
-
-            trades = fetch_all_trades_since(cid, since_epoch)
-
-            # Convert to pre-resolution for closed YES winners to avoid post-resolution drift to ~0
-            if closed and winner == "YES" and res_ts:
-                trimmed = []
-                for t in trades:
-                    tts = _to_epoch(t.get("timestamp") or t.get("time") or t.get("ts"))
-                    if tts is not None and tts <= res_ts:
-                        trimmed.append(t)
-                trades_for_stats = trimmed
-            else:
-                trades_for_stats = trades
+        # ======= WIRED-UP PER-PASS SECTION =======
+        updates_this_pass = 0
+        for idx, m in enumerate(markets, 1):
+            # optional progress ping
+            if idx % 25 == 0:
+                print(f"[{idx}/{len(markets)}] {dt_iso()}")
 
             try:
-                stats = compute_stats_from_trades(trades_for_stats)
-                if stats:
-                    entry = {
-                        "market_id": cid,
-                        "question": question,
-                        "slug": slug,
-                        "updated_at": dt_iso(),
-                        "min_trade_px_raw": stats["min_trade_px_raw"],
-                        "min_trade_px_inc": stats["min_trade_px_inc"],
-                        "budgets": stats["budgets"],
-                        "status": "closed" if closed else "open",
-                        "winner": winner,                 # "YES" | "NO" | None
-                        "resolved_at": res_ts,            # epoch seconds or None
-                    }
-                    entry["under_cap"] = (entry["min_trade_px_inc"] <= CAP_INC_FEE)
-                    state[cid] = {**state.get(cid, {}), **entry}
-                    save_state(state)
-                else:
-                    state[cid] = {
-                        "market_id": cid,
-                        "question": question,
-                        "slug": slug,
-                        "updated_at": dt_iso(),
-                        "status": "closed" if closed else "open",
-                        "winner": winner,
-                        "resolved_at": res_ts,
-                        "no_trades": True
-                    }
-                    save_state(state)
-                # be gentle between markets
-                time.sleep(SLEEP_BETWEEN_MARKETS)
-
+                if process_one_market(state, m, since_epoch, CAP_INC_FEE, FEE_MULT):
+                    updates += 1
+                    updates_this_pass += 1
+                    save_state_periodic(state, updates, SAVE_EVERY)
             except Exception as e:
-                print(f"[WARN {cid[:8]}] {e}")
+                cid_dbg = (m.get("conditionId") or m.get("id") or "unknown")[:10]
+                print(f"[WARN {cid_dbg}] {e}")
                 time.sleep(2)
 
-        # Build grouped counts from the entire DB
-        groups = {
-            "open": {"under":0, "over":0, "unknown":0, "count":0},
-            "closed_yes": {"under":0, "over":0, "unknown":0, "count":0},
-            "closed_no":  {"under":0, "over":0, "unknown":0, "count":0},
-            "all": {"under":0, "over":0, "unknown":0, "count":0},
-        }
-        cap_inc = CAP_INC_FEE  # your inclusive cap (already inc fee/slip)
+            # be gentle between markets
+            time.sleep(SLEEP_BETWEEN_MARKETS)
 
-        for row in state.values():
-            px = row.get("min_trade_px_inc")
-            status = (row.get("status") or "open").lower()
-            win = (row.get("winner") or "").upper()
+        # end of pass → final save
+        save_state(state)
+        # ======= END WIRED-UP SECTION =======
 
-            # choose bucket
-            if status == "closed" and win == "YES":
-                bucket = "closed_yes"
-            elif status == "closed" and win == "NO":
-                bucket = "closed_no"
-            elif status == "closed":
-                # closed but unknown winner → tally only in 'all'
-                bucket = None
-            else:
-                bucket = "open"
-
-            # update a helper to tally
-            def _tally(bucket_name):
-                g = groups[bucket_name]
-                g["count"] += 1
-                if px is None:
-                    g["unknown"] += 1
-                elif float(px) <= float(cap_inc) + 1e-12:
-                    g["under"] += 1
-                else:
-                    g["over"] += 1
-
-            # tally in specific bucket (if any) and in 'all'
-            if bucket:
-                _tally(bucket)
-            _tally("all")
-
+        # Build and print grouped report from entire DB
+        groups = tally_groups(state, CAP_INC_FEE)
         print("===== PASS REPORT =====")
         print(f"Time:                     {dt_iso()}")
         print(f"Markets in DB:            {len(state)}")
@@ -602,7 +686,6 @@ def main():
 
         # rest before starting again
         time.sleep(SLEEP_AFTER_FULL_PASS)
-
 # ------------- utils -------------
 def _to_epoch_any(ts):
     try:
