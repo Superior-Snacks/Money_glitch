@@ -131,55 +131,97 @@ def dt_iso():
     return datetime.now(timezone.utc).isoformat()
 
 # ----------------- Market + Trades fetch -----------------
-def fetch_yesno_markets(since, offset=0, limit=250, max_pages=4, include_closed=True):
-    params = {
-        "limit": limit,
-        "start_date_min": since,
-        "offset":offset,
-        "order": "startDate",
-        "ascending": False,
-        # omit "closed": False so we can fetch both
-        "enableOrderBook": True,
-    }
-    seen, out = set(), []
-    offset = 0
-    for _ in range(max_pages):
-        q = dict(params, offset=offset)
-        _rate_limit()
-        r = SESSION.get(BASE_GAMMA, params=q, timeout=20)
-        r.raise_for_status()
-        data = r.json() or []
-        if not data:
-            break
+def _parse_iso_utc_epoch(s):
+    if not s: return None
+    try:
+        return int(datetime.fromisoformat(str(s).replace("Z","+00:00"))
+                   .astimezone(timezone.utc).timestamp())
+    except Exception:
+        return None
 
-        for m in data:
-            outs = m.get("outcomes")
-            if isinstance(outs, str):
-                try: outs = json.loads(outs)
-                except: outs = None
-            if isinstance(outs, list) and len(outs) == 2:
-                names = {str(x).strip().lower() for x in outs}
-                if names == {"yes", "no"}:
-                    mid = m.get("conditionId") or m.get("id")
-                    if mid and mid not in seen:
-                        out.append(m); seen.add(mid)
+def _market_time_epoch(m):
+    # prefer createdAt, else startDate, else endDate/closedTime as a fallback
+    for k in ("createdAt", "startDate", "endDate", "closedTime", "resolveTime", "resolvedTime"):
+        ts = _parse_iso_utc_epoch(m.get(k))
+        if ts: return ts
+    return None  # last resort: treat as unknown/new
 
-        if len(data) < limit:
-            break
-        offset += limit
+def fetch_yesno_markets_full(since_epoch: int, page_limit=250, include_closed=True):
+    def _pull(closed_flag):
+        seen, out = set(), []
+        offset = 0
+        while True:
+            params = {
+                "limit": page_limit,
+                "order": "startDate",
+                "ascending": False,       # newest → oldest
+                "enableOrderBook": True,
+                "closed": closed_flag,
+                "offset": offset,
+            }
+            _rate_limit()
+            r = SESSION.get(BASE_GAMMA, params=params, timeout=30)
+            r.raise_for_status()
+            data = r.json() or []
+            if not data:
+                break
 
-    return out
+            # keep only yes/no binaries and de-dupe by conditionId/id
+            added = 0
+            oldest_on_page = None
+            for m in data:
+                outs = m.get("outcomes")
+                if isinstance(outs, str):
+                    try: outs = json.loads(outs)
+                    except: outs = None
+                if not (isinstance(outs, list) and len(outs) == 2 and
+                        {str(x).strip().lower() for x in outs} == {"yes","no"}):
+                    continue
+
+                key = m.get("conditionId") or m.get("id")
+                if not key or key in seen:
+                    # still track oldest_on_page even if we skip the row
+                    mt = _market_time_epoch(m)
+                    if mt is not None:
+                        oldest_on_page = mt if oldest_on_page is None else min(oldest_on_page, mt)
+                    continue
+
+                out.append(m); seen.add(key); added += 1
+
+                mt = _market_time_epoch(m)
+                if mt is not None:
+                    oldest_on_page = mt if oldest_on_page is None else min(oldest_on_page, mt)
+
+            # stop if this page is already older than our start time OR last page is short
+            if len(data) < page_limit:
+                break
+            if oldest_on_page is not None and oldest_on_page < since_epoch:
+                break
+
+            offset += page_limit
+            time.sleep(0.5)  # be polite
+        return out
+
+    mkts = _pull(False)
+    if include_closed:
+        mkts += _pull(True)
+
+    # final de-dupe, prefer entries that actually have conditionId
+    by_key = {}
+    for m in mkts:
+        key = m.get("conditionId") or m.get("id")
+        if not key: continue
+        if key not in by_key or (by_key[key].get("conditionId") is None and m.get("conditionId")):
+            by_key[key] = m
+    # sort newest → oldest just for consistent logging
+    return sorted(by_key.values(), key=_market_time_epoch or (lambda _: 0), reverse=True)
 
 def fetch_trades_page(cid: str, limit=250, starting_before=None, offset=None):
-    """
-    Try timestamp-paging first (preferred), fallback to offset paging.
-    - starting_before: epoch seconds; returns trades strictly older than this timestamp.
-    - offset: integer offset for pagination, if timestamp paging not available/working.
-    """
     _rate_limit()
     params = {"market": cid, "sort": "desc", "limit": limit}
     if starting_before is not None:
-        params["starting_before"] = int(starting_before)
+        # pass ms to be safe
+        params["starting_before"] = int(starting_before * 1000)
     if offset is not None:
         params["offset"] = int(offset)
     r = SESSION.get(DATA_TRADES, params=params, timeout=20)
@@ -420,15 +462,12 @@ def main():
 
     while True:
         now_s = int(time.time())
-        # refresh markets list periodically
         if (now_s - last_market_pull >= MARKET_REFRESH_SEC) or not markets:
             try:
-                markets = fetch_yesno_markets(since_epoch, offset)
-                offset = len(markets)
+                markets = fetch_yesno_markets_full(since_epoch, page_limit=250, include_closed=True)
                 last_market_pull = now_s
-                print(f"[MKT] loaded {len(markets)} markets @ {dt_iso()}")
-                # NEW: mark missing markets as closed if absent repeatedly
-                open_ids = {m.get("conditionId") or m.get("id") for m in markets}
+                print(f"[MKT] loaded {len(markets)} markets back to start @ {dt_iso()}")
+                open_ids = {m.get("conditionId") or m.get("id") for m in markets if not is_closed_market(m)}
                 mark_closed_if_missing(state, open_ids, dt_iso())
                 save_state(state)
             except Exception as e:
@@ -437,7 +476,21 @@ def main():
 
         # one full pass
         for m in markets:
-            cid = m.get("conditionId") or m.get("id")
+            cid = m.get("conditionId")  # IMPORTANT: trades API needs conditionId
+            if not cid:
+                # keep a minimal row so it counts in reports, but don't try trades
+                state[m.get("id") or f"legacy:{random.randint(1,1_000_000)}"] = {
+                    "market_id": m.get("id"),
+                    "question": question,
+                    "slug": slug,
+                    "updated_at": dt_iso(),
+                    "status": "closed" if is_closed_market(m) else "open",
+                    "winner": winner_from_market(m),
+                    "resolved_at": resolved_ts_from_market(m),
+                    "no_trades": True,
+                    "note": "missing conditionId; skipped trade fetch"
+                }
+                continue
             question = m.get("question")
             slug = m.get("slug") or m.get("market_slug")
 
