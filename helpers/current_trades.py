@@ -416,13 +416,15 @@ def main():
     state = load_state()
     markets = []
     last_market_pull = 0
+    offset = 0
 
     while True:
         now_s = int(time.time())
         # refresh markets list periodically
         if (now_s - last_market_pull >= MARKET_REFRESH_SEC) or not markets:
             try:
-                markets = fetch_yesno_markets(since_epoch)
+                markets = fetch_yesno_markets(since_epoch, offset)
+                offset = len(markets)
                 last_market_pull = now_s
                 print(f"[MKT] loaded {len(markets)} markets @ {dt_iso()}")
                 # NEW: mark missing markets as closed if absent repeatedly
