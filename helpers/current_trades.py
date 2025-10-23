@@ -49,7 +49,7 @@ SLIP = 0.00
 FEE_MULT = 1.0 + FEE + SLIP
 
 # Inc-fee CAP used to mark markets "under_cap"
-CAP_INC_FEE = 0.40
+CAP_INC_FEE = 0.70
 
 # Budgets to evaluate (USD notional, using raw trade prices in the window)
 TARGET_BUDGETS = [5, 10, 50, 100, 200]
@@ -226,6 +226,9 @@ def fetch_all_trades_since(cid: str, since_epoch: int, page_limit=250, slow_dela
     return uniq
 
 # ----------------- Analytics -----------------
+def cap_for_raw(raw, fee_bps, slip_bps):
+    return raw * (1 + fee_bps/10000 + slip_bps/10000)
+
 def _to_epoch(x):
     try:
         f = float(x)
@@ -430,15 +433,34 @@ def main():
         open_count   = sum(1 for st in state.values() if st.get("status") != "closed")
         closed_count = sum(1 for st in state.values() if st.get("status") == "closed")
 
-        print("\n===== PASS REPORT =====")
-        print(f"Time:               {dt_iso()}")
-        print(f"Open markets seen:  {len(markets)}")
-        print(f"Open markets in DB: {open_count}")
-        print(f"Closed in DB:       {closed_count}")
-        print(f"Markets updated:    {total}")
-        print(f"Under cap (≤{CAP_INC_FEE:.2f} inc): {under}")
-        print(f"Over cap:           {over}")
-        print("=======================\n")
+        # Classify ALL open markets in the DB snapshot, not just ones updated this pass
+        under_cap = 0
+        over_cap  = 0
+        unknown   = 0
+
+        for st in state.values():
+            if st.get("status") == "closed":
+                continue
+            px = st.get("min_trade_px_inc")
+            if px is None:
+                unknown += 1
+            elif float(px) <= float(CAP_INC_FEE) + 1e-12:
+                under_cap += 1
+            else:
+                over_cap += 1
+
+        print("===== PASS REPORT =====")
+        print(f"Time:                 {datetime.now(timezone.utc).isoformat()}")
+        print(f"Open markets seen:    {len(markets)}")
+        print(f"Open markets in DB:   {open_count}")
+        print(f"Closed in DB:         {closed_count}")
+        # If you want 'Markets updated', count during the loop:
+        #   increment updated_this_pass whenever you wrote a stats entry
+        print(f"Markets updated:      {total}")   # or use a dedicated 'updated_this_pass' counter
+        print(f"Under cap (≤{CAP_INC_FEE:.2f} inc): {under_cap}")
+        print(f"Over cap:             {over_cap}")
+        print(f"No data yet:          {unknown}")
+        print("=======================")
 
         # rest before starting again
         time.sleep(SLEEP_AFTER_FULL_PASS)
