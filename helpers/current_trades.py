@@ -55,13 +55,14 @@ CAP_INC_FEE = 0.70
 TARGET_BUDGETS = [5, 10, 50, 100, 200]
 
 # Pull cadence
-MARKET_REFRESH_SEC   = 60    # refresh market list every 15 min
-SLEEP_BETWEEN_PAGES  = 0.5        # seconds between trade pages (be gentle)
-SLEEP_BETWEEN_MARKETS= 0.5        # seconds between markets
-SLEEP_AFTER_FULL_PASS= 120.0      # rest between passes
+MISS_LIMIT_TO_CLOSE = 3  # how many consecutive refreshes a market can be "missing" before we mark it closed
+MARKET_REFRESH_SEC    = 5 * 60      # was 60; fewer full reloads, less churn
+SLEEP_BETWEEN_PAGES   = 0.0         # let the rate limiter do the pacing
+SLEEP_BETWEEN_MARKETS = 0.0         # ^
+SLEEP_AFTER_FULL_PASS = 60.0        # shorter idle between passes
 
-# HTTP + RPS limiter
-RPS_TARGET = 1.0  # nice and slow
+RPS_TARGET            = 3.5         # was 1.0; ~3–4 req/s is still gentle
+SAVE_EVERY            = 200         # was 25; far fewer disk writes per pass
 
 # ----------------- HTTP session -----------------
 def make_session():
@@ -592,7 +593,46 @@ def save_state(state, path=STATE_PATH):
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     os.replace(tmp, path)
 
-MISS_LIMIT_TO_CLOSE = 3  # how many consecutive refreshes a market can be "missing" before we mark it closed
+def append_state_delta(state_delta: dict, path):
+    """Append new/updated market(s) without rewriting the full file."""
+    with open(path, "a", encoding="utf-8") as f:
+        for rec in state_delta.values():
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+def compact_state(path=STATE_PATH):
+    seen = {}
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+                mid = rec.get("market_id")
+                if mid:
+                    seen[mid] = rec  # last line wins
+            except Exception:
+                continue
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as out:
+        for rec in seen.values():
+            out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+def compact_state_gz(path=STATE_PATH):
+    import gzip
+    seen = {}
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+                mid = rec.get("market_id")
+                if mid:
+                    seen[mid] = rec
+            except Exception:
+                continue
+    gz_path = path + ".gz"
+    with gzip.open(gz_path, "wt", encoding="utf-8") as out:
+        for rec in seen.values():
+            out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    print(f"[COMPACT] wrote {len(seen)} markets → {gz_path}")
 
 def mark_open(state, cid, now_iso_str):
     st = state.setdefault(cid, {})
@@ -627,8 +667,6 @@ def main():
     state = load_state()
     markets = []
     last_market_pull = 0
-
-    SAVE_EVERY = 25
     updates = 0  # total updates across runs
 
     while True:
