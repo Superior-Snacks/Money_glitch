@@ -32,6 +32,7 @@ from collections import deque
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from email.utils import parsedate_to_datetime
 
 # ----------------- Config -----------------
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
@@ -63,7 +64,110 @@ SLEEP_AFTER_FULL_PASS = 60.0        # shorter idle between passes
 
 RPS_TARGET            = 3.5         # was 1.0; ~3–4 req/s is still gentle
 SAVE_EVERY            = 200         # was 25; far fewer disk writes per pass
+# --- adaptive RPS control (drop-in) ---
+RPS_TARGET = 3.5      # your desired peak
+_RPS_SCALE = 1.0      # auto-tuned 0.3–1.0
+_RPS_MIN   = 0.3
+_RPS_RECOVER_PER_SEC = 0.03  # slow healing toward target
 
+_last_tokens_ts = time.monotonic()
+_bucket = RPS_TARGET
+
+def _rate_limit():
+    """Token-bucket using current adaptive RPS."""
+    global _last_tokens_ts, _bucket
+    now = time.monotonic()
+    rps_now = max(RPS_TARGET * _RPS_SCALE, 0.1)
+    _bucket = min(rps_now, _bucket + (now - _last_tokens_ts) * rps_now)
+    _last_tokens_ts = now
+    if _bucket < 1.0:
+        need = (1.0 - _bucket) / rps_now
+        time.sleep(need)
+        now2 = time.monotonic()
+        _bucket = min(rps_now, _bucket + (now2 - _last_tokens_ts) * rps_now)
+        _last_tokens_ts = now2
+    _bucket -= 1.0
+
+def _rps_on_429():
+    """Cut RPS scale when we get rate limited."""
+    global _RPS_SCALE
+    _RPS_SCALE = max(_RPS_MIN, _RPS_SCALE * 0.7)  # 30% haircut
+
+def _rps_recover(dt_sec: float):
+    """Recover slowly on each successful request."""
+    global _RPS_SCALE
+    _RPS_SCALE = min(1.0, _RPS_SCALE + _RPS_RECOVER_PER_SEC * dt_sec)
+
+def _retry_after_seconds(resp) -> float:
+    ra = resp.headers.get("Retry-After")
+    if not ra:
+        return 0.0
+    # numeric seconds?
+    try:
+        return max(0.0, float(ra))
+    except Exception:
+        pass
+    # HTTP-date (e.g., "Fri, 24 Oct 2025 12:15:40 GMT")
+    try:
+        dt = parsedate_to_datetime(ra)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return max(0.0, (dt - datetime.now(timezone.utc)).total_seconds())
+    except Exception:
+        return 0.0
+
+def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
+    """
+    Centralized GET that cooperates with _rate_limit(), honors 429 Retry-After,
+    does exponential backoff with jitter, and nudges RPS up on success.
+    """
+    back = 0.5
+    tries = 0
+    last_t = time.monotonic()
+    while True:
+        _rate_limit()
+        try:
+            r = SESSION.get(url, params=params or {}, timeout=timeout)
+        except requests.RequestException as e:
+            # network/timeout -> backoff
+            time.sleep(back + random.random()*0.2)
+            back = min(back*1.7, 20.0)
+            tries += 1
+            if tries >= max_tries:
+                raise
+            continue
+
+        # Success path
+        if r.status_code < 400:
+            # gentle recovery of RPS scale
+            now = time.monotonic()
+            _rps_recover(now - last_t)
+            last_t = now
+            return r
+
+        # 429: honor Retry-After, cut RPS, backoff
+        if r.status_code == 429:
+            _rps_on_429()
+            ra = _retry_after_seconds(r)
+            sleep_s = max(ra, back) + random.random()*0.3
+            time.sleep(sleep_s)
+            back = min(back*1.8, 30.0)
+            tries += 1
+            if tries >= max_tries:
+                r.raise_for_status()
+            continue
+
+        # 5xx: exponential backoff
+        if 500 <= r.status_code < 600:
+            time.sleep(back + random.random()*0.2)
+            back = min(back*1.7, 20.0)
+            tries += 1
+            if tries >= max_tries:
+                r.raise_for_status()
+            continue
+
+        # other 4xx: just raise
+        r.raise_for_status()
 # ----------------- HTTP session -----------------
 def make_session():
     s = requests.Session()
@@ -81,20 +185,6 @@ def make_session():
     return s
 
 SESSION = make_session()
-_last_tokens_ts = time.monotonic()
-_bucket = RPS_TARGET
-def _rate_limit():
-    global _last_tokens_ts, _bucket
-    now = time.monotonic()
-    _bucket = min(RPS_TARGET, _bucket + (now - _last_tokens_ts) * RPS_TARGET)
-    _last_tokens_ts = now
-    if _bucket < 1.0:
-        need = (1.0 - _bucket) / RPS_TARGET
-        time.sleep(need)
-        now2 = time.monotonic()
-        _bucket = min(RPS_TARGET, _bucket + (now2 - _last_tokens_ts) * RPS_TARGET)
-        _last_tokens_ts = now2
-    _bucket -= 1.0
 
 # ----------------- Time parsing -----------------
 def parse_start_input(user_input: str) -> int:
@@ -155,14 +245,12 @@ def fetch_yesno_markets_full(since_epoch: int, page_limit=250, include_closed=Tr
             params = {
                 "limit": page_limit,
                 "order": "startDate",
-                "ascending": False,       # newest → oldest
+                "ascending": False,
                 "enableOrderBook": True,
                 "closed": closed_flag,
                 "offset": offset,
             }
-            _rate_limit()
-            r = SESSION.get(BASE_GAMMA, params=params, timeout=30)
-            r.raise_for_status()
+            r = http_get_with_backoff(BASE_GAMMA, params=params, timeout=30)
             data = r.json() or []
             if not data:
                 break
@@ -218,18 +306,12 @@ def fetch_yesno_markets_full(since_epoch: int, page_limit=250, include_closed=Tr
     return sorted(by_key.values(), key=_market_time_epoch or (lambda _: 0), reverse=True)
 
 def fetch_trades_page_ms(cid: str, limit=250, starting_before_s=None, offset=None):
-    """
-    Trades API helper: passes starting_before in **milliseconds** if provided.
-    Keeps your retry/RPS behavior via SESSION and _rate_limit().
-    """
-    _rate_limit()
     params = {"market": cid, "sort": "desc", "limit": int(limit)}
     if starting_before_s is not None:
         params["starting_before"] = int(starting_before_s * 1000)  # ms
     if offset is not None:
         params["offset"] = int(offset)
-    r = SESSION.get(DATA_TRADES, params=params, timeout=20)
-    r.raise_for_status()
+    r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
     return r.json() or []
 
 def fetch_all_trades_since_slow(cid: str, since_epoch_s: int, page_limit=250, slow_delay=SLEEP_BETWEEN_PAGES):
@@ -689,7 +771,7 @@ def main():
         updates_this_pass = 0
         for idx, m in enumerate(markets, 1):
             # optional progress ping
-            if idx % 25 == 0:
+            if idx % 200 == 0:
                 print(f"[{idx}/{len(markets)}] {dt_iso()}")
 
             try:
