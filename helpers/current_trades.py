@@ -55,13 +55,13 @@ CAP_INC_FEE = 0.70
 TARGET_BUDGETS = [5, 10, 50, 100, 200]
 
 # Pull cadence
-MARKET_REFRESH_SEC   = 15 * 60    # refresh market list every 15 min
-SLEEP_BETWEEN_PAGES  = 2.0        # seconds between trade pages (be gentle)
-SLEEP_BETWEEN_MARKETS= 1.0        # seconds between markets
+MARKET_REFRESH_SEC   = 60    # refresh market list every 15 min
+SLEEP_BETWEEN_PAGES  = 0.5        # seconds between trade pages (be gentle)
+SLEEP_BETWEEN_MARKETS= 0.5        # seconds between markets
 SLEEP_AFTER_FULL_PASS= 120.0      # rest between passes
 
 # HTTP + RPS limiter
-RPS_TARGET = 4.0  # nice and slow
+RPS_TARGET = 1.0  # nice and slow
 
 # ----------------- HTTP session -----------------
 def make_session():
