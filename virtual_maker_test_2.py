@@ -48,7 +48,7 @@ COMPRESS_AFTER_DAYS = 99   # gzip logs older than this (but not today's)
 _created_cutoff = None
 
 # ---- ONE SIZE TO RULE THEM ALL ----
-STAKE_USD = 100.0  # change this once to control ALL per-order sizes
+STAKE_USD = 50.0  # change this once to control ALL per-order sizes
 RAW_CAP_NO = 0.60
 GLOBAL_FEE = 0.0   # 600 for 6.00%
 GLOBAL_SLIP = 0.0  # 200 for 2.00%

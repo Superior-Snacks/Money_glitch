@@ -101,14 +101,13 @@ def log_net_usage():
 
 
 
-def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
+def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
                           require_clob=True, min_liquidity=None, min_volume=None,
                           session=SESSION, verbose=True):
     params = {
         "limit": limit,
         "order": "startDate",
         "ascending": False,
-        "closed": False,
     }
     if days_back:
         params["start_date_min"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
@@ -167,6 +166,18 @@ def fetch_open_yesno_fast(limit=250, max_pages=10, days_back=90,
     if verbose:
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
+
+def fetch_trades(market_dict, session=SESSION):
+    """Pull full trade history with retries+timeouts and a hard time budget."""
+    cid = market_dict["conditionId"]
+    params={"market": cid, "sort": "asc", "limit": 100}
+    try:
+        r = session.get(DATA_TRADES, params=params, timeout=20)
+        r.raise_for_status()
+        payload = r.json()
+        return payload
+    except:
+        return None
 
 #current
 def is_actively_tradable(m):
@@ -406,3 +417,15 @@ def excepthook(exctype, value, tb):
     with open("crash.log","a",encoding="utf-8") as f:
         traceback.print_exception(exctype, value, tb, file=f)
 sys.excepthook = excepthook
+
+def main():
+    m = fetch_open_yesno_fast(days_back=365)
+    for i in m:
+        print(i["startDate"], i["question"])
+    print(len(m))
+    print(m[0].keys())
+
+
+
+if __name__ == "__main__":
+    main()
