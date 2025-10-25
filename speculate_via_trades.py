@@ -167,47 +167,29 @@ def fetch_open_yesno_fast(limit=250, max_pages=1000, days_back=360,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
-def fetch_all_trades(market_dict, session=SESSION, limit=250, max_pages=10000, sleep=0.2):
-    """Fetch full trade history for a given market, safely and with pagination."""
+def fetch_trades(market_dict, session=SESSION, limit=100, max_pages=10000):
+    """Pull full trade history with retries+timeouts and a hard time budget."""
     cid = market_dict["conditionId"]
     offset = 0
+    params={"market": cid, "sort": "asc", "limit": limit, "offset": offset,}
     all_trades = []
-
     while True:
-        params = {
-            "market": cid,
-            "sort": "asc",
-            "limit": limit,
-            "offset": offset,
-        }
-
         try:
             r = session.get(DATA_TRADES, params=params, timeout=20)
             r.raise_for_status()
             payload = r.json()
-            trades = payload.get("data", payload)  # some endpoints wrap in "data"
-
-            # Stop if no more trades
-            if not trades:
+            
+            if not payload:
                 break
-
-            all_trades.extend(trades)
+            all_trades.append(payload)
             offset += limit
-
-            # optional: stop runaway requests
             if offset // limit >= max_pages:
                 print(f"[WARN] Hit max_pages ({max_pages}), stopping early.")
                 break
-
-            # short sleep to avoid rate-limit
-            time.sleep(sleep)
-
-        except requests.exceptions.RequestException as e:
-            print(f"[WARN] Fetch failed at offset={offset}: {e}")
-            break
-
+            time.sleep(0.3)
+        except:
+            return all_trades
     return all_trades
-
 #current
 def is_actively_tradable(m):
     if not m.get("enableOrderBook"): return False
@@ -217,7 +199,7 @@ def is_actively_tradable(m):
         except: toks=[]
     q = (m.get("question") or "").lower()
     # Skip range/between/greater-than style if you want simpler binarys:
-    #if any(w in q for w in ["between", "range", "greater than", "less than"]):
+   #if any(w in q for w in ["between", "range", "greater than", "less than"]):
     #    return False
     return isinstance(toks, list) and len(toks) == 2
 
@@ -441,18 +423,16 @@ def purge_housekeeping(mgr, maker, last_under_seen):
             if cid in mgr.entered or cid not in mgr.watch:
                 maker.orders.pop(cid, None)
 
-
-def excepthook(exctype, value, tb):
-    with open("crash.log","a",encoding="utf-8") as f:
-        traceback.print_exception(exctype, value, tb, file=f)
-sys.excepthook = excepthook
-
 def main():
-    m = fetch_open_yesno_fast(days_back=365)
+    m = fetch_open_yesno_fast(days_back=3)
     for i in m:
         print(i["startDate"], i["question"])
     print(len(m))
     print(m[0].keys())
+    m1 = fetch_trades(m[0])
+    print(m1[0].keys())
+    for i in m1:
+        print(f"price: {i["price"]}, shares:{i["size"]} {m[0]["question"]}")
 
 
 

@@ -37,3 +37,90 @@ Traceback (most recent call last):
     return self._sslobj.read(len, buffer)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 KeyboardInterrupt
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 463, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 452, in main
+    m1 = fetch_all_trades(m[0])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 188, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 463, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 452, in main
+    m1 = fetch_all_trades(m[0])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 188, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 464, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 453, in main
+    m1 = fetch_all_trades(m[0])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 188, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 465, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 453, in main
+    m1 = fetch_all_trades(m[0])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 188, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 465, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 453, in main
+    m1 = fetch_all_trades(m[1])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 188, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 466, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 454, in main
+    m1 = fetch_all_trades(m[1])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 188, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 467, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 455, in main
+    m1 = fetch_all_trades(m[1])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 189, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 467, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 455, in main
+    m1 = fetch_all_trades(m[1])
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 189, in fetch_all_trades
+    trades = payload.get("data", payload)  # some endpoints wrap in "data"
+             ^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 433, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 428, in main
+    print(f"price: {i["price"]}, {i["question"]}")
+                                  ~^^^^^^^^^^^^
+KeyError: 'question'
