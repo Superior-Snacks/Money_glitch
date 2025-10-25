@@ -217,8 +217,8 @@ def is_actively_tradable(m):
         except: toks=[]
     q = (m.get("question") or "").lower()
     # Skip range/between/greater-than style if you want simpler binarys:
-    if any(w in q for w in ["between", "range", "greater than", "less than"]):
-        return False
+    #if any(w in q for w in ["between", "range", "greater than", "less than"]):
+    #    return False
     return isinstance(toks, list) and len(toks) == 2
 
 
