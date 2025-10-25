@@ -4,6 +4,7 @@ all time lægsta, nr. hvaða trade það var, fyrsta undir cap, nr hvað það v
 kaup (ef magn stocks og price nudir cap),
 magn under (open), magn over (opem), magn no trades (open)
 magn under (closed), magn over (closed), magn no trades (closed)
+magn over x, y, z
 """
 import json
 import time
