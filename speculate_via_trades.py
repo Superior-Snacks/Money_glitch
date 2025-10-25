@@ -16,14 +16,12 @@ from urllib3.util.retry import Retry
 import os
 import re
 import random, time
-import os, json, time, math
+import os, json, time
 from datetime import datetime, timedelta, timezone
 import gzip
 import glob
 import time, traceback, sys
-import faulthandler, signal
-import os, sys, time, json, requests, signal, traceback
-import psutil
+import os, sys, time, json, requests, traceback
 from datetime import datetime, timezone, timedelta
 
 name_log = input("name log: ")
@@ -102,8 +100,8 @@ def log_net_usage():
 
 
 
-def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
-                          require_clob=True, min_liquidity=None, min_volume=None,
+def fetch_open_yesno_fast(limit=250, max_pages=1000, days_back=360,
+                          require_clob=False, min_liquidity=None, min_volume=None,
                           session=SESSION, verbose=True):
     params = {
         "limit": limit,
@@ -123,6 +121,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
     offset, pages = 0, 0
 
     while pages < max_pages:
+        time.sleep(1)
         q = dict(params, offset=offset)
         try:
             r = session.get(BASE_GAMMA, params=q, timeout=20)
@@ -168,17 +167,46 @@ def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
-def fetch_trades(market_dict, session=SESSION):
-    """Pull full trade history with retries+timeouts and a hard time budget."""
+def fetch_all_trades(market_dict, session=SESSION, limit=250, max_pages=10000, sleep=0.2):
+    """Fetch full trade history for a given market, safely and with pagination."""
     cid = market_dict["conditionId"]
-    params={"market": cid, "sort": "asc", "limit": 100}
-    try:
-        r = session.get(DATA_TRADES, params=params, timeout=20)
-        r.raise_for_status()
-        payload = r.json()
-        return payload
-    except:
-        return None
+    offset = 0
+    all_trades = []
+
+    while True:
+        params = {
+            "market": cid,
+            "sort": "asc",
+            "limit": limit,
+            "offset": offset,
+        }
+
+        try:
+            r = session.get(DATA_TRADES, params=params, timeout=20)
+            r.raise_for_status()
+            payload = r.json()
+            trades = payload.get("data", payload)  # some endpoints wrap in "data"
+
+            # Stop if no more trades
+            if not trades:
+                break
+
+            all_trades.extend(trades)
+            offset += limit
+
+            # optional: stop runaway requests
+            if offset // limit >= max_pages:
+                print(f"[WARN] Hit max_pages ({max_pages}), stopping early.")
+                break
+
+            # short sleep to avoid rate-limit
+            time.sleep(sleep)
+
+        except requests.exceptions.RequestException as e:
+            print(f"[WARN] Fetch failed at offset={offset}: {e}")
+            break
+
+    return all_trades
 
 #current
 def is_actively_tradable(m):

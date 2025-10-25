@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 430, in <module>
+    main()
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 421, in main
+    m = fetch_open_yesno_fast(days_back=365)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\OneDrive\Documents\python\money_giltch\speculate_via_trades.py", line 126, in fetch_open_yesno_fast
+    r = session.get(BASE_GAMMA, params=q, timeout=20)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\sessions.py", line 746, in send
+    r.content
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 902, in content
+    self._content = b"".join(self.iter_content(CONTENT_CHUNK_SIZE)) or b""
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\models.py", line 820, in generate
+    yield from self.raw.stream(chunk_size, decode_content=True)
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\response.py", line 1063, in stream
+    yield from self.read_chunked(amt, decode_content=decode_content)
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\response.py", line 1219, in read_chunked
+    self._update_chunk_length()
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\response.py", line 1138, in _update_chunk_length
+    line = self._fp.fp.readline()  # type: ignore[union-attr]
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\socket.py", line 720, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\ssl.py", line 1251, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jonin\AppData\Local\Programs\Python\Python312\Lib\ssl.py", line 1103, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
