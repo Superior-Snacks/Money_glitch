@@ -171,17 +171,17 @@ def fetch_trades(market_dict, session=SESSION, limit=100, max_pages=10000):
     """Pull full trade history with retries+timeouts and a hard time budget."""
     cid = market_dict["conditionId"]
     offset = 0
-    params={"market": cid, "sort": "asc", "limit": limit, "offset": offset,}
     all_trades = []
     while True:
         try:
+            params={"market": cid, "sort": "asc", "limit": limit, "offset": offset,}
             r = session.get(DATA_TRADES, params=params, timeout=20)
             r.raise_for_status()
             payload = r.json()
             
-            if not payload:
+            if not payload or len(payload) == 0:
                 break
-            all_trades.append(payload)
+            all_trades.extend(payload)
             offset += limit
             if offset // limit >= max_pages:
                 print(f"[WARN] Hit max_pages ({max_pages}), stopping early.")
@@ -202,6 +202,10 @@ def is_actively_tradable(m):
    #if any(w in q for w in ["between", "range", "greater than", "less than"]):
     #    return False
     return isinstance(toks, list) and len(toks) == 2
+
+def decode_trades(trades):
+    smallest_ever = 0.99
+    trades_till = None
 
 
 # ----------------------------------------------------------------------
