@@ -209,12 +209,16 @@ def decode_trades(trades, market, cap=0.5, bet=100):
     amoount_under_cap = 0
     notional_under_cap = 0
     trades_till = 0
+    count = 0
+    #[price, ammount]
+    spread ={"5":[0,0], "10":[0,0], "25":[0,0], "50":[0,0], "75":[0,0], "100":[0,0], "150":[0,0], "200":[0,0], "300":[0,0],
+             "400":[0,0], "500":[0,0], "750":[0,0], "1000":[0,0]}
     if not trades:
         print(f"NO TRADES FOR | {market["question"]}")
         return None
     for tr in trades:
         count += 1
-        if (tr["price"] > cap) and (tr["price"] < smallest_ever):
+        if (tr["price"] < cap) and (tr["price"] < smallest_ever):
             smallest_ever = tr["price"]
             amoount_under_cap += tr["size"]
             notional_under_cap += tr["size"] * tr["price"]
@@ -450,19 +454,23 @@ def main():
     under = 0
     over = 0
     no_trades = 0
+    trades_till = None
+    smallest_ever =None
     m = fetch_open_yesno_fast(days_back=1)
     for i in m:
         trades = fetch_trades(i)
         if trades:
-            smallest_ever, amoount_under_cap, notional_under_cap, trades_till = decode_trades(trades)
+            smallest_ever, amoount_under_cap, notional_under_cap, trades_till = decode_trades(trades, i)
             if notional_under_cap > bet:
                 under += 1
-                print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever} | {m["question"]}")
+                print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever}, no trades:{no_trades} | {i["question"]}")
             else:
                 over += 1
-                print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever} | {m["question"]}")
+                print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever}, no trades:{no_trades} | {i["question"]}")
         else:
+            no_trades += 1
             print("NO TRADES")
+            print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever}, no trades:{no_trades} | {i["question"]}")
 
 
 if __name__ == "__main__":
