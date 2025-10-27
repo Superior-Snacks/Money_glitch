@@ -1254,14 +1254,14 @@ def main():
     global LADDER_INC_LEVELS 
     _created_cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
 
-    # 1️⃣ Fetch initial markets
+    # 1️ Fetch initial markets
     open_markets = fetch_open_yesno_fast(limit=250, max_pages=4, days_back=0.25, verbose=True)
     recent = [m for m in open_markets if _dt(m.get("createdAt")) and _dt(m["createdAt"]) >= _created_cutoff]
     markets = [m for m in recent if is_actively_tradable(m)]
 
     print(f"Tradable Yes/No with quotes: {len(markets)}")
 
-    # 2️⃣ Initialize the manager
+    # 2️ Initialize the manager
     mgr = WatchlistManager(
         max_no_price=cap_for_raw(RAW_CAP_NO, GLOBAL_FEE, GLOBAL_SLIP),
         min_notional=50.0,
