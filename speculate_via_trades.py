@@ -446,10 +446,17 @@ def purge_housekeeping(mgr, maker, last_under_seen):
                 maker.orders.pop(cid, None)
 
 def main():
+    bet = 100
+    under = 0
+    over = 0
+    no_trades = 0
     m = fetch_open_yesno_fast(days_back=1)
     for i in m:
         trades = fetch_trades(i)
         smallest_ever, amoount_under_cap, notional_under_cap, trades_till = decode_trades(trades)
+        if notional_under_cap > bet:
+            under += 1
+            print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever} | {m["question"]}")
 
 
 if __name__ == "__main__":
