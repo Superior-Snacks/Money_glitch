@@ -205,7 +205,11 @@ def is_actively_tradable(m):
 
 def decode_trades(trades):
     smallest_ever = 0.99
+    amoount_under_cap = 0
     trades_till = None
+    spread = {"5":None, "10":None , "15":None, "20":None, "25":None, "50":None, "75":None, "100":None, "150":None,
+              "200":None, "300":None, "400":None, "500":None, "750":None, "1000":None}
+
 
 
 # ----------------------------------------------------------------------
