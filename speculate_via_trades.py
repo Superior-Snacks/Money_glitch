@@ -453,10 +453,16 @@ def main():
     m = fetch_open_yesno_fast(days_back=1)
     for i in m:
         trades = fetch_trades(i)
-        smallest_ever, amoount_under_cap, notional_under_cap, trades_till = decode_trades(trades)
-        if notional_under_cap > bet:
-            under += 1
-            print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever} | {m["question"]}")
+        if trades:
+            smallest_ever, amoount_under_cap, notional_under_cap, trades_till = decode_trades(trades)
+            if notional_under_cap > bet:
+                under += 1
+                print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever} | {m["question"]}")
+            else:
+                over += 1
+                print(f"under:{under}, over:{over}, place:{trades_till} best price:{smallest_ever} | {m["question"]}")
+        else:
+            print("NO TRADES")
 
 
 if __name__ == "__main__":
