@@ -203,19 +203,25 @@ def is_actively_tradable(m):
     #    return False
     return isinstance(toks, list) and len(toks) == 2
 
-def decode_trades(trades, market, cap=0.5):
+def decode_trades(trades, market, cap=0.5, bet=100):
+    check=True
     smallest_ever = 0.99
     amoount_under_cap = 0
     notional_under_cap = 0
-    trades_till = None
+    trades_till = 0
     if not trades:
         print(f"NO TRADES FOR | {market["question"]}")
         return None
     for tr in trades:
+        count += 1
         if (tr["price"] > cap) and (tr["price"] < smallest_ever):
             smallest_ever = tr["price"]
             amoount_under_cap += tr["size"]
             notional_under_cap += tr["size"] * tr["price"]
+        if notional_under_cap > bet and check:
+            trades_till = count
+            check = False
+
 
 
 
