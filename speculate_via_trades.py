@@ -448,14 +448,8 @@ def purge_housekeeping(mgr, maker, last_under_seen):
 def main():
     m = fetch_open_yesno_fast(days_back=1)
     for i in m:
-        print(i["startDate"], i["question"])
-    print(len(m))
-    print(m[-1].keys())
-    m1 = fetch_trades(m[-1])
-    print(m1[0].keys())
-    for i in m1:
-        print(f"price: {i["price"]}, shares:{i["size"]} {m[0]["question"]}")
-
+        trades = fetch_trades(i)
+        smallest_ever, amoount_under_cap, notional_under_cap, trades_till = decode_trades(trades)
 
 
 if __name__ == "__main__":
