@@ -203,7 +203,7 @@ def is_actively_tradable(m):
     #    return False
     return isinstance(toks, list) and len(toks) == 2
 
-def decode_trades(trades, market):
+def decode_trades(trades, market, cap=0.5):
     smallest_ever = 0.99
     amoount_under_cap = 0
     notional_under_cap = 0
@@ -211,6 +211,11 @@ def decode_trades(trades, market):
     if not trades:
         print(f"NO TRADES FOR | {market["question"]}")
         return None
+    for tr in trades:
+        if (tr["price"] > cap) and (tr["price"] < smallest_ever):
+            smallest_ever = tr["price"]
+            amoount_under_cap += tr["size"]
+            notional_under_cap += tr["size"] * tr["price"]
 
 
 
@@ -434,12 +439,12 @@ def purge_housekeeping(mgr, maker, last_under_seen):
                 maker.orders.pop(cid, None)
 
 def main():
-    m = fetch_open_yesno_fast(days_back=3)
+    m = fetch_open_yesno_fast(days_back=1)
     for i in m:
         print(i["startDate"], i["question"])
     print(len(m))
-    print(m[0].keys())
-    m1 = fetch_trades(m[0])
+    print(m[-1].keys())
+    m1 = fetch_trades(m[-1])
     print(m1[0].keys())
     for i in m1:
         print(f"price: {i["price"]}, shares:{i["size"]} {m[0]["question"]}")
