@@ -218,9 +218,10 @@ def decode_trades(trades, market, cap=0.5, bet=100):
             smallest_ever = tr["price"]
             amoount_under_cap += tr["size"]
             notional_under_cap += tr["size"] * tr["price"]
-        if notional_under_cap > bet and check:
+        if (notional_under_cap > bet) and check:
             trades_till = count
             check = False
+    return smallest_ever, amoount_under_cap, notional_under_cap, trades_till 
 
 
 
