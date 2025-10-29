@@ -488,11 +488,15 @@ def main():
     no_trades = 0
     trades_till = None
     smallest_ever =None
-    m = fetch_open_yesno_fast(days_back=1)
+    m = fetch_open_yesno_fast(days_back=10)
     for i in m:
         trades = fetch_trades(i)
         if trades:
-            decoded = decode_trades(trades, i)
+            dec = decode_trades(trades, i)
+            print(f"${dec["ammount_under_cap"]} | time:{dec["trades_till_fill"]}")
+
+        else:
+            print(f"NO TRADES | {i["question"]}")
 
 if __name__ == "__main__":
     main()
