@@ -203,7 +203,7 @@ def is_actively_tradable(m):
     #    return False
     return isinstance(toks, list) and len(toks) == 2
 
-def decode_trades(trades, market, cap=0.4, bet=100):
+def decode_trades(trades, market, cap=0.5, bet=100):
     # Initialize metrics
     smallest_ever = 0.99
     amount_under_cap = 0
