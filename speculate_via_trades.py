@@ -271,7 +271,19 @@ def decode_trades(trades, market, cap=0.5, bet=100):
     }
 
 def wl_markets_under_cap(market):
-    ...
+    outcome_raw = market.get("outcomePrices", ["0", "0"])
+    outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
+    yes_p, no_p = float(outcome[0]), float(outcome[1])
+    if (yes_p < 0.98 or yes_p > 0.02):
+        return "TBD"
+    elif (no_p < 0.98 or no_p > 0.02):
+        return "TBD"
+    if no_p > yes_p:
+        return "NO"
+    elif no_p < yes_p:
+        return "YES"
+    else:
+        return "TBD"
 
 # ----------------------------------------------------------------------
 # log logic
@@ -510,7 +522,6 @@ def main():
                 under += 1
             else:
                 over += 1
-
             finnished = wl_markets_under_cap(i)
             if finnished == "NO":
                 wl += 1
