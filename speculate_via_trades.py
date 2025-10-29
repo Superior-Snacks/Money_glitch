@@ -514,6 +514,7 @@ def main():
     smallest_ever =None
     wl = 0
     tbd = 0
+    wl_notional = 0.0
     m = fetch_open_yesno_fast(days_back=100)
     for i in m:
         trades = fetch_trades(i)
@@ -526,11 +527,13 @@ def main():
             finnished = wl_markets_under_cap(i)
             if finnished == "NO":
                 wl += 1
+                wl_notional += 10
             elif finnished == "YES":
                 wl -= 1
+                wl_notional -= 5
             elif finnished == "TBD":
                 tbd += 1
-            print(f"wl:{wl}, tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
+            print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
 
         else:
             no_trades += 1
