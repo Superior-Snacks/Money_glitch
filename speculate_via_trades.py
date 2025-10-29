@@ -167,7 +167,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=1000, days_back=360,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
-def fetch_trades(market_dict, session=SESSION, limit=100, max_pages=1000):
+def fetch_trades(market_dict, session=SESSION, limit=100, max_pages=250):
     """Pull full trade history with retries+timeouts and a hard time budget."""
     cid = market_dict["conditionId"]
     offset = 0
