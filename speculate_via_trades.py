@@ -527,7 +527,7 @@ def main():
             finnished = wl_markets_under_cap(i)
             if finnished == "NO":
                 wl += 1
-                wl_notional += 10
+                wl_notional += 9
             elif finnished == "YES":
                 wl -= 1
                 wl_notional -= 5
