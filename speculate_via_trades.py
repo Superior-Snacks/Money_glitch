@@ -500,7 +500,8 @@ def main():
             print(f"ratio{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
 
         else:
-            print(f"NO TRADES | {i["question"]}")
+            no_trades += 1
+            print(f"NO TRADES | {no_trades} | {i["question"]}")
 
 if __name__ == "__main__":
     main()
