@@ -270,6 +270,8 @@ def decode_trades(trades, market, cap=0.5, bet=100):
         "spread": spread
     }
 
+def wl_markets_under_cap(market):
+    ...
 
 # ----------------------------------------------------------------------
 # log logic
@@ -507,6 +509,13 @@ def main():
             else:
                 over += 1
             print(f"ratio{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
+            finnished = wl_markets_under_cap(i)
+            if finnished == "NO":
+                ...
+            elif finnished == "YES":
+                ...
+            elif finnished == "TBD":
+                ...
 
         else:
             no_trades += 1
