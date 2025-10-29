@@ -100,7 +100,7 @@ def log_net_usage():
 
 
 
-def fetch_open_yesno_fast(limit=250, max_pages=1000, days_back=360,
+def fetch_open_yesno_fast(limit=250, max_pages=10000, days_back=360,
                           require_clob=False, min_liquidity=None, min_volume=None,
                           session=SESSION, verbose=True):
     params = {
@@ -272,14 +272,11 @@ def decode_trades(trades, market, cap=0.5, bet=100):
 
 def wl_markets_under_cap(market):
     if market.get("closed") == False:
-        print("not closed")
         return "TBD"
     outcome_raw = market.get("outcomePrices", ["0", "0"])
     outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
     yes_p, no_p = float(outcome[0]), float(outcome[1])
     if 0.02 < yes_p < 0.98 and 0.02 < no_p < 0.98:
-        print(f"yes {yes_p:.2f}, no {no_p:.2f}")
-        print("active?")
         return "TBD"
     if no_p > yes_p:
         return "NO"
@@ -517,7 +514,7 @@ def main():
     smallest_ever =None
     wl = 0
     tbd = 0
-    m = fetch_open_yesno_fast(days_back=10)
+    m = fetch_open_yesno_fast(days_back=100)
     for i in m:
         trades = fetch_trades(i)
         if trades:
