@@ -497,7 +497,7 @@ def main():
                 under += 1
             else:
                 over += 1
-            print(f"ratio{under}/{over}${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
+            print(f"ratio{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
 
         else:
             print(f"NO TRADES | {i["question"]}")
