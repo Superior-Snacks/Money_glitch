@@ -531,7 +531,7 @@ def main():
                 wl -= 1
             elif finnished == "TBD":
                 tbd += 1
-            print(f"wl:{wl}, tbd:{tbd} | ratio{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
+            print(f"wl:{wl}, tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
 
         else:
             no_trades += 1
