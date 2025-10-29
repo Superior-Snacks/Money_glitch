@@ -277,12 +277,8 @@ def wl_markets_under_cap(market):
     outcome_raw = market.get("outcomePrices", ["0", "0"])
     outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
     yes_p, no_p = float(outcome[0]), float(outcome[1])
-    if (yes_p < 0.98) or (yes_p > 0.02):
-        print(f"yes {yes_p}, no {no_p}")
-        print("active?")
-        return "TBD"
-    elif (no_p < 0.98) or (no_p > 0.02):
-        print(f"yes {yes_p}, no {no_p}")
+    if 0.02 < yes_p < 0.98 and 0.02 < no_p < 0.98:
+        print(f"yes {yes_p:.2f}, no {no_p:.2f}")
         print("active?")
         return "TBD"
     if no_p > yes_p:
