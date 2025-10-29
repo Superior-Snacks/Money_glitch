@@ -162,7 +162,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=1000, days_back=360,
         offset += limit
 
     # sort newest → oldest by startDate or createdAt
-    all_rows.sort(key=lambda m: (m.get("startDate") or m.get("createdAt") or ""), reverse=True)
+    all_rows.sort(key=lambda m: (m.get("startDate") or m.get("createdAt") or ""), reverse=False)
     if verbose:
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
@@ -272,19 +272,23 @@ def decode_trades(trades, market, cap=0.5, bet=100):
 
 def wl_markets_under_cap(market):
     if market.get("closed") == False:
+        print("not closed")
         return "TBD"
     outcome_raw = market.get("outcomePrices", ["0", "0"])
     outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
     yes_p, no_p = float(outcome[0]), float(outcome[1])
     if (yes_p < 0.98 or yes_p > 0.02):
+        print("active?")
         return "TBD"
     elif (no_p < 0.98 or no_p > 0.02):
+        print("active?")
         return "TBD"
     if no_p > yes_p:
         return "NO"
     elif no_p < yes_p:
         return "YES"
     else:
+        print("how?")
         return "TBD"
 
 # ----------------------------------------------------------------------
@@ -531,7 +535,7 @@ def main():
                 wl -= 1
             elif finnished == "TBD":
                 tbd += 1
-            print(f"wl:{wl}, tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
+            print(f"wl:{wl}, tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
 
         else:
             no_trades += 1
