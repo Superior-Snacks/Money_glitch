@@ -271,6 +271,8 @@ def decode_trades(trades, market, cap=0.5, bet=100):
     }
 
 def wl_markets_under_cap(market):
+    if market.get("closed") == False:
+        return "TBD"
     outcome_raw = market.get("outcomePrices", ["0", "0"])
     outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
     yes_p, no_p = float(outcome[0]), float(outcome[1])
