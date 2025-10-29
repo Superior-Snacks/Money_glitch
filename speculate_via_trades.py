@@ -493,7 +493,11 @@ def main():
         trades = fetch_trades(i)
         if trades:
             dec = decode_trades(trades, i)
-            print(f"${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
+            if dec["amount_under_cap"] > 5:
+                under += 1
+            else:
+                over += 1
+            print(f"ratio{under}/{over}${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"]}")
 
         else:
             print(f"NO TRADES | {i["question"]}")
