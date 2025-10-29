@@ -232,6 +232,9 @@ def decode_trades(trades, market, cap=0.5, bet=100):
         sz = tr.get("size", tr.get("amount", 0))
         notional = pr * sz
 
+        if count > 9999:
+            break
+
         # Track the smallest trade price seen
         if pr < smallest_ever:
             smallest_ever = pr
