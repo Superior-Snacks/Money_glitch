@@ -210,6 +210,8 @@ def decode_trades(trades, market, cap=0.5, bet=100):
     notional_under_cap = 0
     trades_till_fill = 0
     count = 0
+    first_under = None
+    first = False
 
     # Buckets by dollar amount
     spread = {
@@ -229,8 +231,11 @@ def decode_trades(trades, market, cap=0.5, bet=100):
     for tr in trades:
         count += 1
         pr = tr["price"]
-        sz = tr.get("size", tr.get("amount", 0))
+        sz = tr["size"]
         notional = pr * sz
+
+        if not first and (pr <= cap):
+            first_under = (pr , sz)
 
         if count > 9999:
             break
@@ -258,6 +263,7 @@ def decode_trades(trades, market, cap=0.5, bet=100):
     return {
         "market": market["question"],
         "smallest_price": smallest_ever,
+        "first_under": first_under,
         "amount_under_cap": amount_under_cap,
         "notional_under_cap": notional_under_cap,
         "trades_till_fill": trades_till_fill,
