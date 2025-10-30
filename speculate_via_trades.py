@@ -379,29 +379,6 @@ def append_jsonl(path_base: str, record: dict):
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
-def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_price_eff, bank_after_open):
-    """
-    Persist a single line for the trade you just took.
-    """
-    bb, ba = best_of_book(book_used or {})
-    rec = {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "market_id": market.get("conditionId"),
-        "market_slug": market.get("slug"),
-        "question": market.get("question"),
-        "side": side,                        # "NO" or "YES"
-        "token_id": token_id,
-        "spent_after": round(float(spent_after), 6),
-        "shares": round(float(shares), 6),
-        "avg_price_eff": round(float(avg_price_eff), 6),  # effective avg (after fees/slip used to decide)
-        "book_best_bid": bb,
-        "book_best_ask": ba,
-        "locked_now": round(float(locked_now), 6),
-        "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
-        "bank_after_open": round(float(bank_after_open), 6),
-    }
-    append_jsonl(TRADE_LOG_BASE, rec)
-
 def log_view(wl, wl_notional, no_trades, tbd, under, over):
     rec = {
         "trades_taken":under,
