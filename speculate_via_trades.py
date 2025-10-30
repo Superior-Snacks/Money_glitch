@@ -25,11 +25,14 @@ import os, sys, time, json, requests, traceback
 from datetime import datetime, timezone, timedelta
 import argparse
 
+bet = float(input("bet: "))
+if not bet:
+    bet = 100.0
 name_log = input("name log: ")
 if name_log:
     LOG_DIR = os.path.join("logs", name_log)
 else:
-    LOG_DIR = os.path.join("logs", f"logs_run_{int(time.time())}")
+    LOG_DIR = os.path.join("logs", f"logs_run_{bet}_{int(time.time())}")
 
 BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
@@ -538,6 +541,13 @@ def main():
             no_trades += 1
             print(f"NO TRADES | {no_trades} | {i["question"]}")
 
+def run_historic():
+    ...
+
+def run_active():
+    ...
+
+
 def main1():
     p = argparse.ArgumentParser(description="trades taken under cap simulator")
     g = p.add_mutually_exclusive_group(required=False)
@@ -545,16 +555,15 @@ def main1():
     g.add_argument("--historic", action="store_true", help="simulating historic to compare with active")
     args = p.parse_args()
 
-    if args.once:
-        ...
-        return
-
-    while True:
-        try:
-            ...
-        except Exception as e:
-            print(f"[WARN] compute error: {e}")
-        time.sleep(max(60, args.interval))
+    if args.historic:
+        run_historic()
+    else:
+        while True:
+            try:
+                run_active()
+            except Exception as e:
+                print(f"[WARN] compute error: {e}")
+            time.sleep(180)
 
 
 if __name__ == "__main__":
