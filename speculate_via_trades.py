@@ -28,6 +28,12 @@ import argparse
 bet = float(input("bet: "))
 if not bet:
     bet = 100.0
+cap = float(input("cap: "))
+if not cap:
+    cap = 0.5
+days_back = input("days back: ")
+if not days_back:
+    days_back = 10
 name_log = input("name log: ")
 if name_log:
     LOG_DIR = os.path.join("logs", name_log)
@@ -300,7 +306,6 @@ def run_historic(days_back, bet, cap):
     wl = 0
     tbd = 0
     wl_notional = 0.0
-    skipped = 0
     while not finished:
         markets = fetch_open_yesno_fast(offset=offset, days_back=days_back)
         offset += 100 * 250
@@ -342,7 +347,7 @@ def main():
     args = p.parse_args()
 
     if args.historic:
-        run_historic()
+        run_historic(days_back, bet, cap)
     else:
         while True:
             try:
