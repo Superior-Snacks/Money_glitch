@@ -343,18 +343,20 @@ def run_historic(days_back, bet, cap):
             if raw_trades:
                 dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
                 res = wl_markets_under_cap(market)
+                if dec["amount_under_cap"] > bet:
+                    under += 1
+                else:
+                    over += 1
                 if res == "YES":
                     wl -= bet
                     wl_notional -= bet
                 elif res == "TBD":
                     tbd += 1
-                elif res == "NO":
+                elif (res == "NO") and (dec["amount_under_cap"] > bet):
                     wl += 1
                     wl_notional += bet - (bet/cap)
                 else:
                     print("ERROR SOMETHING HORRIBLE WENT WRONG")
-                if not dec:
-                    no_trades += 1
                 print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
             else:
                 no_trades += 1
