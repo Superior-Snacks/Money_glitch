@@ -510,8 +510,6 @@ def main():
     under = 0
     over = 0
     no_trades = 0
-    trades_till = None
-    smallest_ever =None
     wl = 0
     tbd = 0
     wl_notional = 0.0
@@ -519,7 +517,7 @@ def main():
     for i in m:
         trades = fetch_trades(i)
         if trades:
-            dec = decode_trades(trades, i)
+            dec = decode_trades(trades, i, bet=bet)
             if dec["amount_under_cap"] > 5:
                 under += 1
             else:
@@ -527,7 +525,7 @@ def main():
             finnished = wl_markets_under_cap(i)
             if finnished == "NO":
                 wl += 1
-                wl_notional += 9
+                wl_notional += 4
             elif finnished == "YES":
                 wl -= 1
                 wl_notional -= 5
@@ -541,3 +539,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    """
+    active mode, only track closed false open markets, follow up report wl --slow
+    history mode, from x days back give report svo end -- fast ish
+    """
