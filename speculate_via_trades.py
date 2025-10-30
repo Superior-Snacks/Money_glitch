@@ -411,33 +411,8 @@ def log_view(wl, wl_notional, no_trades, tbd, under, over):
         "tbd":tbd,
         "no_trades":no_trades
     }
+    append_jsonl(RUN_SNAP_BASE, rec)
 
-
-
-def log_run_snapshot(bank, total_trades_count: int):    
-    global locked_now, peak_locked, peak_locked_time
-    # Recompute locked from positions to avoid drift
-    locked_now = compute_locked_now()
-    if locked_now > peak_locked:
-        peak_locked = locked_now
-        peak_locked_time = datetime.now(timezone.utc)
-
-    snap = {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "bank": round(float(bank), 6),
-        "locked_now": round(float(locked_now), 6),
-        "open_positions": len(positions_by_id),
-        "potential_value_if_all_win": round(compute_potential_value_if_all_win(), 6),
-        "total_trades_taken": int(total_trades_count),
-        "peak_locked": round(float(peak_locked), 6),
-        "peak_locked_time": peak_locked_time.isoformat() if peak_locked_time else None,
-        "first_trade_time": first_trade_dt.isoformat() if first_trade_dt else None,
-        "last_settle_time": last_settle_dt.isoformat() if last_settle_dt else None,
-    }
-    if random.random() < DECISION_LOG_SNAPSHOT:
-        append_jsonl(RUN_SNAP_BASE, snap)
-    else:
-        print(f"[SNAPSHOT] | {snap['ts']} | taken:{snap['total_trades_taken']} | spnet:{snap['peak_locked']}")
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
