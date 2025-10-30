@@ -309,8 +309,6 @@ def run_historic(days_back, bet, cap):
             if raw_trades:
                 dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
                 res = wl_markets_under_cap(market)
-                if dec["amount_under_cap"] == 0:
-                    skipped += 1
                 if dec["amount_under_cap"] > bet:
                     under += 1
                 else:
@@ -328,8 +326,8 @@ def run_historic(days_back, bet, cap):
                 print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
             else:
                 no_trades += 1
-                print(f"NO TRADES | {no_trades} | {i["question"]}")
-        log_view(wl, wl_notional, no_trades, tbd, under, over, skipped)
+                print(f"NO TRADES | {no_trades} | {market["question"]}")
+        log_view(wl, wl_notional, no_trades, tbd, under, over)
             
 
 def run_active():
@@ -404,10 +402,10 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
     }
     append_jsonl(TRADE_LOG_BASE, rec)
 
-def log_view(wl, wl_notional, no_trades, tbd, under, over, skipped):
+def log_view(wl, wl_notional, no_trades, tbd, under, over):
     rec = {
         "trades_taken":under,
-        "skipped":skipped,
+        "skipped":over,
         "p/l":wl_notional,
         "w/l":wl,
         "tbd":tbd,
