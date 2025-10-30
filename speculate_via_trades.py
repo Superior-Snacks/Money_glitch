@@ -318,12 +318,6 @@ def append_jsonl(path_base: str, record: dict):
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
-def compute_potential_value_if_all_win():
-    total = 0.0
-    for pos in positions_by_id.values():
-        total += float(pos["shares"]) * (1.0 - SETTLE_FEE)
-    return total
-
 def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_price_eff, bank_after_open):
     """
     Persist a single line for the trade you just took.
@@ -372,78 +366,8 @@ def log_run_snapshot(bank, total_trades_count: int):
     else:
         print(f"[SNAPSHOT] | {snap['ts']} | taken:{snap['total_trades_taken']} | spnet:{snap['peak_locked']}")
 
-def debug_show_books_for_market(market):
-    try:
-        om = outcome_map_from_market(market)
-        yes_token, no_token = om["YES"], om["NO"]
-    except Exception:
-        # best-effort legacy fallback
-        toks = market.get("clobTokenIds")
-        outs = market.get("outcomes")
-        if isinstance(toks, str):
-            try: toks = json.loads(toks)
-            except: pass
-        if isinstance(outs, str):
-            try: outs = json.loads(outs)
-            except: pass
-        if isinstance(toks, list) and len(toks) == 2:
-            yes_token, no_token = toks[0], toks[1]
-        else:
-            print("[DEBUG BOOKS] cannot resolve tokens")
-            return
-
-    yb = fetch_book(yes_token, depth=8)
-    nb = fetch_book(no_token,  depth=8)
-
-    def fmt_side(side, book):
-        asks = book.get("asks") or []
-        bids = book.get("bids") or []
-        print(f"  {side} — ASKS (price x size):")
-        for i,a in enumerate(asks):
-            try:
-                print(f"    [{i}] {float(a['price']):.4f} x {float(a['size']):.6f}")
-            except Exception:
-                print(f"    [{i}] {a}")
-        print(f"  {side} — BIDS (price x size):")
-        for i,b in enumerate(bids):
-            try:
-                print(f"    [{i}] {float(b['price']):.4f} x {float(b['size']):.6f}")
-            except Exception:
-                print(f"    [{i}] {b}")
-
-    print(f"\n[DEBUG BOOKS] {market.get('question')}")
-    print(f"  outcomes={market.get('outcomes')}")
-    print(f"  YES token={yes_token}")
-    fmt_side("YES", yb)
-    print(f"  NO  token={no_token}")
-    fmt_side("NO", nb)
-
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
-
-def maybe_log_decision(*args, **kwargs):
-    if random.random() < DECISION_LOG_SAMPLE:
-        log_decision(*args, **kwargs)
-
-def log_decision(market, price_cap, budget, book, takeable, best_ask, shares, reasons, result):
-    """
-    result can include: {'ok': bool, 'spent_after': float, 'avg_price': float, 'shares': float}
-    """
-    rec = {
-        "ts": now_iso(),
-        "type": "decision",
-        "market_id": market.get("conditionId"),
-        "question": market.get("question"),
-        "price_cap_inc_fee": price_cap,
-        "budget": budget,
-        "best_ask": best_ask,
-        "book_seq": book.get("sequence") if book else None,
-        "under_cap_takeable_ex": takeable,
-        "under_cap_shares": shares,
-        "reasons": reasons,
-        "result": result,
-    }
-    append_jsonl(DECISION_LOG_BASE, rec)
 
 def _parse_day_from_filename(path):
     base = os.path.basename(path)
@@ -456,58 +380,6 @@ def _parse_day_from_filename(path):
     except Exception:
         return None
 
-def compress_and_prune_logs(log_dir=LOG_DIR,
-                            retain_days=RETAIN_DAYS,
-                            compress_after_days=COMPRESS_AFTER_DAYS):
-    """Gzip old logs and delete very old ones. Safe to run during writes because files are opened per-append."""
-    today = datetime.now(timezone.utc).date()
-    now_ts = time.time()
-
-    # Compress *.jsonl older than compress_after_days (skip today's files)
-    for path in glob.glob(os.path.join(log_dir, "*.jsonl")):
-        d = _parse_day_from_filename(path)
-        if not d: 
-            continue
-        age_days = (today - d).days
-        gz_path = path + ".gz"
-        if age_days >= compress_after_days and not os.path.exists(gz_path):
-            try:
-                # Double-check it's not the current day
-                if d != today:
-                    with open(path, "rb") as fin, gzip.open(gz_path, "wb") as fout:
-                        fout.writelines(fin)
-                    # Remove the original only after successful gzip write
-                    os.remove(path)
-                    print(f"[LOG] compressed {os.path.basename(path)}")
-            except Exception as e:
-                print(f"[LOG WARN] compress failed for {path}: {e}")
-
-    # Delete *.jsonl.gz (and any stray *.jsonl) older than retain_days
-    for path in glob.glob(os.path.join(log_dir, "*.jsonl*")):
-        d = _parse_day_from_filename(path.replace(".gz", ""))
-        if not d:
-            continue
-        age_days = (today - d).days
-        if age_days > retain_days:
-            try:
-                os.remove(path)
-                print(f"[LOG] deleted old log {os.path.basename(path)}")
-            except Exception as e:
-                print(f"[LOG WARN] delete failed for {path}: {e}")
-
-
-def purge_housekeeping(mgr, maker, last_under_seen):
-    # drop old keys from last_under_seen
-    cutoff = time.time() - 24*3600
-    for k, t0 in list(last_under_seen.items()):
-        if t0 < cutoff:
-            last_under_seen.pop(k, None)
-
-    # trim maker.orders for markets already entered or no longer watched
-    if maker is not None and hasattr(maker, "orders"):
-        for cid in list(maker.orders.keys()):
-            if cid in mgr.entered or cid not in mgr.watch:
-                maker.orders.pop(cid, None)
 
 def main():
     bet = 100
