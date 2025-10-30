@@ -343,11 +343,13 @@ def run_historic(days_back, bet, cap):
             dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
             res = wl_markets_under_cap(market)
             if res == "YES":
-                ...
+                wl -= bet
+                wl_notional -= bet
             elif res == "TBD":
-                ...
+                tbd += 1
             elif res == "NO":
-                ...
+                wl += 1
+                wl_notional += bet - (bet/cap)
             else:
                 ...
 
