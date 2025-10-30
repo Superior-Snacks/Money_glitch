@@ -23,6 +23,7 @@ import glob
 import time, traceback, sys
 import os, sys, time, json, requests, traceback
 from datetime import datetime, timezone, timedelta
+import argparse
 
 name_log = input("name log: ")
 if name_log:
@@ -536,6 +537,25 @@ def main():
         else:
             no_trades += 1
             print(f"NO TRADES | {no_trades} | {i["question"]}")
+
+def main1():
+    p = argparse.ArgumentParser(description="Continuous P/L MTM timeseries reporter")
+    g = p.add_mutually_exclusive_group(required=False)
+    g.add_argument("--active", action="store_true", help="simulate looking at new markets store-ing all including not taken")
+    g.add_argument("--historic", action="store_true", help="simulating historic to compare with active")
+    args = p.parse_args()
+
+    if args.once:
+        ...
+        return
+
+    while True:
+        try:
+            ...
+        except Exception as e:
+            print(f"[WARN] compute error: {e}")
+        time.sleep(max(60, args.interval))
+
 
 if __name__ == "__main__":
     main()
