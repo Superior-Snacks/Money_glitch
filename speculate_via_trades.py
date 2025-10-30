@@ -351,8 +351,7 @@ def run_historic(days_back, bet, cap):
                 wl += 1
                 wl_notional += bet - (bet/cap)
             else:
-                ...
-
+                print("ERROR SOMETHING HORRIBLE WENT WRONG")
 
 
 
