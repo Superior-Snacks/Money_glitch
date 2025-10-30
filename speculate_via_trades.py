@@ -340,20 +340,36 @@ def run_historic(days_back, bet, cap):
         offset += 100 * 250
         for market in markets:
             raw_trades = fetch_trades(market)
-            dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
-            res = wl_markets_under_cap(market)
-            if res == "YES":
-                wl -= bet
-                wl_notional -= bet
-            elif res == "TBD":
-                tbd += 1
-            elif res == "NO":
-                wl += 1
-                wl_notional += bet - (bet/cap)
+            if raw_trades:
+                dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
+                res = wl_markets_under_cap(market)
+                if res == "YES":
+                    wl -= bet
+                    wl_notional -= bet
+                elif res == "TBD":
+                    tbd += 1
+                elif res == "NO":
+                    wl += 1
+                    wl_notional += bet - (bet/cap)
+                else:
+                    print("ERROR SOMETHING HORRIBLE WENT WRONG")
+                if not dec:
+                    no_trades += 1
+                print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
             else:
-                print("ERROR SOMETHING HORRIBLE WENT WRONG")
+                no_trades += 1
+                print(f"NO TRADES | {no_trades} | {i["question"]}")
+            
 
-
+{
+        "market": market["question"],
+        "smallest_price": smallest_ever,
+        "first_under": first_under,
+        "amount_under_cap": amount_under_cap,
+        "notional_under_cap": notional_under_cap,
+        "trades_till_fill": trades_till_fill,
+        "spread": spread
+    }
 
 
 
