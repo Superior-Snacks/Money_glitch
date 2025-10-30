@@ -290,52 +290,18 @@ def wl_markets_under_cap(market):
         print("how?")
         return "TBD"
 
-def main():
-    bet = 100
+
+def run_historic(days_back, bet, cap):
+    finished = False
+    offset = 0
     under = 0
     over = 0
     no_trades = 0
     wl = 0
     tbd = 0
     wl_notional = 0.0
-    m = fetch_open_yesno_fast(days_back=100)
-    for i in m:
-        trades = fetch_trades(i)
-        if trades:
-            dec = decode_trades(trades, i, bet=bet)
-            if dec["amount_under_cap"] > 5:
-                under += 1
-            else:
-                over += 1
-            finnished = wl_markets_under_cap(i)
-            if finnished == "NO":
-                wl += 1
-                wl_notional += 4
-            elif finnished == "YES":
-                wl -= 1
-                wl_notional -= 5
-            elif finnished == "TBD":
-                tbd += 1
-            print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
-
-        else:
-            no_trades += 1
-            print(f"NO TRADES | {no_trades} | {i["question"]}")
-
-def run_historic(days_back, bet, cap):
-    fetch_open_yesno_fast()
-    fetch_trades()
-    decode_trades()
-    wl_markets_under_cap()
-    finished = False
-    offset = 0
+    skipped = 0
     while not finished:
-        under = 0
-        over = 0
-        no_trades = 0
-        wl = 0
-        tbd = 0
-        wl_notional = 0.0
         markets = fetch_open_yesno_fast(offset=offset, days_back=days_back)
         offset += 100 * 250
         for market in markets:
@@ -343,6 +309,8 @@ def run_historic(days_back, bet, cap):
             if raw_trades:
                 dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
                 res = wl_markets_under_cap(market)
+                if dec["amount_under_cap"] == 0:
+                    skipped += 1
                 if dec["amount_under_cap"] > bet:
                     under += 1
                 else:
@@ -361,29 +329,14 @@ def run_historic(days_back, bet, cap):
             else:
                 no_trades += 1
                 print(f"NO TRADES | {no_trades} | {i["question"]}")
+        log_view(wl, wl_notional, no_trades, tbd, under, over, skipped)
             
 
-{
-        "market": market["question"],
-        "smallest_price": smallest_ever,
-        "first_under": first_under,
-        "amount_under_cap": amount_under_cap,
-        "notional_under_cap": notional_under_cap,
-        "trades_till_fill": trades_till_fill,
-        "spread": spread
-    }
-
-
-
-
 def run_active():
-    fetch_open_yesno_fast()
-    fetch_trades()
-    decode_trades()
-    wl_markets_under_cap()
+    ...
 
 
-def main1():
+def main():
     p = argparse.ArgumentParser(description="trades taken under cap simulator")
     g = p.add_mutually_exclusive_group(required=False)
     g.add_argument("--active", action="store_true", help="simulate looking at new markets store-ing all including not taken")
@@ -451,6 +404,18 @@ def log_open_trade(market, side, token_id, book_used, spent_after, shares, avg_p
     }
     append_jsonl(TRADE_LOG_BASE, rec)
 
+def log_view(wl, wl_notional, no_trades, tbd, under, over, skipped):
+    rec = {
+        "trades_taken":under,
+        "skipped":skipped,
+        "p/l":wl_notional,
+        "w/l":wl,
+        "tbd":tbd,
+        "no_trades":no_trades
+    }
+
+
+
 def log_run_snapshot(bank, total_trades_count: int):    
     global locked_now, peak_locked, peak_locked_time
     # Recompute locked from positions to avoid drift
@@ -484,4 +449,38 @@ if __name__ == "__main__":
     """
     active mode, only track closed false open markets, follow up report wl --slow
     history mode, from x days back give report svo end -- fast ish
+    """
+
+    """
+    def main():
+    bet = 100
+    under = 0
+    over = 0
+    no_trades = 0
+    wl = 0
+    tbd = 0
+    wl_notional = 0.0
+    m = fetch_open_yesno_fast(days_back=100)
+    for i in m:
+        trades = fetch_trades(i)
+        if trades:
+            dec = decode_trades(trades, i, bet=bet)
+            if dec["amount_under_cap"] > 5:
+                under += 1
+            else:
+                over += 1
+            finnished = wl_markets_under_cap(i)
+            if finnished == "NO":
+                wl += 1
+                wl_notional += 4
+            elif finnished == "YES":
+                wl -= 1
+                wl_notional -= 5
+            elif finnished == "TBD":
+                tbd += 1
+            print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
+
+        else:
+            no_trades += 1
+            print(f"NO TRADES | {no_trades} | {i["question"]}")
     """
