@@ -539,7 +539,7 @@ def main():
             print(f"NO TRADES | {no_trades} | {i["question"]}")
 
 def main1():
-    p = argparse.ArgumentParser(description="Continuous P/L MTM timeseries reporter")
+    p = argparse.ArgumentParser(description="trades taken under cap simulator")
     g = p.add_mutually_exclusive_group(required=False)
     g.add_argument("--active", action="store_true", help="simulate looking at new markets store-ing all including not taken")
     g.add_argument("--historic", action="store_true", help="simulating historic to compare with active")
