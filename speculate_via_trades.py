@@ -31,9 +31,6 @@ if not bet:
 cap = float(input("cap: "))
 if not cap:
     cap = 0.5
-days_back = input("days back: ")
-if not days_back:
-    days_back = 10
 name_log = input("name log: ")
 if name_log:
     LOG_DIR = os.path.join("logs", name_log)
@@ -108,9 +105,42 @@ def log_net_usage():
         "bytes_in_total": bytes_in_total
     })
 
+def parse_start_input(user_input: str) -> int:
+    """
+    Accepts:
+      - ISO 8601 e.g. '2025-10-01T00:00:00Z' or '2025-10-01 00:00:00'
+      - Relative like 'hours=6', 'days=2', 'minutes=30'
+    Returns epoch seconds UTC.
+    """
+    s = user_input.strip()
+    # relative?
+    if "=" in s and all(k in s for k in ["="]):
+        parts = dict(
+            (k.strip(), float(v))
+            for k,v in (p.split("=",1) for p in s.split(","))
+        )
+        delta = timedelta(
+            days=parts.get("days", 0.0),
+            hours=parts.get("hours", 0.0),
+            minutes=parts.get("minutes", 0.0)
+        )
+        t = datetime.now(timezone.utc) - delta
+        return int(t.timestamp())
 
+    # ISO variants
+    s2 = s.replace("Z","+00:00")
+    try:
+        t = datetime.fromisoformat(s2).astimezone(timezone.utc)
+        return int(t.timestamp())
+    except Exception:
+        print("Could not parse time. Try ISO like 2025-10-01T00:00:00Z or relative like hours=6")
+        sys.exit(1)
 
-def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
+days_back = parse_start_input(input("days=, hours=, minutes= : "))
+if not days_back:
+    parse_start_input("days=10")
+
+def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
                           require_clob=False, min_liquidity=None, min_volume=None,
                           session=SESSION, verbose=True):
     params = {
@@ -119,7 +149,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
         "ascending": False,
     }
     if days_back:
-        params["start_date_min"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+        params["startDate"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
     if require_clob:
         params["enableOrderBook"] = True
     if min_liquidity is not None:
@@ -128,7 +158,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360,
         params["volume_num_min"] = float(min_volume)
 
     all_rows, seen_ids = [], set()
-    offset, pages = 0, 0
+    pages = 0
 
     while pages < max_pages:
         time.sleep(1)
@@ -307,7 +337,8 @@ def run_historic(days_back, bet, cap):
     tbd = 0
     wl_notional = 0.0
     while not finished:
-        markets = fetch_open_yesno_fast(offset=offset, days_back=days_back)
+        days_ago = (datetime.now(timezone.utc) - datetime.fromtimestamp(days_back, tz=timezone.utc)).days
+        markets = fetch_open_yesno_fast(offset=offset, days_back=days_ago)
         offset += 100 * 250
         for market in markets:
             raw_trades = fetch_trades(market)
@@ -319,13 +350,13 @@ def run_historic(days_back, bet, cap):
                 else:
                     over += 1
                 if res == "YES":
-                    wl -= bet
+                    wl -= 1
                     wl_notional -= bet
                 elif res == "TBD":
                     tbd += 1
                 elif (res == "NO") and (dec["amount_under_cap"] > bet):
                     wl += 1
-                    wl_notional += bet - (bet/cap)
+                    wl_notional += (bet/cap) - bet
                 else:
                     print("ERROR SOMETHING HORRIBLE WENT WRONG")
                 print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
@@ -334,9 +365,78 @@ def run_historic(days_back, bet, cap):
                 print(f"NO TRADES | {no_trades} | {market["question"]}")
         log_view(wl, wl_notional, no_trades, tbd, under, over)
             
+def fetch_yesno_fast(limit=250, max_pages=100, offset=0,
+                          require_clob=False, min_liquidity=None, min_volume=None,
+                          session=SESSION, verbose=True):
+    params = {
+        "limit": limit,
+        "order": "createdAt",
+        "createdAt":datetime.now(timezone.utc),
+        "ascending": False,
+    }
+    if require_clob:
+        params["enableOrderBook"] = True
+    if min_liquidity is not None:
+        params["liquidity_num_min"] = float(min_liquidity)
+    if min_volume is not None:
+        params["volume_num_min"] = float(min_volume)
+
+    all_rows, seen_ids = [], set()
+    pages = 0
+
+    while pages < max_pages:
+        time.sleep(1)
+        q = dict(params, offset=offset)
+        try:
+            r = session.get(BASE_GAMMA, params=q, timeout=20)
+            r.raise_for_status()
+        except Exception as e:
+            if verbose: print(f"[WARN] fetch failed at offset {offset} with {q}: {e}")
+            break
+
+        page = r.json() or []
+        if not page:
+            if verbose: print("[INFO] empty page; done.")
+            break
+
+        added = 0
+        for m in page:
+            outs = m.get("outcomes")
+            if isinstance(outs, str):
+                try: outs = json.loads(outs)
+                except: outs = None
+            def is_yesno(lst):
+                if not isinstance(lst, list) or len(lst) != 2: return False
+                s = [str(x).strip().lower() for x in lst]
+                return set(s) == {"yes", "no"}
+            if is_yesno(outs):
+                mid = m.get("id")
+                if mid not in seen_ids:
+                    all_rows.append(m)
+                    seen_ids.add(mid)
+                    added += 1
+
+        if verbose:
+            print(f"[PAGE {pages}] got {len(page)} raw, added {added} new, total {len(all_rows)}")
+
+        if len(page) < limit:
+            if verbose: print("[INFO] last page (short).")
+            break
+        pages += 1
+        offset += limit
+
+    # sort newest → oldest by startDate or createdAt
+    all_rows.sort(key=lambda m: (m.get("startDate") or m.get("createdAt") or ""), reverse=False)
+    if verbose:
+        print(f"✅ Total open Yes/No markets: {len(all_rows)}")
+    return all_rows
 
 def run_active():
-    ...
+    #fetch marketr from x date real time right away, search for createdAt (should return only a few markets)
+    #load saved trades, compare if new are in old, if not create bet at price
+    #check trades filterd by startDate
+    #periodically check if trades are finnished, maybe another script
+    new_markets = fetch_yesno_fast()
 
 
 def main():
