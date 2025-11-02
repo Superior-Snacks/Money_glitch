@@ -25,12 +25,16 @@ import os, sys, time, json, requests, traceback
 from datetime import datetime, timezone, timedelta
 import argparse
 
-bet = float(input("bet: "))
+bet = input("bet: ")
 if not bet:
     bet = 100.0
-cap = float(input("cap: "))
+else:
+    bet = float(bet)
+cap = input("cap: ")
 if not cap:
     cap = 0.5
+else:
+    cap = float(cap)
 name_log = input("name log: ")
 if name_log:
     LOG_DIR = os.path.join("logs", name_log)
@@ -135,10 +139,11 @@ def parse_start_input(user_input: str) -> int:
     except Exception:
         print("Could not parse time. Try ISO like 2025-10-01T00:00:00Z or relative like hours=6")
         sys.exit(1)
-
-days_back = parse_start_input(input("days=, hours=, minutes= : "))
-if not days_back:
-    parse_start_input("days=10")
+get_days_back = input("days=, hours=, minutes= : ")
+if not get_days_back:
+    days_back = parse_start_input("days=10")
+else:
+    days_back = parse_start_input(get_days_back)
 
 def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
                           require_clob=False, min_liquidity=None, min_volume=None,
@@ -149,7 +154,7 @@ def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
         "ascending": False,
     }
     if days_back:
-        params["startDate"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+        params["start_date_min"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
     if require_clob:
         params["enableOrderBook"] = True
     if min_liquidity is not None:
@@ -365,13 +370,14 @@ def run_historic(days_back, bet, cap):
                 print(f"NO TRADES | {no_trades} | {market["question"]}")
         log_view(wl, wl_notional, no_trades, tbd, under, over)
             
-def fetch_yesno_fast(limit=250, max_pages=100, offset=0,
+def fetch_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
                           require_clob=False, min_liquidity=None, min_volume=None,
-                          session=SESSION, verbose=True):
+                          session=SESSION, verbose=True,
+                          now=(datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()):
     params = {
         "limit": limit,
-        "order": "createdAt",
-        "createdAt":datetime.now(timezone.utc),
+        "order": "startDate",
+        "start_date_min": now,
         "ascending": False,
     }
     if require_clob:
@@ -431,12 +437,23 @@ def fetch_yesno_fast(limit=250, max_pages=100, offset=0,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
+old_markets = []
 def run_active():
     #fetch marketr from x date real time right away, search for createdAt (should return only a few markets)
     #load saved trades, compare if new are in old, if not create bet at price
+    #save when "bet placed" make sure trades check only "takes if param happens after place time"
     #check trades filterd by startDate
     #periodically check if trades are finnished, maybe another script
-    new_markets = fetch_yesno_fast()
+    now = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
+    new_markets = fetch_yesno_fast(now=now)
+    for market in new_markets:
+        if market in old_markets:
+            continue
+        if len(old_markets) > 100:
+            old_markets = []
+        print(f"{market["startDate"]} | {market["question"]}")
+        save_market(market, now)
+
 
 
 def main():
@@ -454,7 +471,7 @@ def main():
                 run_active()
             except Exception as e:
                 print(f"[WARN] compute error: {e}")
-            time.sleep(180)
+            time.sleep(10)
 
 # ----------------------------------------------------------------------
 # log logic
@@ -494,6 +511,20 @@ def log_view(wl, wl_notional, no_trades, tbd, under, over):
         "no_trades":no_trades
     }
     append_jsonl(RUN_SNAP_BASE, rec)
+
+def save_market(market, time):
+    rec = {
+    "time_found": time,
+    "id": market["id"],
+    "question": market["question"]
+    }
+    append_jsonl(RUN_SNAP_BASE, rec)
+
+
+
+def check_old_markets():
+    ...
+
 
 
 def now_iso():
