@@ -520,13 +520,6 @@ def save_market(market, time):
     }
     append_jsonl(RUN_TRADE_BASE, rec)
 
-
-
-def check_old_markets():
-    ...
-
-
-
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
