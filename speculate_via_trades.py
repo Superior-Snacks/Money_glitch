@@ -45,7 +45,7 @@ BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
 BASE_HISTORY = "https://clob.polymarket.com/prices-history"
 BASE_BOOK = "https://clob.polymarket.com/book"
 DATA_TRADES = "https://data-api.polymarket.com/trades"
-TRADE_LOG_BASE = "trades_taken.jsonl"
+RUN_TRADE_BASE = "markets.jsonl"
 RUN_SNAP_BASE  = "run_snapshots.jsonl"
 DECISION_LOG_BASE = "decisions.jsonl"
 DECISION_LOG_SAMPLE = 0.001  # 15% sampling
@@ -518,7 +518,7 @@ def save_market(market, time):
     "id": market["id"],
     "question": market["question"]
     }
-    append_jsonl(RUN_SNAP_BASE, rec)
+    append_jsonl(RUN_TRADE_BASE, rec)
 
 
 
