@@ -58,6 +58,7 @@ _created_cutoff = None
 
 GLOBAL_FEE = 0.0   # 600 for 6.00%
 GLOBAL_SLIP = 0.0  # 200 for 2.00%
+old_markets = []
 
 # ----------------------------------------------------------------------
 #network helpers
@@ -437,13 +438,14 @@ def fetch_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
         print(f"✅ Total open Yes/No markets: {len(all_rows)}")
     return all_rows
 
-old_markets = []
+
 def run_active():
     #fetch marketr from x date real time right away, search for createdAt (should return only a few markets)
     #load saved trades, compare if new are in old, if not create bet at price
     #save when "bet placed" make sure trades check only "takes if param happens after place time"
     #check trades filterd by startDate
     #periodically check if trades are finnished, maybe another script
+    global old_markets
     now = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
     new_markets = fetch_yesno_fast(now=now)
     for market in new_markets:
