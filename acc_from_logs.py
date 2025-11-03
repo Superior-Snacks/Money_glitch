@@ -215,16 +215,14 @@ def fetch_market_by_id_or_cid(id_or_cid: str, stats=None) -> Optional[dict]:
         # small pause is handled via rate limiter
     return None
 
-def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None) -> Tuple[List[dict], int, int]:
+def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None):
     """
-    Pull trades for a market strictly AFTER since_epoch.
-    Count trades with price <= cap (under) and > cap (over).
-    Prints each trade line while scanning.
+    Pull ALL trades for a market strictly AFTER since_epoch.
+    Prints each trade, tags UNDER/OVER based on cap.
+    Returns the list of trades-after (raw dicts) you can then pass to compute_fill_from_trades().
     """
     out = []
-    under, over = 0, 0
     limit = 250
-    # We'll page backwards by starting_before (ms). Start at "now".
     starting_before = int(time.time())
     printed_header = False
 
@@ -241,7 +239,6 @@ def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None) -> Tu
             break
         out.extend(data)
 
-        # print per-trade (after since)
         oldest = None
         for t in data:
             ts = t.get("timestamp") or t.get("time") or t.get("ts")
@@ -250,6 +247,7 @@ def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None) -> Tu
                 ts_s = int(tsf/1000) if tsf > 1e12 else int(tsf)
             except:
                 ts_s = None
+
             price = float(t.get("price", 0) or 0)
             size  = float(t.get("size", 0) or 0)
             outcome = str(t.get("outcome","")).upper()
@@ -258,6 +256,7 @@ def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None) -> Tu
             if ts_s is not None:
                 oldest = ts_s if oldest is None else min(oldest, ts_s)
 
+            # only print trades AFTER time_found
             if ts_s is None or ts_s <= since_epoch:
                 continue
 
@@ -266,11 +265,6 @@ def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None) -> Tu
                 printed_header = True
 
             flag = "UNDER" if price <= cap + 1e-12 else "OVER"
-            if price <= cap + 1e-12:
-                under += 1
-            else:
-                over += 1
-
             print(f"[TRADE] {datetime.fromtimestamp(ts_s, tz=timezone.utc).isoformat()} "
                   f"price={price:.4f} size={size:.4f} outcome={outcome} side={side} → {flag}")
 
@@ -278,9 +272,18 @@ def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None) -> Tu
             break
         starting_before = oldest
 
-        # light pacing is controlled globally
+    # Keep only trades strictly after since_epoch for downstream fill
+    trades_after = []
+    for t in out:
+        ts = t.get("timestamp") or t.get("time") or t.get("ts")
+        try:
+            tsf = float(ts); ts_s = int(tsf/1000) if tsf > 1e12 else int(tsf)
+        except:
+            ts_s = None
+        if ts_s is not None and ts_s > since_epoch:
+            trades_after.append(t)
 
-    return out, under, over
+    return trades_after
 
 # ====================== ECON / P&L CALC =============================
 
@@ -529,35 +532,53 @@ def main():
 
                 # If we have time_found, scan trades after time_found and count under/over vs cap
                 if tf_epoch is not None:
-                    trades, under, over = fetch_trades_after(m.get("conditionId") or cid, tf_epoch, cap, stats=stats)
-                    total_under_trades += under
-                    total_over_trades  += over
+                    trades_after = fetch_trades_after(m.get("conditionId") or cid, tf_epoch, cap, stats=stats)
+                    fill = compute_fill_from_trades(trades_after, cap, bet_size)
+
+                    # print a one-line summary of the attempted fill
+                    if fill["vwap"] is not None:
+                        print(f"[FILL] under-cap notional=${fill['filled_dollars']:.2f}/{bet_size:.2f} "
+                            f"→ {'FILLED' if fill['filled'] else 'NOT FILLED'}; "
+                            f"shares={fill['filled_shares']:.4f} vwap={fill['vwap']:.4f}")
+                    else:
+                        print(f"[FILL] under-cap notional=${fill['filled_dollars']:.2f}/{bet_size:.2f} → NOT FILLED")
+
+                    total_under_trades += fill["under_count"]
+                    total_over_trades  += fill["over_count"]
 
                 # If newly closed and not logged yet → compute P/L and write
-                if resolved and (m.get("conditionId") or cid) not in already_closed:
-                    # Assume filled at cap
-                    pl = pnl_for_no_bet_at_price(bet_size, cap, winner or "YES")
+                if time_found_iso is not None and fill.get("filled"):
+                    pl = pnl_for_no_fill(bet_size, fill["vwap"], winner or "YES")
                     wl = 1 if (winner == "NO") else 0
+                    bet_filled = True
+                else:
+                    pl = 0.0
+                    wl = None  # no bet was actually filled
+                    bet_filled = False
 
-                    row = {
-                        "time_logged": iso_now(),
-                        "market_id": m.get("conditionId") or cid,
-                        "question": name,
-                        "winner": winner,                   # "YES"/"NO"/None
-                        "resolved_at": res_ts,              # epoch
-                        "w_l": wl,                          # 1=win, 0=loss
-                        "p_l": round(pl, 2),                # assuming entry at cap
-                        "cap": cap,
-                        "bet_size": bet_size,
-                        "open_markets_seen": total_open,
-                        "closed_markets_seen": total_closed,
-                        "trades_under_cap_since_found": under if tf_epoch is not None else None,
-                        "trades_over_cap_since_found": over if tf_epoch is not None else None,
-                    }
-                    open_jsonl_write(CLOSED_PATH, row)
-                    print(f"[CLOSED] wrote → {name} | winner={winner} | P/L=${row['p_l']:.2f}")
-                    newly_closed_rows += 1
-                    stats.newly_closed += 1
+                row = {
+                    "time_logged": iso_now(),
+                    "market_id": m.get("conditionId") or cid,
+                    "question": name,
+                    "winner": winner,                   # "YES"/"NO"/None
+                    "resolved_at": res_ts,              # epoch
+                    "bet_filled": bet_filled,
+                    "w_l": wl,                          # 1=win, 0=loss, None=no bet
+                    "p_l": round(pl, 2),
+                    "cap": cap,
+                    "bet_size": bet_size,
+                    "open_markets_seen": total_open,
+                    "closed_markets_seen": total_closed,
+                    "trades_under_cap_since_found": fill["under_count"] if tf_epoch is not None else None,
+                    "trades_over_cap_since_found":  fill["over_count"]  if tf_epoch is not None else None,
+                    "filled_dollars": fill["filled_dollars"] if tf_epoch is not None else None,
+                    "filled_shares":  fill["filled_shares"]  if tf_epoch is not None else None,
+                    "fill_vwap":      fill["vwap"]           if tf_epoch is not None else None,
+                }
+                open_jsonl_write(CLOSED_PATH, row)
+                print(f"[CLOSED] wrote → {name} | winner={winner} | bet_filled={bet_filled} | P/L=${row['p_l']:.2f}")
+                newly_closed_rows += 1
+                stats.newly_closed += 1
 
             # Dollars locked = bet_size * unresolved_seen (your definition)
             snapshot = {
