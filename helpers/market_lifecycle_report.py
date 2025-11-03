@@ -27,7 +27,7 @@ def make_session():
     )
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter); s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-lifecycle-report/1.0"})
+    s.headers.update({"User-Agent": "pm-lifecycle-report/1.1"})
     return s
 
 SESSION = make_session()
@@ -61,12 +61,10 @@ def _retry_after_seconds(resp) -> float:
     ra = resp.headers.get("Retry-After")
     if not ra:
         return 0.0
-    # numeric seconds?
     try:
         return max(0.0, float(ra))
     except Exception:
         pass
-    # HTTP-date format
     try:
         dt = parsedate_to_datetime(ra)
         if dt.tzinfo is None:
@@ -165,13 +163,11 @@ def activity_anchor_start(m):
 
 def activity_anchor_end(m):
     _, _, enddt, closed, _ = field_times(m)
-    # active until endDate or closedTime, whichever is earlier if both exist
     if enddt and closed:
         return min(enddt, closed)
     return enddt or closed
 
 def payout_anchor_start(m):
-    # when do we consider "waiting for payout" to begin?
     _, _, enddt, closed, _ = field_times(m)
     return closed or enddt
 
@@ -180,7 +176,6 @@ def payout_anchor_end(m):
     return resolve
 
 def market_time_key(m):
-    # For pagination sanity checks
     _, _, enddt, _, _ = field_times(m)
     return enddt or _parse_iso_utc(m.get("startDate")) or _parse_iso_utc(m.get("createdAt"))
 
@@ -200,8 +195,8 @@ def fetch_yesno_by_enddate_window(days_back: int, page_limit=250, include_closed
             params = {
                 "limit": page_limit,
                 "order": "endDate",
-                "ascending": False,          # newest endDate first
-                "enableOrderBook": False,    # we only need metadata
+                "ascending": False,
+                "enableOrderBook": False,
                 "closed": closed_flag,
                 "offset": offset,
             }
@@ -216,17 +211,14 @@ def fetch_yesno_by_enddate_window(days_back: int, page_limit=250, include_closed
                     continue
                 key = m.get("conditionId") or m.get("id")
                 if not key or key in seen:
-                    # still update oldest stamp
                     mk = market_time_key(m)
                     if mk:
                         t = _to_secs(mk)
                         oldest_on_page = t if oldest_on_page is None else min(oldest_on_page, t)
                     continue
 
-                # filter by endDate window
                 enddt = _parse_iso_utc(m.get("endDate"))
                 if (enddt is None) or (_to_secs(enddt) < since_secs):
-                    # if endDate missing/older than window, we can stop only if page is strictly older
                     mk = market_time_key(m)
                     if mk:
                         t = _to_secs(mk)
@@ -242,7 +234,6 @@ def fetch_yesno_by_enddate_window(days_back: int, page_limit=250, include_closed
 
             if len(data) < page_limit:
                 break
-            # stop when the page’s oldest is older than our window start
             if oldest_on_page is not None and oldest_on_page < since_secs:
                 break
 
@@ -253,7 +244,6 @@ def fetch_yesno_by_enddate_window(days_back: int, page_limit=250, include_closed
     if include_closed:
         mkts += _pull(True)
 
-    # final de-dupe (prefer records with conditionId)
     by_key = {}
     for m in mkts:
         key = m.get("conditionId") or m.get("id")
@@ -262,24 +252,67 @@ def fetch_yesno_by_enddate_window(days_back: int, page_limit=250, include_closed
         if key not in by_key or (by_key[key].get("conditionId") is None and m.get("conditionId")):
             by_key[key] = m
 
-    # sort by endDate desc
     def sort_key(m):
         ed = _parse_iso_utc(m.get("endDate"))
         return ed or datetime.fromtimestamp(0, tz=timezone.utc)
     return sorted(by_key.values(), key=sort_key, reverse=True)
 
-# =================== Metrics & report ===================
+# =================== Robust stats (DAYS) ===================
+def _iqr(xs_sorted):
+    if not xs_sorted:
+        return None
+    n = len(xs_sorted)
+    def q(p):
+        idx = int(round(p*(n-1)))
+        return xs_sorted[max(0, min(n-1, idx))]
+    return q(0.75) - q(0.25)
+
+def trimmed_mean_days(values_seconds, trim_p=0.10):
+    xs = [v/86400.0 for v in values_seconds if isinstance(v, (int,float))]
+    if not xs: return None
+    xs.sort()
+    n = len(xs)
+    k = int(n * trim_p)
+    if k*2 >= n:
+        return median(xs)  # degenerate: too few points, fall back
+    core = xs[k:n-k]
+    return sum(core) / len(core)
+
+def winsorized_mean_days(values_seconds, winsor_p=0.05):
+    xs = [v/86400.0 for v in values_seconds if isinstance(v, (int,float))]
+    if not xs: return None
+    xs.sort()
+    n = len(xs)
+    k = int(n * winsor_p)
+    lo = xs[k] if k < n else xs[-1]
+    hi = xs[-k-1] if k < n else xs[0]
+    clipped = [min(max(x, lo), hi) for x in xs]
+    return sum(clipped) / len(clipped)
+
+def summarize_days(values_seconds):
+    xs = [v for v in values_seconds if isinstance(v, (int,float))]
+    if not xs:
+        return {"n":0}
+    xs_days = sorted([v/86400.0 for v in xs])
+    n = len(xs_days)
+    med = median(xs_days)
+    t10 = trimmed_mean_days(xs, 0.10)
+    w05 = winsorized_mean_days(xs, 0.05)
+    iqr = _iqr(xs_days)
+    return {
+        "n": n,
+        "median_d": round(med, 3),
+        "trimmed10_mean_d": round(t10, 3) if t10 is not None else None,
+        "winsor05_mean_d": round(w05, 3) if w05 is not None else None,
+        "iqr_d": round(iqr, 3) if iqr is not None else None,
+        "min_d": round(xs_days[0], 3),
+        "max_d": round(xs_days[-1], 3),
+    }
+
+# =================== Rows & report ===================
 def sec(delta):
     if delta is None: return None
     return int(delta.total_seconds())
-
-def fmt_h(ms):
-    if ms is None: return "-"
-    h = ms / 3600
-    if h >= 24:
-        d = h/24
-        return f"{d:.1f}d"
-    return f"{h:.1f}h"
 
 def compute_lifecycle_row(m):
     q = m.get("question")
@@ -312,29 +345,7 @@ def compute_lifecycle_row(m):
         "closedTime": closed.isoformat() if closed else None,
         "resolvedTime": resolve.isoformat() if resolve else None,
         "active_secs": active_secs,
-        "active_h": round(active_secs/3600, 3) if active_secs is not None else None,
         "payout_secs": payout_secs,
-        "payout_h": round(payout_secs/3600, 3) if payout_secs is not None else None,
-    }
-
-def summarize(nums):
-    xs = [x for x in nums if isinstance(x, (int, float)) and x is not None]
-    if not xs:
-        return {"n":0}
-    xs_sorted = sorted(xs)
-    def pct(p):
-        k = max(0, min(len(xs_sorted)-1, int(round(p*(len(xs_sorted)-1)))))
-        return xs_sorted[k]
-    return {
-        "n": len(xs_sorted),
-        "mean_h": round(mean(xs_sorted)/3600, 2),
-        "median_h": round(median(xs_sorted)/3600, 2),
-        "p10_h": round(pct(0.10)/3600, 2),
-        "p25_h": round(pct(0.25)/3600, 2),
-        "p75_h": round(pct(0.75)/3600, 2),
-        "p90_h": round(pct(0.90)/3600, 2),
-        "min_h": round(xs_sorted[0]/3600, 2),
-        "max_h": round(xs_sorted[-1]/3600, 2),
     }
 
 def main():
@@ -351,52 +362,65 @@ def main():
 
     rows = [compute_lifecycle_row(m) for m in mkts]
 
-    # Split buckets for your analysis
-    open_like   = [r for r in rows if r["resolvedTime"] is None]       # unresolved
-    closed_yes  = [r for r in rows if r["winner"] == "YES"]
-    closed_no   = [r for r in rows if r["winner"] == "NO"]
-    closed_any  = [r for r in rows if r["resolvedTime"] is not None]
+    active_secs = [r["active_secs"] for r in rows if r["active_secs"] is not None]
+    payout_secs_any = [r["payout_secs"] for r in rows if r["payout_secs"] is not None]
+    payout_secs_yes = [r["payout_secs"] for r in rows if r["payout_secs"] is not None and r["winner"] == "YES"]
+    payout_secs_no  = [r["payout_secs"] for r in rows if r["payout_secs"] is not None and r["winner"] == "NO"]
 
-    # Stats
-    active_all   = summarize([r["active_secs"] for r in rows if r["active_secs"] is not None])
-    payout_all   = summarize([r["payout_secs"] for r in closed_any if r["payout_secs"] is not None])
-    payout_yes   = summarize([r["payout_secs"] for r in closed_yes if r["payout_secs"] is not None])
-    payout_no    = summarize([r["payout_secs"] for r in closed_no  if r["payout_secs"] is not None])
+    active_stats = summarize_days(active_secs)
+    payout_stats = summarize_days(payout_secs_any)
+    payout_yes_stats = summarize_days(payout_secs_yes)
+    payout_no_stats  = summarize_days(payout_secs_no)
 
-    print("\n===== LIFECYCLE REPORT =====")
+    print("\n===== LIFECYCLE REPORT (robust days) =====")
     print(f"Window: last {days_back} day(s) by endDate")
-    print(f"Total markets:    {len(rows)}")
-    print(f"Open/unresolved:  {len(open_like)}")
-    print(f"Closed (any):     {len(closed_any)}   | YES: {len(closed_yes)}  NO: {len(closed_no)}")
-    print("\nActive duration (start→min(endDate,closed)):")
-    if active_all.get("n",0):
-        print(f"  n={active_all['n']}  mean={active_all['mean_h']}h  median={active_all['median_h']}h  "
-              f"p10={active_all['p10_h']}h  p90={active_all['p90_h']}h  min={active_all['min_h']}h  max={active_all['max_h']}h")
-    else:
-        print("  (no data)")
+    print(f"Total markets in window: {len(rows)}")
+    print(f"Resolved markets: {payout_stats.get('n',0)} | YES: {payout_yes_stats.get('n',0)}  NO: {payout_no_stats.get('n',0)}")
 
-    print("\nPayout lag (resolve − (closed or endDate)) for resolved markets:")
-    if payout_all.get("n",0):
-        print(f"  ALL n={payout_all['n']}  mean={payout_all['mean_h']}h  median={payout_all['median_h']}h  "
-              f"p25={payout_all['p25_h']}h  p75={payout_all['p75_h']}h")
-    else:
-        print("  (no data)")
+    def _p(label, s):
+        if s.get("n",0)==0:
+            print(f"{label}: (no data)")
+            return
+        print(
+            f"{label}: n={s['n']}  "
+            f"median={s['median_d']}d  "
+            f"trimmed-mean(10%)={s['trimmed10_mean_d']}d  "
+            f"winsor-mean(5%)={s['winsor05_mean_d']}d  "
+            f"IQR={s['iqr_d']}d  "
+            f"min={s['min_d']}d  max={s['max_d']}d"
+        )
 
-    if payout_yes.get("n",0):
-        print(f"  YES n={payout_yes['n']}  mean={payout_yes['mean_h']}h  median={payout_yes['median_h']}h")
-    if payout_no.get("n",0):
-        print(f"  NO  n={payout_no['n']}  mean={payout_no['mean_h']}h  median={payout_no['median_h']}h")
+    print("\nActive duration (start → min(endDate, closedTime))")
+    _p("  ACTIVE", active_stats)
 
-    # Save CSV
-    out_name = f"lifecycle_report_{days_back}d_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.csv"
-    cols = ["market_id","slug","question","winner","createdAt","startDate","endDate","closedTime","resolvedTime","active_secs","active_h","payout_secs","payout_h"]
-    with open(out_name, "w", newline="", encoding="utf-8") as f:
+    print("\nPayout lag (resolvedTime − (closedTime or endDate))")
+    _p("  ALL", payout_stats)
+    _p("  YES", payout_yes_stats)
+    _p("  NO ", payout_no_stats)
+
+    # Save CSV of rows + a tiny summary JSON next to it
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    csv_name = f"lifecycle_rows_{days_back}d_{stamp}.csv"
+    cols = ["market_id","slug","question","winner","createdAt","startDate","endDate","closedTime","resolvedTime","active_secs","payout_secs"]
+    with open(csv_name, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         for r in rows:
             w.writerow({k: r.get(k) for k in cols})
-    print(f"\nSaved CSV → {out_name}")
-    print("============================\n")
+    print(f"\nSaved per-market rows → {csv_name}")
+
+    summary = {
+        "window_days": days_back,
+        "generated_at": now_iso(),
+        "active_days_stats": active_stats,
+        "payout_days_stats_all": payout_stats,
+        "payout_days_stats_yes": payout_yes_stats,
+        "payout_days_stats_no": payout_no_stats,
+    }
+    json_name = f"lifecycle_summary_{days_back}d_{stamp}.json"
+    with open(json_name, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+    print(f"Saved summary stats → {json_name}\n")
 
 if __name__ == "__main__":
     try:
