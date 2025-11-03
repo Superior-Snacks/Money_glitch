@@ -297,6 +297,80 @@ def pnl_for_no_bet_at_price(bet_size: float, price: float, winner: str) -> float
         return shares - bet_size
     else:
         return -bet_size
+    
+def compute_fill_from_trades(trades_after: list, cap: float, bet_size: float):
+    """
+    Given trades AFTER time_found, simulate buying NO at prices <= cap.
+    Fill criterion: cumulative notional (price*size) >= bet_size.
+    We compute filled_shares, filled_dollars (<= bet_size), and vwap.
+    Returns dict with fill stats and also total under/over counts.
+    """
+    # Count under/over while we’re here
+    under_count, over_count = 0, 0
+
+    # Keep only trades priced <= cap for filling; but still count over
+    under_trades = []
+    for t in trades_after:
+        price = float(t.get("price", 0) or 0)
+        size  = float(t.get("size", 0) or 0)
+        if price <= cap + 1e-12:
+            under_count += 1
+            if price > 0 and size > 0:
+                ts = t.get("timestamp") or t.get("time") or t.get("ts")
+                try:
+                    tsf = float(ts)
+                    ts_s = int(tsf/1000) if tsf > 1e12 else int(tsf)
+                except:
+                    ts_s = None
+                under_trades.append((ts_s, price, size))
+        else:
+            over_count += 1
+
+    # Oldest-first to simulate time flow
+    under_trades.sort(key=lambda x: (x[0] if x[0] is not None else 0))
+
+    filled_dollars = 0.0
+    filled_shares  = 0.0
+    spent          = 0.0
+
+    for _, p, s in under_trades:
+        need = bet_size - spent
+        if need <= 0:
+            break
+        # dollars available in this trade
+        avail_dollars = p * s
+        take_dollars = min(need, avail_dollars)
+        if p > 0:
+            take_shares = take_dollars / p
+        else:
+            take_shares = 0.0
+        spent          += take_dollars
+        filled_dollars += take_dollars
+        filled_shares  += take_shares
+
+    filled = spent >= bet_size - 1e-9
+    vwap   = (filled_dollars / filled_shares) if filled_shares > 0 else None
+
+    return {
+        "filled": filled,
+        "filled_dollars": round(filled_dollars, 6),
+        "filled_shares":  round(filled_shares, 6),
+        "vwap":           (round(vwap, 6) if vwap is not None else None),
+        "under_count":    under_count,
+        "over_count":     over_count,
+    }
+
+
+def pnl_for_no_fill(bet_size: float, vwap_price: float, winner: str) -> float:
+    """
+    P/L for a filled NO bet using actual filled VWAP price.
+    Shares = bet_size / vwap. If NO wins → profit = shares - bet_size.
+    If YES wins → -bet_size.
+    """
+    if vwap_price is None or vwap_price <= 0:
+        return 0.0
+    shares = bet_size / vwap_price
+    return (shares - bet_size) if winner == "NO" else (-bet_size)
 
 # ====================== RUN STATS & SUMMARY =========================
 

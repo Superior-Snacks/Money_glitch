@@ -1,0 +1,12 @@
+{
+  "time": "2025-11-03T18:39:29+00:00",
+  "cap": 0.5,
+  "bet_size": 10.0,
+  "open_markets_seen": 0,
+  "closed_markets_seen": 0,
+  "trades_under_cap_total": 0,
+  "trades_over_cap_total": 0,
+  "unresolved_count": 0,
+  "dollars_locked_est": 0.0,
+  "newly_closed_rows": 0
+}
