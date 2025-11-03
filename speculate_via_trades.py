@@ -449,10 +449,11 @@ def run_active():
     now = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
     new_markets = fetch_yesno_fast(now=now)
     for market in new_markets:
-        if market in old_markets:
+        if market["id"] in old_markets:
             continue
         if len(old_markets) > 100:
             old_markets = []
+        old_markets.append(market["id"])
         print(f"{market["startDate"]} | {market["question"]}")
         save_market(market, now)
 
