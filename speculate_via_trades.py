@@ -1,474 +1,568 @@
-import os, sys, json, time, math, random, glob
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, List, Tuple, Optional
+"""
+hlutir til að fylgjast með fyrir hvern markað,
+all time lægsta, nr. hvaða trade það var, fyrsta undir cap, nr hvað það var, magn trades, magn af shares fyrir allt, 
+kaup (ef magn stocks og price nudir cap),
+magn under (open), magn over (opem), magn no trades (open)
+magn under (closed), magn over (closed), magn no trades (closed)
+magn over x, y, z
+"""
+import json
+import time
 import requests
+from datetime import datetime, timezone
+import time, json, requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import os
+import re
+import random, time
+import os, json, time
+from datetime import datetime, timedelta, timezone
+import gzip
+import glob
+import time, traceback, sys
+import os, sys, time, json, requests, traceback
+from datetime import datetime, timezone, timedelta
+import argparse
 
-# ==============================
-# Config
-# ==============================
-LOGS_ROOT      = "logs"
-MARKET_SUBDIR  = "marketfiles"
-SNAPSHOT_NAME  = "no_bet_snapshots.jsonl"  # appended in logs/<folder>/
-BASE_GAMMA     = "https://gamma-api.polymarket.com"
-GAMMA_MARKETS  = f"{BASE_GAMMA}/markets"
-DATA_TRADES    = "https://data-api.polymarket.com/trades"
+bet = input("bet: ")
+if not bet:
+    bet = 100.0
+else:
+    bet = float(bet)
+cap = input("cap: ")
+if not cap:
+    cap = 0.5
+else:
+    cap = float(cap)
+name_log = input("name log: ")
+if name_log:
+    LOG_DIR = os.path.join("logs", name_log)
+else:
+    LOG_DIR = os.path.join("logs", f"logs_run_{bet}_{int(time.time())}")
 
-RPS_TARGET     = 3.0      # adaptive RPS target
-_RPS_SCALE     = 1.0
-_RPS_MIN       = 0.3
-_RPS_RECOVER_PER_SEC = 0.03
+BASE_GAMMA = "https://gamma-api.polymarket.com/markets"
+BASE_HISTORY = "https://clob.polymarket.com/prices-history"
+BASE_BOOK = "https://clob.polymarket.com/book"
+DATA_TRADES = "https://data-api.polymarket.com/trades"
+RUN_TRADE_BASE = "markets.jsonl"
+RUN_SNAP_BASE  = "run_snapshots.jsonl"
+DECISION_LOG_BASE = "decisions.jsonl"
+DECISION_LOG_SAMPLE = 0.001  # 15% sampling
+DECISION_LOG_SNAPSHOT = 0.001
+VERBOSE = True
+SHOW_DEBUG_BOOKS = False  # Set True to fetch YES/NO books on skipped markets for inspection
+RETAIN_DAYS = 79           # delete logs older than this
+COMPRESS_AFTER_DAYS = 91   # gzip logs older than this (but not today's)
+_created_cutoff = None
 
-# ==============================
-# Session + rate limiter + HTTP
-# ==============================
-def make_session() -> requests.Session:
+GLOBAL_FEE = 0.0   # 600 for 6.00%
+GLOBAL_SLIP = 0.0  # 200 for 2.00%
+old_markets = []
+
+# ----------------------------------------------------------------------
+#network helpers
+# ----------------------------------------------------------------------
+def make_session():
     s = requests.Session()
     retry = Retry(
-        total=5, connect=5, read=5,
-        backoff_factor=0.4,
+        total=5,
+        connect=5,
+        read=5,
+        backoff_factor=0.5,  # 0.5, 1.0, 2.0, ...
         status_forcelist=(429, 500, 502, 503, 504),
         allowed_methods=("GET", "POST"),
         raise_on_status=False,
     )
-    adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-no-bet-backtest/1.0"})
+    s.headers.update({"User-Agent": "research-bot/1.0"})
     return s
-
 SESSION = make_session()
+
+# --- Simple global RPS limiter ---------------------------------------
+RPS_TARGET = 10.0     # choose 2–5 to stay very safe
 _last_tokens_ts = time.monotonic()
 _bucket = RPS_TARGET
 
 def _rate_limit():
-    global _last_tokens_ts, _bucket, _RPS_SCALE
+    global _last_tokens_ts, _bucket
     now = time.monotonic()
-    rps_now = max(RPS_TARGET * _RPS_SCALE, 0.1)
-    _bucket = min(rps_now, _bucket + (now - _last_tokens_ts) * rps_now)
+    # refill bucket
+    _bucket = min(RPS_TARGET, _bucket + (now - _last_tokens_ts) * RPS_TARGET)
     _last_tokens_ts = now
     if _bucket < 1.0:
-        need = (1.0 - _bucket) / rps_now
+        # need to wait for 1 token
+        need = (1.0 - _bucket) / RPS_TARGET
         time.sleep(need)
         now2 = time.monotonic()
-        _bucket = min(rps_now, _bucket + (now2 - _last_tokens_ts) * rps_now)
+        _bucket = min(RPS_TARGET, _bucket + (now2 - _last_tokens_ts) * RPS_TARGET)
         _last_tokens_ts = now2
     _bucket -= 1.0
 
-def _rps_on_429():
-    global _RPS_SCALE
-    _RPS_SCALE = max(_RPS_MIN, _RPS_SCALE * 0.7)
+NET_LOG_BASE = "net_usage.jsonl"
+bytes_in_total = 0
 
-def _rps_recover(dt_sec: float):
-    global _RPS_SCALE
-    _RPS_SCALE = min(1.0, _RPS_SCALE + _RPS_RECOVER_PER_SEC * dt_sec)
+def log_net_usage():
+    append_jsonl(NET_LOG_BASE, {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "bytes_in_total": bytes_in_total
+    })
 
-def _retry_after_seconds(resp) -> float:
-    ra = resp.headers.get("Retry-After")
-    if not ra:
-        return 0.0
+def parse_start_input(user_input: str) -> int:
+    """
+    Accepts:
+      - ISO 8601 e.g. '2025-10-01T00:00:00Z' or '2025-10-01 00:00:00'
+      - Relative like 'hours=6', 'days=2', 'minutes=30'
+    Returns epoch seconds UTC.
+    """
+    s = user_input.strip()
+    # relative?
+    if "=" in s and all(k in s for k in ["="]):
+        parts = dict(
+            (k.strip(), float(v))
+            for k,v in (p.split("=",1) for p in s.split(","))
+        )
+        delta = timedelta(
+            days=parts.get("days", 0.0),
+            hours=parts.get("hours", 0.0),
+            minutes=parts.get("minutes", 0.0)
+        )
+        t = datetime.now(timezone.utc) - delta
+        return int(t.timestamp())
+
+    # ISO variants
+    s2 = s.replace("Z","+00:00")
     try:
-        return max(0.0, float(ra))
-    except Exception:
-        return 0.0
-
-def http_get(url: str, *, params=None, timeout=20, max_tries=8) -> requests.Response:
-    back = 0.5
-    tries = 0
-    last_t = time.monotonic()
-    while True:
-        _rate_limit()
-        try:
-            r = SESSION.get(url, params=params or {}, timeout=timeout)
-        except requests.RequestException:
-            time.sleep(back + random.random()*0.2)
-            back = min(back*1.7, 20.0)
-            tries += 1
-            if tries >= max_tries:
-                raise
-            continue
-
-        if r.status_code < 400:
-            now = time.monotonic()
-            _rps_recover(now - last_t)
-            return r
-
-        if r.status_code == 429:
-            _rps_on_429()
-            ra = _retry_after_seconds(r)
-            sleep_s = max(ra, back) + random.random()*0.3
-            time.sleep(sleep_s)
-            back = min(back*1.8, 30.0)
-            tries += 1
-            if tries >= max_tries:
-                r.raise_for_status()
-            continue
-
-        if 500 <= r.status_code < 600:
-            time.sleep(back + random.random()*0.2)
-            back = min(back*1.7, 20.0)
-            tries += 1
-            if tries >= max_tries:
-                r.raise_for_status()
-            continue
-
-        r.raise_for_status()
-
-# ==============================
-# Utils
-# ==============================
-def iso_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def to_epoch_seconds(x) -> Optional[int]:
-    """Accept ms or s or iso. Returns seconds (int) or None."""
-    if x is None:
-        return None
-    if isinstance(x, (int, float)):
-        f = float(x)
-        return int(f/1000) if f > 1e12 else int(f)
-    s = str(x).strip()
-    # ISO?
-    try:
-        t = datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(timezone.utc)
+        t = datetime.fromisoformat(s2).astimezone(timezone.utc)
         return int(t.timestamp())
     except Exception:
-        pass
-    # numeric string?
-    try:
-        f = float(s)
-        return int(f/1000) if f > 1e12 else int(f)
-    except Exception:
-        return None
+        print("Could not parse time. Try ISO like 2025-10-01T00:00:00Z or relative like hours=6")
+        sys.exit(1)
+get_days_back = input("days=, hours=, minutes= : ")
+if not get_days_back:
+    days_back = parse_start_input("days=10")
+else:
+    days_back = parse_start_input(get_days_back)
 
-def ensure_dir(path: str):
-    os.makedirs(path, exist_ok=True)
+def fetch_open_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
+                          require_clob=False, min_liquidity=None, min_volume=None,
+                          session=SESSION, verbose=True):
+    params = {
+        "limit": limit,
+        "order": "startDate",
+        "ascending": False,
+    }
+    if days_back:
+        params["start_date_min"] = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+    if require_clob:
+        params["enableOrderBook"] = True
+    if min_liquidity is not None:
+        params["liquidity_num_min"] = float(min_liquidity)
+    if min_volume is not None:
+        params["volume_num_min"] = float(min_volume)
 
-def list_market_log_files(folder: str) -> List[str]:
-    base = os.path.join(LOGS_ROOT, folder, MARKET_SUBDIR)
-    ensure_dir(base)
-    # common names, change as needed
-    pats = [
-        os.path.join(base, "markets_*.jsonl"),
-        os.path.join(base, "*.jsonl"),
-    ]
-    files = []
-    for p in pats:
-        files.extend(glob.glob(p))
-    return sorted(set(files))
+    all_rows, seen_ids = [], set()
+    pages = 0
 
-# ==============================
-# Market id resolving
-# ==============================
-def resolve_condition_id_from_market_obj(m: Dict[str, Any]) -> Optional[str]:
-    cid = m.get("conditionId")
-    if isinstance(cid, str) and cid:
-        return cid
-    mid = m.get("id") or m.get("market_id")
-    if not mid:
-        return None
-    # Try Gamma /markets?id=<mid>
-    try:
-        r = http_get(GAMMA_MARKETS, params={"id": mid, "limit": 1}, timeout=20)
-        arr = r.json() or []
-        if isinstance(arr, list) and arr:
-            cid2 = arr[0].get("conditionId") or arr[0].get("id")
-            if isinstance(cid2, str) and cid2:
-                return cid2
-    except Exception:
-        return None
-    return None
+    while pages < max_pages:
+        time.sleep(1)
+        q = dict(params, offset=offset)
+        try:
+            r = session.get(BASE_GAMMA, params=q, timeout=20)
+            r.raise_for_status()
+        except Exception as e:
+            if verbose: print(f"[WARN] fetch failed at offset {offset} with {q}: {e}")
+            break
 
-# ==============================
-# Trade fetch (after a cutoff) - NO only
-# ==============================
-def fetch_trades_after_NO(cid: str, since_epoch: int, cap: float) -> Tuple[List[Dict[str,Any]], int, int, Tuple[Optional[float], float]]:
-    """
-    Returns:
-      - trades_after (raw dicts, NO only, strictly after cutoff)
-      - under_count (count of NO trades priced <= cap)
-      - over_count  (count of NO trades priced >  cap)
-      - lowest_seen: (min_price, total_notional_at_min_price) among NO trades (after cutoff)
-    Also prints each trade with UNDER/OVER and keeps running 'lowest so far' + '$ under cap' logs.
-    """
-    out: List[Dict[str,Any]] = []
-    under_count = 0
-    over_count  = 0
-    lowest_price: Optional[float] = None
-    lowest_notional: float = 0.0
-    cumulative_under_cap: float = 0.0
+        page = r.json() or []
+        if not page:
+            if verbose: print("[INFO] empty page; done.")
+            break
 
-    limit = 250
-    starting_before = int(time.time())
+        added = 0
+        for m in page:
+            outs = m.get("outcomes")
+            if isinstance(outs, str):
+                try: outs = json.loads(outs)
+                except: outs = None
+            def is_yesno(lst):
+                if not isinstance(lst, list) or len(lst) != 2: return False
+                s = [str(x).strip().lower() for x in lst]
+                return set(s) == {"yes", "no"}
+            if is_yesno(outs):
+                mid = m.get("id")
+                if mid not in seen_ids:
+                    all_rows.append(m)
+                    seen_ids.add(mid)
+                    added += 1
 
-    printed_header = False
+        if verbose:
+            print(f"[PAGE {pages}] got {len(page)} raw, added {added} new, total {len(all_rows)}")
+
+        if len(page) < limit:
+            if verbose: print("[INFO] last page (short).")
+            break
+        pages += 1
+        offset += limit
+
+    # sort newest → oldest by startDate or createdAt
+    all_rows.sort(key=lambda m: (m.get("startDate") or m.get("createdAt") or ""), reverse=False)
+    if verbose:
+        print(f"✅ Total open Yes/No markets: {len(all_rows)}")
+    return all_rows
+
+def fetch_trades(market_dict, session=SESSION, limit=100, max_pages=250):
+    """Pull full trade history with retries+timeouts and a hard time budget."""
+    cid = market_dict["conditionId"]
+    offset = 0
+    all_trades = []
     while True:
-        params = {
-            "market": cid,
-            "sort": "desc",
-            "limit": limit,
-            "starting_before": int(starting_before * 1000),  # ms
-        }
-        r = http_get(DATA_TRADES, params=params, timeout=20)
-        data = r.json() or []
-        if not data:
-            break
+        try:
+            params={"market": cid, "sort": "asc", "limit": limit, "offset": offset,}
+            r = session.get(DATA_TRADES, params=params, timeout=20)
+            r.raise_for_status()
+            payload = r.json()
+            
+            if not payload or len(payload) == 0:
+                break
+            all_trades.extend(payload)
+            offset += limit
+            if offset // limit >= max_pages:
+                print(f"[WARN] Hit max_pages ({max_pages}), stopping early.")
+                break
+            time.sleep(0.3)
+        except:
+            return all_trades
+    return all_trades
+#current
+def is_actively_tradable(m):
+    if not m.get("enableOrderBook"): return False
+    toks = m.get("clobTokenIds"); 
+    if isinstance(toks, str):
+        try: toks=json.loads(toks)
+        except: toks=[]
+    q = (m.get("question") or "").lower()
+    # Skip range/between/greater-than style if you want simpler binarys:
+   #if any(w in q for w in ["between", "range", "greater than", "less than"]):
+    #    return False
+    return isinstance(toks, list) and len(toks) == 2
 
-        oldest = None
-        # iterate newest→oldest on this page, but we’re only interested in AFTER cutoff
-        for t in data:
-            ts_s = to_epoch_seconds(t.get("timestamp") or t.get("time") or t.get("ts"))
-            if ts_s is None:
-                continue
-            if oldest is None or ts_s < oldest:
-                oldest = ts_s
+def decode_trades(trades, market, cap=0.5, bet=100):
+    # Initialize metrics
+    smallest_ever = 0.99
+    amount_under_cap = 0
+    notional_under_cap = 0
+    trades_till_fill = 0
+    count = 0
+    first_under = None
+    first = False
 
-            if ts_s <= since_epoch:
-                # older than cutoff → ignore
-                continue
-
-            outcome = str(t.get("outcome", "")).upper()
-            if outcome != "NO":
-                continue
-
-            price = float(t.get("price") or 0.0)
-            size  = float(t.get("size")  or 0.0)
-            if price <= 0 or size <= 0:
-                continue
-
-            # Update lowest ever (since cutoff) for NO
-            if (lowest_price is None) or (price < lowest_price - 1e-12):
-                lowest_price = price
-                lowest_notional = price * size
-            elif lowest_price is not None and abs(price - lowest_price) <= 1e-12:
-                lowest_notional += price * size
-
-            # Update under/over and cumulative under-cap notional
-            if price <= cap + 1e-12:
-                under_count += 1
-                cumulative_under_cap += price * size
-                flag = "UNDER"
-            else:
-                over_count += 1
-                flag = "OVER"
-
-            if not printed_header:
-                print(f"\n--- NO trades AFTER {datetime.fromtimestamp(since_epoch, tz=timezone.utc).isoformat()} for market {cid} ---")
-                printed_header = True
-
-            print(f"[TRADE] {datetime.fromtimestamp(ts_s, tz=timezone.utc).isoformat()} "
-                  f"NO price={price:.6f} size={size:.6f} → {flag} | "
-                  f"lowest_so_far={('%.6f' % lowest_price) if lowest_price is not None else 'N/A'} "
-                  f"@$={lowest_notional:.2f} | $under_cap={cumulative_under_cap:.2f}")
-
-            out.append(t)
-
-        if oldest is None or oldest <= since_epoch:
-            break
-        starting_before = oldest
-
-    return out, under_count, over_count, (lowest_price, lowest_notional)
-
-# ==============================
-# Fill simulation (NO only)
-# ==============================
-def compute_no_fill(trades_after: List[Dict[str,Any]], cap: float, bet_size: float) -> Dict[str,Any]:
-    """
-    Use ONLY NO trades at price <= cap, oldest→newest, to see if we can spend bet_size dollars.
-    Returns dict: filled, filled_dollars, filled_shares, vwap.
-    """
-    pts: List[Tuple[int,float,float]] = []
-    for t in trades_after:
-        outcome = str(t.get("outcome","")).upper()
-        if outcome != "NO":
-            continue
-        p = float(t.get("price") or 0.0)
-        s = float(t.get("size") or 0.0)
-        if p <= 0 or s <= 0:
-            continue
-        if p <= cap + 1e-12:
-            ts = to_epoch_seconds(t.get("timestamp") or t.get("time") or t.get("ts"))
-            pts.append((ts if ts is not None else 0, p, s))
-
-    pts.sort(key=lambda x: x[0])
-
-    spent = 0.0
-    shares = 0.0
-    for _, p, s in pts:
-        need = bet_size - spent
-        if need <= 0:
-            break
-        avail_dollars = p * s
-        take_dollars = min(need, avail_dollars)
-        take_shares  = take_dollars / p
-        spent += take_dollars
-        shares += take_shares
-
-    filled = spent >= bet_size - 1e-9
-    vwap = (spent / shares) if shares > 0 else None
-
-    return {
-        "filled": filled,
-        "filled_dollars": round(spent, 6),
-        "filled_shares": round(shares, 6),
-        "vwap": (round(vwap, 6) if vwap is not None else None),
+    # Buckets by dollar amount
+    spread = {
+        "5": [0, 0], "10": [0, 0], "25": [0, 0], "50": [0, 0],
+        "75": [0, 0], "100": [0, 0], "150": [0, 0], "200": [0, 0],
+        "300": [0, 0], "400": [0, 0], "500": [0, 0],
+        "750": [0, 0], "1000": [0, 0],
     }
 
-# ==============================
-# Snapshot writing
-# ==============================
-def append_jsonl(path: str, rec: Dict[str,Any]):
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
+    if not trades:
+        print(f"NO TRADES FOR | {market['question']}")
+        return None
 
-# ==============================
-# Main scanning logic
-# ==============================
-def parse_markets_from_logs(folder: str) -> List[Dict[str,Any]]:
-    """
-    Reads every JSON line from logs/<folder>/marketfiles/* and yields
-    {'conditionId','id','time_found','question',...} light records.
-    Deduplicates by conditionId or id, keeping the earliest time_found.
-    """
-    files = list_market_log_files(folder)
-    found: Dict[str, Dict[str,Any]] = {}
-    for path in files:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    row = json.loads(line)
-                except Exception:
-                    continue
-                # time_found key should exist in your logs; default if missing
-                tf = row.get("time_found") or row.get("time_found_at") or row.get("found_at")
-                if not tf:
-                    continue
-                try:
-                    tf_s = to_epoch_seconds(tf)
-                    if tf_s is None:
-                        continue
-                except Exception:
-                    continue
+    # Sort by price ascending if needed
+    trades = sorted(trades, key=lambda x: x["price"])
 
-                cid = row.get("conditionId")
-                mid = row.get("id") or row.get("market_id")
-                q   = row.get("question") or row.get("name") or row.get("title")
+    for tr in trades:
+        count += 1
+        pr = tr["price"]
+        sz = tr["size"]
+        notional = pr * sz
 
-                key = (cid or mid)
-                if not key:
-                    continue
+        if not first and (pr <= cap):
+            first_under = (pr , sz)
 
-                prev = found.get(key)
-                if prev is None or tf_s < prev["time_found_s"]:
-                    found[key] = {
-                        "conditionId": cid,
-                        "id": mid,
-                        "question": q,
-                        "time_found_s": tf_s,
-                        "raw": row,
-                    }
-    return list(found.values())
+        if count > 9999:
+            break
 
-def scan_once(folder: str, bet_size: float, cap: float):
-    markets = parse_markets_from_logs(folder)
-    out_dir = os.path.join(LOGS_ROOT, folder)
-    ensure_dir(out_dir)
-    snap_path = os.path.join(out_dir, SNAPSHOT_NAME)
+        # Track the smallest trade price seen
+        if pr < smallest_ever:
+            smallest_ever = pr
 
-    print(f"\n=== NO-bet backtest: folder='{folder}' bet_size=${bet_size:.2f} cap={cap:.4f} ===")
-    print(f"Found {len(markets)} unique markets from logs/{folder}/{MARKET_SUBDIR}/")
+        # Track under cap stats
+        if pr <= cap:
+            amount_under_cap += sz
+            notional_under_cap += notional
+            trades_till_fill += 1
 
-    for i, m in enumerate(markets, 1):
-        cid = m.get("conditionId")
-        mid = m.get("id")
-        q   = m.get("question")
-        tf_s = m["time_found_s"]
+        # Update each bucket — how much notional is available up to that size
+        cumulative_notional = 0
+        for key in spread:
+            bucket = int(key)
+            if bucket >= notional:
+                spread[key][0] += sz       # total size
+                spread[key][1] += notional # total notional
+                break
+            cumulative_notional += notional
 
-        # Resolve conditionId if missing / numeric id
-        if not cid or not (isinstance(cid, str) and cid.startswith("0x")):
-            resolved = resolve_condition_id_from_market_obj(m["raw"])
-            if resolved:
-                cid = resolved
+    return {
+        "market": market["question"],
+        "smallest_price": smallest_ever,
+        "first_under": first_under,
+        "amount_under_cap": amount_under_cap,
+        "notional_under_cap": notional_under_cap,
+        "trades_till_fill": trades_till_fill,
+        "spread": spread
+    }
+
+def wl_markets_under_cap(market):
+    if market.get("closed") == False:
+        return "TBD"
+    outcome_raw = market.get("outcomePrices", ["0", "0"])
+    outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
+    yes_p, no_p = float(outcome[0]), float(outcome[1])
+    if 0.02 < yes_p < 0.98 and 0.02 < no_p < 0.98:
+        return "TBD"
+    if no_p > yes_p:
+        return "NO"
+    elif no_p < yes_p:
+        return "YES"
+    else:
+        print("how?")
+        return "TBD"
+
+
+def run_historic(days_back, bet, cap):
+    finished = False
+    offset = 0
+    under = 0
+    over = 0
+    no_trades = 0
+    wl = 0
+    tbd = 0
+    wl_notional = 0.0
+    while not finished:
+        days_ago = (datetime.now(timezone.utc) - datetime.fromtimestamp(days_back, tz=timezone.utc)).days
+        markets = fetch_open_yesno_fast(offset=offset, days_back=days_ago)
+        offset += 100 * 250
+        for market in markets:
+            raw_trades = fetch_trades(market)
+            if raw_trades:
+                dec = decode_trades(raw_trades, market, cap=cap, bet=bet)
+                res = wl_markets_under_cap(market)
+                if dec["amount_under_cap"] > bet:
+                    under += 1
+                else:
+                    over += 1
+                if res == "YES":
+                    wl -= 1
+                    wl_notional -= bet
+                elif res == "TBD":
+                    tbd += 1
+                elif (res == "NO") and (dec["amount_under_cap"] > bet):
+                    wl += 1
+                    wl_notional += (bet/cap) - bet
+                else:
+                    print("ERROR SOMETHING HORRIBLE WENT WRONG")
+                print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
             else:
-                # cannot fetch trades without a conditionId
-                print(f"[{i}/{len(markets)}] SKIP (no conditionId) id={mid} q={q}")
-                continue
+                no_trades += 1
+                print(f"NO TRADES | {no_trades} | {market["question"]}")
+        log_view(wl, wl_notional, no_trades, tbd, under, over)
+            
+def fetch_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
+                          require_clob=False, min_liquidity=None, min_volume=None,
+                          session=SESSION, verbose=True,
+                          now=(datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()):
+    params = {
+        "limit": limit,
+        "order": "startDate",
+        "start_date_min": now,
+        "ascending": False,
+    }
+    if require_clob:
+        params["enableOrderBook"] = True
+    if min_liquidity is not None:
+        params["liquidity_num_min"] = float(min_liquidity)
+    if min_volume is not None:
+        params["volume_num_min"] = float(min_volume)
 
-        print(f"\n[{i}/{len(markets)}] Market {cid}  |  {q or '(no title)'}")
-        # Pull trades after time_found, NO only; print trades and running stats
-        trades_after, under_ct, over_ct, (min_px, min_notional) = fetch_trades_after_NO(cid, tf_s, cap)
+    all_rows, seen_ids = [], set()
+    pages = 0
 
-        # Compute whether hypothetical NO bet fills (and VWAP) from these trades
-        fill = compute_no_fill(trades_after, cap, bet_size)
-
-        # Summary line in console
-        print(f"[SUMMARY] under={under_ct}  over={over_ct}  "
-              f"lowest_NO={'%.6f' % min_px if min_px is not None else 'N/A'} "
-              f"@$={min_notional:.2f}  |  "
-              f"filled={'YES' if fill['filled'] else 'NO'}  "
-              f"spent=${fill['filled_dollars']:.2f}  shares={fill['filled_shares']:.4f}  "
-              f"vwap={(('%.6f' % fill['vwap']) if fill['vwap'] is not None else 'N/A')}")
-
-        # Append snapshot row
-        row = {
-            "time_logged": iso_now(),
-            "folder": folder,
-            "market_id": cid,
-            "question": q,
-            "time_found": datetime.fromtimestamp(tf_s, tz=timezone.utc).isoformat(),
-            "bet_size": bet_size,
-            "cap": cap,
-            "trades_after_count": len(trades_after),
-            "under_count": under_ct,
-            "over_count": over_ct,
-            "lowest_no_price": (round(min_px, 6) if min_px is not None else None),
-            "lowest_no_notional": round(min_notional, 4),
-            "filled": fill["filled"],
-            "filled_dollars": fill["filled_dollars"],
-            "filled_shares": fill["filled_shares"],
-            "fill_vwap": fill["vwap"],
-        }
-        append_jsonl(snap_path, row)
-
-    print(f"\nSaved snapshots → {snap_path}")
-
-# ==============================
-# CLI / loop
-# ==============================
-def ask_float(prompt: str, default: Optional[float]=None) -> float:
-    while True:
-        s = input(f"{prompt}{' ['+str(default)+']' if default is not None else ''}: ").strip()
-        if not s and default is not None:
-            return float(default)
+    while pages < max_pages:
+        time.sleep(1)
+        q = dict(params, offset=offset)
         try:
-            return float(s)
-        except Exception:
-            print("Enter a number.")
+            r = session.get(BASE_GAMMA, params=q, timeout=20)
+            r.raise_for_status()
+        except Exception as e:
+            if verbose: print(f"[WARN] fetch failed at offset {offset} with {q}: {e}")
+            break
+
+        page = r.json() or []
+        if not page:
+            if verbose: print("[INFO] empty page; done.")
+            break
+
+        added = 0
+        for m in page:
+            outs = m.get("outcomes")
+            if isinstance(outs, str):
+                try: outs = json.loads(outs)
+                except: outs = None
+            def is_yesno(lst):
+                if not isinstance(lst, list) or len(lst) != 2: return False
+                s = [str(x).strip().lower() for x in lst]
+                return set(s) == {"yes", "no"}
+            if is_yesno(outs):
+                mid = m.get("id")
+                if mid not in seen_ids:
+                    all_rows.append(m)
+                    seen_ids.add(mid)
+                    added += 1
+
+        if verbose:
+            print(f"[PAGE {pages}] got {len(page)} raw, added {added} new, total {len(all_rows)}")
+
+        if len(page) < limit:
+            if verbose: print("[INFO] last page (short).")
+            break
+        pages += 1
+        offset += limit
+
+    # sort newest → oldest by startDate or createdAt
+    all_rows.sort(key=lambda m: (m.get("startDate") or m.get("createdAt") or ""), reverse=False)
+    if verbose:
+        print(f"✅ Total open Yes/No markets: {len(all_rows)}")
+    return all_rows
+
+
+def run_active():
+    #fetch marketr from x date real time right away, search for createdAt (should return only a few markets)
+    #load saved trades, compare if new are in old, if not create bet at price
+    #save when "bet placed" make sure trades check only "takes if param happens after place time"
+    #check trades filterd by startDate
+    #periodically check if trades are finnished, maybe another script
+    global old_markets
+    now = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
+    new_markets = fetch_yesno_fast(now=now)
+    for market in new_markets:
+        if market["id"] in old_markets:
+            continue
+        if len(old_markets) > 100:
+            old_markets = []
+        old_markets.append(market["id"])
+        print(f"{market["startDate"]} | {market["question"]}")
+        save_market(market, now)
+
+
 
 def main():
-    folder = input("Custom folder name under logs/ (where 'marketfiles' lives): ").strip()
-    if not folder:
-        print("Need a folder name (e.g., 'customname').")
-        sys.exit(1)
+    p = argparse.ArgumentParser(description="trades taken under cap simulator")
+    g = p.add_mutually_exclusive_group(required=False)
+    g.add_argument("--active", action="store_true", help="simulate looking at new markets store-ing all including not taken")
+    g.add_argument("--historic", action="store_true", help="simulating historic to compare with active")
+    args = p.parse_args()
 
-    bet_size = ask_float("Bet size $ (NO)", 100.0)
-    cap      = ask_float("Price cap (<= this price)", 0.70)
-    loop_s   = ask_float("LOOP_SECONDS (0 = single pass)", 0.0)
+    if args.historic:
+        run_historic(days_back, bet, cap)
+    else:
+        while True:
+            try:
+                run_active()
+            except Exception as e:
+                print(f"[WARN] compute error: {e}")
+            time.sleep(10)
 
-    try:
-        if loop_s <= 0:
-            scan_once(folder, bet_size, cap)
-        else:
-            while True:
-                print("\n================= SCAN START =================")
-                print(iso_now())
-                print("================================================\n")
-                scan_once(folder, bet_size, cap)
-                print(f"\nSleeping {loop_s:.0f} sec … (Ctrl+C to stop)")
-                time.sleep(loop_s)
-    except KeyboardInterrupt:
-        print("\nbye.")
+# ----------------------------------------------------------------------
+# log logic
+# ----------------------------------------------------------------------
+def _ensure_logdir():
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+MAX_LOG_BYTES = 50 * 1024 * 1024   # 50 MB per part
+
+def _dated_with_part(path_base: str) -> str:
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    name, ext = os.path.splitext(path_base)
+    base = os.path.join(LOG_DIR, f"{name}_{day}{ext}")
+    # If base exceeds MAX_LOG_BYTES, find next part suffix
+    if os.path.exists(base) and os.path.getsize(base) >= MAX_LOG_BYTES:
+        i = 1
+        while True:
+            candidate = os.path.join(LOG_DIR, f"{name}_{day}_part{i}{ext}")
+            if not os.path.exists(candidate) or os.path.getsize(candidate) < MAX_LOG_BYTES:
+                return candidate
+            i += 1
+    return base
+
+def append_jsonl(path_base: str, record: dict):
+    _ensure_logdir()
+    path = _dated_with_part(path_base)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+
+def log_view(wl, wl_notional, no_trades, tbd, under, over):
+    rec = {
+        "trades_taken":under,
+        "skipped":over,
+        "p/l":wl_notional,
+        "w/l":wl,
+        "tbd":tbd,
+        "no_trades":no_trades
+    }
+    append_jsonl(RUN_SNAP_BASE, rec)
+
+def save_market(market, time):
+    rec = {
+    "time_found": time,
+    "conditionId": market["conditionId"],
+    "question": market["question"]
+    }
+    append_jsonl(RUN_TRADE_BASE, rec)
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
 
 if __name__ == "__main__":
     main()
+    """
+    active mode, only track closed false open markets, follow up report wl --slow
+    history mode, from x days back give report svo end -- fast ish
+    """
+
+    """
+    def main():
+    bet = 100
+    under = 0
+    over = 0
+    no_trades = 0
+    wl = 0
+    tbd = 0
+    wl_notional = 0.0
+    m = fetch_open_yesno_fast(days_back=100)
+    for i in m:
+        trades = fetch_trades(i)
+        if trades:
+            dec = decode_trades(trades, i, bet=bet)
+            if dec["amount_under_cap"] > 5:
+                under += 1
+            else:
+                over += 1
+            finnished = wl_markets_under_cap(i)
+            if finnished == "NO":
+                wl += 1
+                wl_notional += 4
+            elif finnished == "YES":
+                wl -= 1
+                wl_notional -= 5
+            elif finnished == "TBD":
+                tbd += 1
+            print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
+
+        else:
+            no_trades += 1
+            print(f"NO TRADES | {no_trades} | {i["question"]}")
+    """

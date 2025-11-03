@@ -1,611 +1,486 @@
-import os, sys, json, time, glob, math, random
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple
+import os, sys, json, time, glob, random
+from typing import Optional, Iterable, Tuple, List, Dict
+from datetime import datetime, timezone, timedelta
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ========================== CONFIG / INPUT ==========================
+# =========================
+# Config / endpoints
+# =========================
+BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
+DATA_TRADES  = "https://data-api.polymarket.com/trades"
 
-GAMMA_MARKETS = "https://gamma-api.polymarket.com/markets"
-TRADES_API    = "https://data-api.polymarket.com/trades"
+LOGS_ROOT    = "logs"
+SNAPSHOT_NAME= "no_bet_snapshots.jsonl"
 
-def iso_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+# pacing
+MARKET_REFRESH_SEC    = 5*60
+SLEEP_BETWEEN_MARKETS = 0.0
+SLEEP_AFTER_FULL_PASS = 5.0
 
-def parse_iso_to_epoch(s: str) -> Optional[int]:
-    try:
-        return int(datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp())
-    except Exception:
-        return None
-
-def ask_float(prompt: str, default: Optional[float] = None) -> float:
-    while True:
-        raw = input(f"{prompt}{' ['+str(default)+']' if default is not None else ''}: ").strip()
-        if not raw and default is not None:
-            return float(default)
-        try:
-            return float(raw)
-        except:
-            print("Please enter a number.")
-
-def ask_str(prompt: str) -> str:
-    s = input(f"{prompt}: ").strip()
-    return s
-
-# ========================== LOG PATHS / IO ==========================
-
-def ensure_dir(p: str):
-    os.makedirs(p, exist_ok=True)
-
-def open_jsonl_write(path: str, rec: dict):
-    ensure_dir(os.path.dirname(path))
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
-
-def write_text(path: str, text: str):
-    ensure_dir(os.path.dirname(path))
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(text)
-
-def write_json(path: str, obj: Any):
-    ensure_dir(os.path.dirname(path))
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2, default=str)
-    os.replace(tmp, path)
-
-# ========================== SESSION / RPS ===========================
-
-# Adaptive token bucket + proper backoff honoring Retry-After
-RPS_TARGET = 3.5         # desired peak
-_RPS_SCALE = 1.0         # auto-tuned [0.3 .. 1.0]
-_RPS_MIN   = 0.3
-_RPS_RECOVER_PER_SEC = 0.03
-
+# RPS (gentle)
+RPS_TARGET = 3.0
 _last_tokens_ts = time.monotonic()
 _bucket = RPS_TARGET
-
-def make_session() -> requests.Session:
-    s = requests.Session()
-    retry = Retry(
-        total=5, connect=5, read=5,
-        backoff_factor=0.3,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=("GET", "HEAD"),
-        raise_on_status=False,
-    )
-    adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
-    s.mount("https://", adapter)
-    s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-lifecycle-watch/1.0"})
-    return s
-
-SESSION = make_session()
 
 def _rate_limit():
     global _last_tokens_ts, _bucket
     now = time.monotonic()
-    rps_now = max(RPS_TARGET * _RPS_SCALE, 0.1)
-    _bucket = min(rps_now, _bucket + (now - _last_tokens_ts) * rps_now)
+    _bucket = min(RPS_TARGET, _bucket + (now - _last_tokens_ts) * RPS_TARGET)
     _last_tokens_ts = now
     if _bucket < 1.0:
-        need = (1.0 - _bucket) / rps_now
+        need = (1.0 - _bucket) / RPS_TARGET
         time.sleep(need)
         now2 = time.monotonic()
-        _bucket = min(rps_now, _bucket + (now2 - _last_tokens_ts) * rps_now)
+        _bucket = min(RPS_TARGET, _bucket + (now2 - _last_tokens_ts) * RPS_TARGET)
         _last_tokens_ts = now2
     _bucket -= 1.0
 
-def _rps_on_429():
-    global _RPS_SCALE
-    _RPS_SCALE = max(_RPS_MIN, _RPS_SCALE * 0.7)
+def make_session():
+    s = requests.Session()
+    retry = Retry(
+        total=5, connect=5, read=5,
+        backoff_factor=0.4,
+        status_forcelist=(429,500,502,503,504),
+        allowed_methods=("GET","POST"),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=20, pool_maxsize=20)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    s.headers.update({"User-Agent": "pm-no-bet-rolling/1.0"})
+    return s
 
-def _rps_recover(dt_sec: float):
-    global _RPS_SCALE
-    _RPS_SCALE = min(1.0, _RPS_SCALE + _RPS_RECOVER_PER_SEC * dt_sec)
+SESSION = make_session()
 
-def _retry_after_seconds(resp) -> float:
-    ra = resp.headers.get("Retry-After")
-    if not ra: return 0.0
-    try:
-        return max(0.0, float(ra))
-    except:
-        return 0.0
+# =========================
+# Small utils
+# =========================
+def iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
-def http_get(url: str, *, params=None, timeout=25, max_tries=8, stats=None) -> requests.Response:
-    back = 0.5
-    tries = 0
-    last_t = time.monotonic()
-    while True:
-        _rate_limit()
+def ensure_dir(path: str):
+    os.makedirs(path, exist_ok=True)
+
+def to_epoch_seconds(x) -> Optional[int]:
+    """Accepts epoch s/ms, or ISO8601 string; returns epoch seconds or None."""
+    if x is None:
+        return None
+    if isinstance(x, (int, float)):
+        v = float(x)
+        return int(v/1000) if v > 1e12 else int(v)
+    if isinstance(x, str):
+        s = x.strip().replace("Z", "+00:00")
         try:
-            r = SESSION.get(url, params=params or {}, timeout=timeout)
-        except requests.RequestException:
-            time.sleep(back + random.random() * 0.2)
-            back = min(back * 1.7, 20.0)
-            tries += 1
-            if tries >= max_tries:
-                raise
-            continue
-
-        if r.status_code < 400:
-            now = time.monotonic()
-            _rps_recover(now - last_t)
-            return r
-
-        if r.status_code == 429:
-            if stats: stats.http_429s += 1
-            _rps_on_429()
-            ra = _retry_after_seconds(r)
-            sleep_s = max(ra, back) + random.random() * 0.3
-            time.sleep(sleep_s)
-            back = min(back * 1.8, 30.0)
-            tries += 1
-            if tries >= max_tries:
-                r.raise_for_status()
-            continue
-
-        if 500 <= r.status_code < 600:
-            time.sleep(back + random.random() * 0.2)
-            back = min(back * 1.7, 20.0)
-            tries += 1
-            if tries >= max_tries:
-                r.raise_for_status()
-            continue
-
-        r.raise_for_status()
-
-# ========================== HELPERS / API ===========================
-
-def market_is_closed(m: dict) -> bool:
-    if m.get("closed") is True:
-        return True
-    # winner keys
-    for k in ("winningOutcome","resolvedOutcome","winner","resolveOutcome","resolution","outcome"):
-        v = m.get(k)
-        if isinstance(v, str) and v.strip().lower() in ("yes", "no"):
-            return True
-    return False
-
-def market_winner(m: dict) -> Optional[str]:
-    for k in ("winningOutcome","resolvedOutcome","winner","resolveOutcome","resolution","outcome"):
-        v = m.get(k)
-        if isinstance(v, str) and v.strip().lower() in ("yes", "no"):
-            return v.strip().upper()
-    res = m.get("result") or m.get("resolutionData") or {}
-    if isinstance(res, dict):
-        for k in ("winner","winningOutcome","outcome"):
-            v = res.get(k)
-            if isinstance(v, str) and v.strip().lower() in ("yes","no"):
-                return v.strip().upper()
-    return None
-
-def market_resolved_ts(m: dict) -> Optional[int]:
-    for k in ("resolvedTime","resolveTime","resolutionTime","closedTime","endDate","closeTime"):
-        s = m.get(k)
-        if not s: continue
-        ts = parse_iso_to_epoch(str(s))
-        if ts: return ts
-    return None
-
-def fetch_market_by_id_or_cid(id_or_cid: str, stats=None) -> Optional[dict]:
-    """
-    Try to fetch a single market row by conditionId or id by scanning pages (newest→oldest).
-    Efficient enough for hourly checks; avoids complex query params.
-    """
-    limit = 250
-    offset = 0
-    seen = 0
-    while True:
-        params = {"limit": limit, "order": "startDate", "ascending": False, "enableOrderBook": False, "offset": offset}
-        r = http_get(GAMMA_MARKETS, params=params, stats=stats)
-        rows = r.json() or []
-        if not rows: break
-        for m in rows:
-            cid = m.get("conditionId") or m.get("id")
-            mid = m.get("id")
-            if id_or_cid == cid or id_or_cid == mid:
-                return m
-        seen += len(rows)
-        if len(rows) < limit: break
-        offset += limit
-        # small pause is handled via rate limiter
-    return None
-
-def fetch_trades_after(cid: str, since_epoch: int, cap: float, stats=None):
-    """
-    Pull ALL trades for a market strictly AFTER since_epoch.
-    Prints each trade, tags UNDER/OVER based on cap.
-    Returns the list of trades-after (raw dicts) you can then pass to compute_fill_from_trades().
-    """
-    out = []
-    limit = 250
-    starting_before = int(time.time())
-    printed_header = False
-
-    while True:
-        params = {
-            "market": cid,
-            "sort": "desc",
-            "limit": limit,
-            "starting_before": int(starting_before * 1000)  # ms
-        }
-        r = http_get(TRADES_API, params=params, stats=stats)
-        data = r.json() or []
-        if not data:
-            break
-        out.extend(data)
-
-        oldest = None
-        for t in data:
-            ts = t.get("timestamp") or t.get("time") or t.get("ts")
+            dt = datetime.fromisoformat(s).astimezone(timezone.utc)
+            return int(dt.timestamp())
+        except Exception:
+            # maybe numeric string
             try:
-                tsf = float(ts)
-                ts_s = int(tsf/1000) if tsf > 1e12 else int(tsf)
-            except:
-                ts_s = None
+                v = float(s)
+                return int(v/1000) if v > 1e12 else int(v)
+            except Exception:
+                return None
+    return None
 
-            price = float(t.get("price", 0) or 0)
-            size  = float(t.get("size", 0) or 0)
-            outcome = str(t.get("outcome","")).upper()
-            side = str(t.get("side","")).upper()
+def append_jsonl(path: str, record: dict):
+    ensure_dir(os.path.dirname(path))
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
-            if ts_s is not None:
-                oldest = ts_s if oldest is None else min(oldest, ts_s)
+# =========================
+# Robust market-log reader
+# =========================
+def _extract_markets_from_obj(obj) -> Iterable[dict]:
+    """Yield markets from obj that may be a single dict, a list, or wrapped."""
+    if obj is None:
+        return
+    if isinstance(obj, dict):
+        if isinstance(obj.get("markets"), list):
+            for m in obj["markets"]:
+                if isinstance(m, dict): yield m
+            return
+        data = obj.get("data")
+        if isinstance(data, dict) and isinstance(data.get("markets"), list):
+            for m in data["markets"]:
+                if isinstance(m, dict): yield m
+            return
+        # assume obj itself is a market row
+        yield obj
+        return
+    if isinstance(obj, list):
+        for m in obj:
+            if isinstance(m, dict):
+                yield m
 
-            # only print trades AFTER time_found
-            if ts_s is None or ts_s <= since_epoch:
-                continue
-
-            if not printed_header:
-                print(f"--- Trades AFTER {datetime.fromtimestamp(since_epoch, tz=timezone.utc).isoformat()} for {cid} ---")
-                printed_header = True
-
-            flag = "UNDER" if price <= cap + 1e-12 else "OVER"
-            print(f"[TRADE] {datetime.fromtimestamp(ts_s, tz=timezone.utc).isoformat()} "
-                  f"price={price:.4f} size={size:.4f} outcome={outcome} side={side} → {flag}")
-
-        if oldest is None or oldest <= since_epoch:
-            break
-        starting_before = oldest
-
-    # Keep only trades strictly after since_epoch for downstream fill
-    trades_after = []
-    for t in out:
-        ts = t.get("timestamp") or t.get("time") or t.get("ts")
-        try:
-            tsf = float(ts); ts_s = int(tsf/1000) if tsf > 1e12 else int(tsf)
-        except:
-            ts_s = None
-        if ts_s is not None and ts_s > since_epoch:
-            trades_after.append(t)
-
-    return trades_after
-
-# ====================== ECON / P&L CALC =============================
-
-def pnl_for_no_bet_at_price(bet_size: float, price: float, winner: str) -> float:
+def read_market_logs_rolling(folder: str) -> List[dict]:
     """
-    Assume we spent `bet_size` USD buying NO at `price` (per-share price).
-    Shares = bet_size / price. If NO wins, value = shares*1 → profit = shares - bet_size.
-    If YES wins, profit = -bet_size.
+    Read all markets_*.jsonl in logs/<folder>/ (and logs/<folder>/marketfiles/ if present).
+    Return a list of market dicts (deduped by 'id').
     """
-    if price <= 0:
-        return 0.0
-    shares = bet_size / price
-    if winner == "NO":
-        return shares - bet_size
-    else:
-        return -bet_size
-    
-def compute_fill_from_trades(trades_after: list, cap: float, bet_size: float):
-    """
-    Given trades AFTER time_found, simulate buying NO at prices <= cap.
-    Fill criterion: cumulative notional (price*size) >= bet_size.
-    We compute filled_shares, filled_dollars (<= bet_size), and vwap.
-    Returns dict with fill stats and also total under/over counts.
-    """
-    # Count under/over while we’re here
-    under_count, over_count = 0, 0
+    patterns = [
+        os.path.join(LOGS_ROOT, folder, "markets_*.jsonl"),
+        os.path.join(LOGS_ROOT, folder, "marketfiles", "markets_*.jsonl"),
+    ]
+    paths = []
+    for pat in patterns:
+        paths.extend(glob.glob(pat))
+    paths = sorted(set(paths))  # unique + sorted
 
-    # Keep only trades priced <= cap for filling; but still count over
-    under_trades = []
-    for t in trades_after:
-        price = float(t.get("price", 0) or 0)
-        size  = float(t.get("size", 0) or 0)
-        if price <= cap + 1e-12:
-            under_count += 1
-            if price > 0 and size > 0:
-                ts = t.get("timestamp") or t.get("time") or t.get("ts")
-                try:
-                    tsf = float(ts)
-                    ts_s = int(tsf/1000) if tsf > 1e12 else int(tsf)
-                except:
-                    ts_s = None
-                under_trades.append((ts_s, price, size))
-        else:
-            over_count += 1
+    out = []
+    bad = 0
+    if not paths:
+        print(f"[READ] No files found. Looked for:\n  - {patterns[0]}\n  - {patterns[1]}")
+        return out
 
-    # Oldest-first to simulate time flow
-    under_trades.sort(key=lambda x: (x[0] if x[0] is not None else 0))
-
-    filled_dollars = 0.0
-    filled_shares  = 0.0
-    spent          = 0.0
-
-    for _, p, s in under_trades:
-        need = bet_size - spent
-        if need <= 0:
-            break
-        # dollars available in this trade
-        avail_dollars = p * s
-        take_dollars = min(need, avail_dollars)
-        if p > 0:
-            take_shares = take_dollars / p
-        else:
-            take_shares = 0.0
-        spent          += take_dollars
-        filled_dollars += take_dollars
-        filled_shares  += take_shares
-
-    filled = spent >= bet_size - 1e-9
-    vwap   = (filled_dollars / filled_shares) if filled_shares > 0 else None
-
-    return {
-        "filled": filled,
-        "filled_dollars": round(filled_dollars, 6),
-        "filled_shares":  round(filled_shares, 6),
-        "vwap":           (round(vwap, 6) if vwap is not None else None),
-        "under_count":    under_count,
-        "over_count":     over_count,
-    }
-
-
-def pnl_for_no_fill(bet_size: float, vwap_price: float, winner: str) -> float:
-    """
-    P/L for a filled NO bet using actual filled VWAP price.
-    Shares = bet_size / vwap. If NO wins → profit = shares - bet_size.
-    If YES wins → -bet_size.
-    """
-    if vwap_price is None or vwap_price <= 0:
-        return 0.0
-    shares = bet_size / vwap_price
-    return (shares - bet_size) if winner == "NO" else (-bet_size)
-
-# ====================== RUN STATS & SUMMARY =========================
-
-@dataclass
-class RunStats:
-    scanned: int = 0
-    newly_closed: int = 0
-    unresolved_seen: int = 0
-    http_429s: int = 0
-
-    def est_locked_dollars(self, bet_size):
-        try:
-            return float(bet_size) * float(self.unresolved_seen)
-        except:
-            return None
-
-def write_run_summary(summary_path: str, when_iso: str, stats: RunStats, cap: float, bet_size: float, took_seconds: float):
-    h = int(took_seconds // 3600)
-    m = int((took_seconds % 3600) // 60)
-    s = int(took_seconds % 60)
-    pretty = f"{h:02d}:{m:02d}:{s:02d}"
-    locked = stats.est_locked_dollars(bet_size)
-    locked_str = f"${locked:,.2f}" if locked is not None else "n/a"
-    line = (f"{when_iso} | scanned={stats.scanned} | newly_closed={stats.newly_closed} | "
-            f"unresolved_seen={stats.unresolved_seen} | est_locked={locked_str} | "
-            f"cap={cap:.2f} | bet_size=${bet_size:.2f} | r429={stats.http_429s} | took={pretty}\n")
-    write_text(summary_path, line)
-    # JSONL twin
-    js_path = os.path.splitext(summary_path)[0] + ".jsonl"
-    open_jsonl_write(js_path, {
-        "time": when_iso,
-        "scanned": stats.scanned,
-        "newly_closed": stats.newly_closed,
-        "unresolved_seen": stats.unresolved_seen,
-        "est_locked": stats.est_locked_dollars(bet_size),
-        "cap": cap,
-        "bet_size": bet_size,
-        "http_429s": stats.http_429s,
-        "took_seconds": round(took_seconds, 3),
-    })
-
-# ====================== MAIN HOURLY WORKER ==========================
-
-def read_found_records(found_dir: str) -> List[dict]:
-    """Load all lines from logs/<custom>/marketfiles/*.jsonl"""
-    paths = sorted(glob.glob(os.path.join(found_dir, "*.jsonl")))
-    rows = []
     for p in paths:
         with open(p, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line: continue
                 try:
-                    rows.append(json.loads(line))
-                except:
+                    obj = json.loads(line)
+                except Exception:
+                    bad += 1
                     continue
+                for m in _extract_markets_from_obj(obj):
+                    if not isinstance(m, dict): continue
+                    # normalize id
+                    if "id" not in m and "market_id" in m:
+                        m["id"] = m.get("market_id")
+                    out.append(m)
+
+    # Deduplicate by 'id' (last seen row wins)
+    dedup: Dict[str, dict] = {}
+    for m in out:
+        mid = str(m.get("id") or "")
+        if mid:
+            dedup[mid] = m
+
+    rows = list(dedup.values())
+    print(f"[READ] files={len(paths)} rows≈{len(out)} unique_by_id={len(rows)} bad_lines={bad}")
     return rows
 
-def resolve_market_identity(rec: dict) -> Tuple[Optional[str], Optional[str]]:
+def infer_time_found(m: dict) -> int:
+    """Prefer 'time_found'; fallback to created/start; else 0."""
+    for k in ("time_found", "time_found_at"):
+        tf = to_epoch_seconds(m.get(k))
+        if tf is not None: return tf
+    for k in ("createdAt", "startDate", "openDate", "listedAt"):
+        tf = to_epoch_seconds(m.get(k))
+        if tf is not None: return tf
+    return 0
+
+# =========================
+# Gamma helpers
+# =========================
+def fetch_markets_by_ids(ids: List[str]) -> Dict[str, dict]:
     """
-    Returns (conditionId, human_name) from the found record or later via Gamma fetch.
+    Best-effort resolver: Gamma supports filtering by 'ids' (comma-separated).
+    We’ll chunk to be safe. Returns {id: market_dict}.
     """
-    cid = rec.get("conditionId") or rec.get("id") or rec.get("cid")
-    name = rec.get("question") or rec.get("name") or rec.get("title")
-    return cid, name
+    out: Dict[str, dict] = {}
+    chunk = 100
+    for i in range(0, len(ids), chunk):
+        part = ids[i:i+chunk]
+        params = {"ids": ",".join(part)}
+        _rate_limit()
+        r = SESSION.get(BASE_GAMMA, params=params, timeout=20)
+        if r.status_code >= 400:
+            continue
+        data = r.json() or []
+        for m in data:
+            mid = str(m.get("id") or "")
+            if mid:
+                out[mid] = m
+    return out
+
+def resolve_condition_ids(markets: List[dict], cache: Dict[str, str]) -> Dict[str, str]:
+    """
+    Return mapping market_id -> conditionId (using cache, embedded fields, or Gamma lookup).
+    """
+    result = dict(cache) if cache else {}
+    missing: List[str] = []
+
+    for m in markets:
+        mid = str(m.get("id") or "")
+        if not mid: continue
+        if mid in result and result[mid]:
+            continue
+        cid = m.get("conditionId")
+        if cid:
+            result[mid] = cid
+        else:
+            missing.append(mid)
+
+    if missing:
+        looked = fetch_markets_by_ids(missing)
+        for mid in missing:
+            cid = (looked.get(mid) or {}).get("conditionId")
+            if cid:
+                result[mid] = cid
+    return result
+
+# simple JSON cache for (market id -> conditionId)
+def cache_path(folder: str) -> str:
+    return os.path.join(LOGS_ROOT, folder, "id_to_conditionId.json")
+
+def load_cid_cache(folder: str) -> Dict[str, str]:
+    p = cache_path(folder)
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_cid_cache(folder: str, mapping: Dict[str, str]):
+    p = cache_path(folder)
+    ensure_dir(os.path.dirname(p))
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(mapping, f, ensure_ascii=False)
+
+# =========================
+# Trades (NO only) helpers
+# =========================
+def fetch_trades_page_ms(cid: str, limit=250, starting_before_s=None, offset=None) -> list:
+    params = {"market": cid, "sort": "desc", "limit": int(limit)}
+    if starting_before_s is not None:
+        params["starting_before"] = int(starting_before_s * 1000)  # milliseconds
+    if offset is not None:
+        params["offset"] = int(offset)
+    _rate_limit()
+    r = SESSION.get(DATA_TRADES, params=params, timeout=20)
+    r.raise_for_status()
+    return r.json() or []
+
+def backfill_trades_since(cid: str, since_epoch_s: int, page_limit=250, max_pages=2000) -> list:
+    """
+    Pull trades backward in time until we reach <= since_epoch_s.
+    Then filter to trades >= since_epoch_s.
+    """
+    out = []
+    starting_before = None
+    last_len = None
+
+    # timestamp-first pass
+    for _ in range(10000):
+        data = fetch_trades_page_ms(cid, limit=page_limit, starting_before_s=starting_before)
+        if not data: break
+        out.extend(data)
+        # oldest on this page
+        oldest = min(to_epoch_seconds(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
+        if oldest <= since_epoch_s:
+            break
+        starting_before = oldest
+        # progress check
+        if last_len == len(data): break
+        last_len = len(data)
+
+    # if still not reached since, try offset paging a bit
+    if not out or (min(to_epoch_seconds(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in out) > since_epoch_s):
+        offset = 0
+        for i in range(max_pages):
+            data = fetch_trades_page_ms(cid, limit=page_limit, offset=offset)
+            if not data: break
+            out.extend(data)
+            oldest = min(to_epoch_seconds(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
+            if oldest <= since_epoch_s:
+                break
+            offset += len(data)
+
+    # de-dup
+    seen, uniq = set(), []
+    for t in out:
+        key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
+        if key in seen: continue
+        seen.add(key); uniq.append(t)
+
+    # keep only trades at/after since
+    filtered = []
+    for t in uniq:
+        ts = to_epoch_seconds(t.get("timestamp") or t.get("time") or t.get("ts"))
+        if ts is None: continue
+        if ts >= since_epoch_s:
+            filtered.append(t)
+    return filtered
+
+def analyse_no_trades(trades: list, cap: float) -> Tuple[int,int, Tuple[Optional[float], float], float]:
+    """
+    Return:
+      - under_count
+      - over_count
+      - (min_no_price, min_no_notional_at_that_price)
+      - total_under_notional
+    Only counts outcome == 'NO'.
+    """
+    under = over = 0
+    min_px: Optional[float] = None
+    min_notional = 0.0
+    total_under_notional = 0.0
+
+    for t in trades:
+        outcome = str(t.get("outcome") or "").lower()
+        if outcome != "no":
+            continue
+        try:
+            p = float(t.get("price", 0.0))
+            s = float(t.get("size", 0.0))
+        except Exception:
+            continue
+        if p <= 0 or s <= 0:
+            continue
+
+        # min price tracking (sum notional at that exact min)
+        if (min_px is None) or (p < min_px - 1e-12):
+            min_px = p
+            min_notional = p * s
+        elif (min_px is not None) and abs(p - min_px) <= 1e-12:
+            min_notional += p * s
+
+        # under/over cap
+        if p <= cap + 1e-12:
+            under += 1
+            total_under_notional += p * s
+        else:
+            over += 1
+
+    return under, over, (min_px, min_notional), total_under_notional
+
+def compute_fill_from_under_notional(total_under_notional: float, cap: float, bet_size: float) -> dict:
+    """
+    Greedy assumption: you get filled at or below cap up to bet_size.
+    We don't reconstruct the exact depth ladder here; use total notional as availability.
+    """
+    filled_dollars = min(bet_size, total_under_notional)
+    filled = filled_dollars >= bet_size - 1e-9
+    # approximate shares at cap (worst-case within cap)
+    filled_shares = filled_dollars / cap if cap > 0 else 0.0
+    vwap = cap if filled_shares > 0 else None
+    return {
+        "filled": filled,
+        "filled_dollars": round(filled_dollars, 2),
+        "filled_shares": round(filled_shares, 6),
+        "vwap": vwap
+    }
+
+# =========================
+# Main scan
+# =========================
+def scan_once(folder: str, bet_size: float, cap: float):
+    out_dir = os.path.join(LOGS_ROOT, folder)
+    ensure_dir(out_dir)
+    snap_path = os.path.join(out_dir, SNAPSHOT_NAME)
+
+    # read all rolling daily files
+    markets = read_market_logs_rolling(folder)
+    if not markets:
+        print("[SCAN] No markets found — nothing to do.")
+        return
+
+    # resolve conditionIds
+    cid_cache = load_cid_cache(folder)
+    cid_map = resolve_condition_ids(markets, cid_cache)
+    save_cid_cache(folder, cid_map)
+
+    print(f"\n=== NO bet backtest (folder={folder}) | markets={len(markets)} ===")
+
+    for i, m in enumerate(markets, 1):
+        mid = str(m.get("id") or "")
+        q   = m.get("question") or m.get("name") or m.get("title") or "(no title)"
+        if not mid:
+            if i % 50 == 0:
+                print(f"[{i}/{len(markets)}] skip: missing market id")
+            continue
+
+        cid = cid_map.get(mid)
+        if not cid:
+            print(f"[{i}/{len(markets)}] SKIP: cannot resolve conditionId for id={mid}")
+            continue
+
+        tf = infer_time_found(m)
+        tf_iso = datetime.fromtimestamp(tf, tz=timezone.utc).isoformat()
+
+        print(f"\n[{i}/{len(markets)}] {cid} | {q}")
+        print(f"  time_found: {tf_iso}  cap={cap}  bet=${bet_size:.2f}")
+
+        # fetch trades since time_found
+        trades = backfill_trades_since(cid, tf)
+        # analyse NO-only trades against cap
+        under, over, (min_px, min_not), total_under_notional = analyse_no_trades(trades, cap)
+
+        # print per-market quick summary
+        print(f"  trades_NO: under_cap={under} over_cap={over}")
+        if min_px is not None:
+            print(f"  lowest_NO: {min_px:.4f}  notional_at_lowest=${min_not:.2f}")
+        else:
+            print("  lowest_NO: N/A")
+        print(f"  total_under_cap_notional=${total_under_notional:.2f}")
+
+        # compute fill decision from total_under_notional
+        fill = compute_fill_from_under_notional(total_under_notional, cap, bet_size)
+        print(f"  fill: {'YES' if fill['filled'] else 'NO'} "
+              f"spent=${fill['filled_dollars']:.2f} shares={fill['filled_shares']:.4f} "
+              f"vwap={fill['vwap'] if fill['vwap'] is not None else 'N/A'}")
+
+        # snapshot row
+        row = {
+            "time_logged": iso_now(),
+            "market_id": mid,
+            "conditionId": cid,
+            "question": q,
+            "time_found": tf_iso,
+            "bet_size": bet_size,
+            "cap": cap,
+            "no_trades_under_cap": under,
+            "no_trades_over_cap": over,
+            "lowest_no_price": min_px,
+            "lowest_no_notional": round(min_not, 2),
+            "total_under_cap_notional": round(total_under_notional, 2),
+            **fill
+        }
+        append_jsonl(snap_path, row)
+        time.sleep(SLEEP_BETWEEN_MARKETS)
+
+    print(f"\nSnapshots saved to {snap_path}")
+
+# =========================
+# CLI
+# =========================
+def prompt_float(prompt: str, default: float) -> float:
+    s = input(f"{prompt} [{default}]: ").strip()
+    if not s:
+        return float(default)
+    return float(s)
+
+def prompt_int(prompt: str, default: int) -> int:
+    s = input(f"{prompt} [{default}]: ").strip()
+    if not s:
+        return int(default)
+    return int(s)
 
 def main():
-    print("== Hourly closed-market watcher ==")
-    custom = ask_str("Custom folder name (under logs/)")
-    cap = ask_float("Cap price (e.g. 0.70)", 0.70)
-    bet_size = ask_float("Bet size in $ (per market)", 100.0)
+    folder = input("Folder name under logs/: ").strip()
+    if not folder:
+        print("Need a folder name (under logs/).")
+        sys.exit(1)
 
-    ROOT_DIR = os.path.join("logs", custom)
-    FOUND_DIR = os.path.join(ROOT_DIR, "marketfiles")
-    ensure_dir(ROOT_DIR)
+    bet_size = prompt_float("Bet size $", 10.0)
+    cap      = prompt_float("Price cap", 0.50)
+    loop_s   = prompt_int("Loop seconds (0=single pass)", 0)
 
-    CLOSED_PATH = os.path.join(ROOT_DIR, "closed_markets.jsonl")
-    SNAPSHOT_PATH = os.path.join(ROOT_DIR, "snapshot_latest.json")
-    SUMMARY_PATH  = os.path.join(ROOT_DIR, "run_summary.log")
-
-    print(f"Reading found logs from: {FOUND_DIR}")
-    print(f"Outputs: {CLOSED_PATH}, {SNAPSHOT_PATH}, {SUMMARY_PATH}")
-    print("Running hourly. Ctrl+C to stop.\n")
-
+    print(f"{iso_now()} Starting scan…")
     try:
-        while True:
-            run_started = time.monotonic()
-            stats = RunStats()
-
-            # Aggregate snapshot counters
-            total_open = 0
-            total_closed = 0
-            total_under_trades = 0
-            total_over_trades = 0
-
-            # Load found market records
-            found = read_found_records(FOUND_DIR)
-            print(f"{iso_now()} loaded found rows: {len(found)}")
-
-            # De-dup by ID with most recent time_found kept
-            latest_by_id: Dict[str, dict] = {}
-            for r in found:
-                cid, _ = resolve_market_identity(r)
-                if not cid:
-                    # skip malformed rows
-                    continue
-                tf = r.get("time_found")
-                tf_epoch = parse_iso_to_epoch(str(tf)) if tf else None
-                prev = latest_by_id.get(cid)
-                if prev is None:
-                    latest_by_id[cid] = r
-                else:
-                    prev_tf = parse_iso_to_epoch(str(prev.get("time_found"))) if prev.get("time_found") else None
-                    if (tf_epoch or 0) > (prev_tf or 0):
-                        latest_by_id[cid] = r
-
-            ids = list(latest_by_id.keys())
-
-            # Track which cids we've already written to CLOSED_PATH (avoid duplicate rows)
-            already_closed: set = set()
-            if os.path.exists(CLOSED_PATH):
-                with open(CLOSED_PATH, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            j = json.loads(line)
-                            if j.get("market_id"):
-                                already_closed.add(j["market_id"])
-                        except:
-                            continue
-
-            newly_closed_rows = 0
-
-            for cid in ids:
-                stats.scanned += 1
-                rec = latest_by_id[cid]
-                time_found_iso = rec.get("time_found")
-                tf_epoch = parse_iso_to_epoch(str(time_found_iso)) if time_found_iso else None
-                _, name_hint = resolve_market_identity(rec)
-
-                # Pull market meta
-                m = fetch_market_by_id_or_cid(cid, stats=stats)
-                if not m:
-                    print(f"[MISS] market not found for id={cid}")
-                    continue
-
-                name = name_hint or m.get("question") or m.get("slug") or m.get("market_slug") or "(unknown)"
-                resolved = market_is_closed(m)
-                winner = market_winner(m)
-                res_ts = market_resolved_ts(m)
-
-                if not resolved:
-                    stats.unresolved_seen += 1
-                    total_open += 1
-                else:
-                    total_closed += 1
-
-                # If we have time_found, scan trades after time_found and count under/over vs cap
-                if tf_epoch is not None:
-                    trades_after = fetch_trades_after(m.get("conditionId") or cid, tf_epoch, cap, stats=stats)
-                    fill = compute_fill_from_trades(trades_after, cap, bet_size)
-
-                    # print a one-line summary of the attempted fill
-                    if fill["vwap"] is not None:
-                        print(f"[FILL] under-cap notional=${fill['filled_dollars']:.2f}/{bet_size:.2f} "
-                            f"→ {'FILLED' if fill['filled'] else 'NOT FILLED'}; "
-                            f"shares={fill['filled_shares']:.4f} vwap={fill['vwap']:.4f}")
-                    else:
-                        print(f"[FILL] under-cap notional=${fill['filled_dollars']:.2f}/{bet_size:.2f} → NOT FILLED")
-
-                    total_under_trades += fill["under_count"]
-                    total_over_trades  += fill["over_count"]
-
-                # If newly closed and not logged yet → compute P/L and write
-                if time_found_iso is not None and fill.get("filled"):
-                    pl = pnl_for_no_fill(bet_size, fill["vwap"], winner or "YES")
-                    wl = 1 if (winner == "NO") else 0
-                    bet_filled = True
-                else:
-                    pl = 0.0
-                    wl = None  # no bet was actually filled
-                    bet_filled = False
-
-                row = {
-                    "time_logged": iso_now(),
-                    "market_id": m.get("conditionId") or cid,
-                    "question": name,
-                    "winner": winner,                   # "YES"/"NO"/None
-                    "resolved_at": res_ts,              # epoch
-                    "bet_filled": bet_filled,
-                    "w_l": wl,                          # 1=win, 0=loss, None=no bet
-                    "p_l": round(pl, 2),
-                    "cap": cap,
-                    "bet_size": bet_size,
-                    "open_markets_seen": total_open,
-                    "closed_markets_seen": total_closed,
-                    "trades_under_cap_since_found": fill["under_count"] if tf_epoch is not None else None,
-                    "trades_over_cap_since_found":  fill["over_count"]  if tf_epoch is not None else None,
-                    "filled_dollars": fill["filled_dollars"] if tf_epoch is not None else None,
-                    "filled_shares":  fill["filled_shares"]  if tf_epoch is not None else None,
-                    "fill_vwap":      fill["vwap"]           if tf_epoch is not None else None,
-                }
-                open_jsonl_write(CLOSED_PATH, row)
-                print(f"[CLOSED] wrote → {name} | winner={winner} | bet_filled={bet_filled} | P/L=${row['p_l']:.2f}")
-                newly_closed_rows += 1
-                stats.newly_closed += 1
-
-            # Dollars locked = bet_size * unresolved_seen (your definition)
-            snapshot = {
-                "time": iso_now(),
-                "cap": cap,
-                "bet_size": bet_size,
-                "open_markets_seen": total_open,
-                "closed_markets_seen": total_closed,
-                "trades_under_cap_total": total_under_trades,
-                "trades_over_cap_total": total_over_trades,
-                "unresolved_count": stats.unresolved_seen,
-                "dollars_locked_est": stats.est_locked_dollars(bet_size),
-                "newly_closed_rows": newly_closed_rows,
-            }
-            write_json(SNAPSHOT_PATH, snapshot)
-
-            took = time.monotonic() - run_started
-            write_run_summary(SUMMARY_PATH, iso_now(), stats, cap, bet_size, took)
-
-            # Sleep to next hour
-            # Try to align roughly to 1h cadence while accounting for runtime
-            sleep_for = max(0.0, 3600.0 - took)
-            print(f"\n{iso_now()} pass done: scanned={stats.scanned}, newly_closed={stats.newly_closed}, "
-                  f"unresolved={stats.unresolved_seen}, under_trades_total={total_under_trades}, "
-                  f"over_trades_total={total_over_trades}. Sleeping {int(sleep_for)}s.\n")
-            time.sleep(sleep_for)
-
+        if loop_s <= 0:
+            scan_once(folder, bet_size, cap)
+        else:
+            while True:
+                scan_once(folder, bet_size, cap)
+                print(f"Sleeping {loop_s}s… (Ctrl+C to stop)")
+                time.sleep(loop_s)
     except KeyboardInterrupt:
         print("\nbye.")
 
