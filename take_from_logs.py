@@ -935,27 +935,12 @@ def closed_yes(market):
 
 
 def main():
-    import argparse
-    p = argparse.ArgumentParser(description="Continuous P/L MTM timeseries reporter")
-    g = p.add_mutually_exclusive_group(required=False)
-    g.add_argument("--include-crypto", action="store_true", help="Include crypto markets (default)")
-    g.add_argument("--exclude-crypto", action="store_true", help="Exclude crypto markets")
-    p.add_argument("--once", action="store_true", help="Run once and exit (no loop)")
-    p.add_argument("--interval", type=int, default=UPDATE_INTERVAL_S, help="Seconds between updates (default hourly)")
-    args = p.parse_args()
-
-    include_crypto = not args.exclude_crypto
-
-    if args.once:
-        compute_and_write_once(include_crypto)
-        return
-
     while True:
         try:
-            compute_and_write_once(include_crypto)
+            make_bets()
         except Exception as e:
             print(f"[WARN] compute error: {e}")
-        time.sleep(max(60, args.interval))
+        time.sleep(60*60)
 
 if __name__ == "__main__":
     main()
