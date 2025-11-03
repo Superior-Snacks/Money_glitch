@@ -1,0 +1,22 @@
+{
+  "window_days": 100,
+  "generated_at": "2025-11-03T16:26:03.914688+00:00",
+  "active_days_stats": {
+    "n": 46370,
+    "median_d": 6.462,
+    "trimmed10_mean_d": 14.774,
+    "winsor05_mean_d": 33.155,
+    "iqr_d": 18.189,
+    "min_d": 0.002,
+    "max_d": 1214.225
+  },
+  "payout_days_stats_all": {
+    "n": 0
+  },
+  "payout_days_stats_yes": {
+    "n": 0
+  },
+  "payout_days_stats_no": {
+    "n": 0
+  }
+}

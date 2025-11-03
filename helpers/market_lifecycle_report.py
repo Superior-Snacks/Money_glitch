@@ -117,6 +117,33 @@ def http_get_with_backoff(url, *, params=None, timeout=25, max_tries=8):
 # =================== Time helpers ===================
 def now_iso(): return datetime.now(timezone.utc).isoformat()
 
+def _parse_ts_any(v):
+    """
+    Accepts:
+      - ISO8601 strings (with or without 'Z')
+      - epoch seconds (int/float)
+      - epoch milliseconds (int/float > 1e12)
+    Returns: aware datetime in UTC or None
+    """
+    if v is None:
+        return None
+    # numeric epoch?
+    if isinstance(v, (int, float)):
+        try:
+            s = float(v)
+            if s > 1e12:   # ms → s
+                s = s / 1000.0
+            return datetime.fromtimestamp(s, tz=timezone.utc)
+        except Exception:
+            return None
+    # string ISO?
+    if isinstance(v, str):
+        try:
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except Exception:
+            return None
+    return None
+
 def _parse_iso_utc(s):
     if not s: return None
     try:
@@ -150,11 +177,38 @@ def winner_from_market(m):
     return None
 
 def field_times(m):
-    created = _parse_iso_utc(m.get("createdAt"))
-    start   = _parse_iso_utc(m.get("startDate"))
-    enddt   = _parse_iso_utc(m.get("endDate"))
-    closed  = _parse_iso_utc(m.get("closedTime"))
-    resolve = _parse_iso_utc(m.get("resolvedTime") or m.get("resolveTime") or m.get("resolutionTime"))
+    """
+    Returns: (created, start, enddt, closed, resolve) as datetimes (UTC) or None.
+    We check multiple key aliases and support ISO or epoch(ms/s).
+    """
+    created = None
+    for k in ("createdAt", "created_at"):
+        created = _parse_ts_any(m.get(k))
+        if created: break
+
+    start = None
+    for k in ("startDate", "start_time", "start"):
+        start = _parse_ts_any(m.get(k))
+        if start: break
+
+    enddt = None
+    for k in ("endDate", "end_time", "end"):
+        enddt = _parse_ts_any(m.get(k))
+        if enddt: break
+
+    closed = None
+    for k in ("closedTime", "closeTime", "closed_at", "closed"):
+        closed = _parse_ts_any(m.get(k))
+        if closed: break
+
+    resolve = None
+    # include many aliases seen in the wild
+    for k in ("resolvedTime", "resolveTime", "resolutionTime", "resolved_at",
+              "resolve_at", "resolution_at", "settledTime", "settled_at",
+              "resolveDate", "resolutionDate"):
+        resolve = _parse_ts_any(m.get(k))
+        if resolve: break
+
     return created, start, enddt, closed, resolve
 
 def activity_anchor_start(m):
@@ -168,11 +222,16 @@ def activity_anchor_end(m):
     return enddt or closed
 
 def payout_anchor_start(m):
+    # when “counting” payout lag from: closedTime if present, else endDate
     _, _, enddt, closed, _ = field_times(m)
     return closed or enddt
 
 def payout_anchor_end(m):
+    # when “counting” payout lag to: resolved/settled time (any alias we parse)
     _, _, _, _, resolve = field_times(m)
+    if resolve is None and winner_from_market(m) in ("YES","NO"):
+    # assume instant payout when winner exists but no resolve timestamp available
+        return payout_anchor_start(m)
     return resolve
 
 def market_time_key(m):
