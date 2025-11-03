@@ -156,6 +156,16 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=250):
         seen.add(key); uniq.append(t)
     return uniq
 
+def should_skip_category(q: str, excluded: list) -> bool:
+    """Check if question text matches any excluded keywords."""
+    if not excluded:
+        return False
+    q_low = q.lower()
+    for ex in excluded:
+        if ex.lower() in q_low:
+            return True
+    return False
+
 # ---------- Market meta (closed/winner) ----------
 def fetch_market_meta(cid: str):
     """
@@ -333,7 +343,10 @@ def main():
     try:
         loop_s = int(input("Loop seconds (0=single pass) [0]: ").strip() or "0")
     except:
-        loop_s = 0
+        loop_s = 3600
+
+    excluded_str = input("Exclude categories/keywords (comma-separated, blank=none): ").strip()
+    excluded = [x.strip() for x in excluded_str.split(",") if x.strip()]
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
@@ -351,6 +364,9 @@ def main():
 
             print(f"[{i}/{len(uniq)}] {q}  (cid={cid[:10]}…)")
             # Fetch trades since time_found
+            if should_skip_category(meta["question"], excluded):
+                print(f"[{i}/{len(uniq)}] SKIP: excluded keyword match → {meta['question']}")
+                continue
             try:
                 trades = fetch_all_trades_since(cid, since_epoch, page_limit=250)
             except Exception as e:

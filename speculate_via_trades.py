@@ -59,6 +59,7 @@ _created_cutoff = None
 GLOBAL_FEE = 0.0   # 600 for 6.00%
 GLOBAL_SLIP = 0.0  # 200 for 2.00%
 old_markets = []
+t = []
 
 # ----------------------------------------------------------------------
 #network helpers
@@ -445,14 +446,14 @@ def run_active():
     #save when "bet placed" make sure trades check only "takes if param happens after place time"
     #check trades filterd by startDate
     #periodically check if trades are finnished, maybe another script
-    global old_markets
+    global old_markets, t
     now = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
     new_markets = fetch_yesno_fast(now=now)
     for market in new_markets:
         if market["conditionId"] in old_markets:
             continue
-        if len(old_markets) > 100:
-            old_markets = []
+        if len(old_markets) > 1000:
+            old_markets = old_markets[-100:]
         old_markets.append(market["conditionId"])
         print(f"{market["startDate"]} | {market["question"]}")
         save_market(market, now)
