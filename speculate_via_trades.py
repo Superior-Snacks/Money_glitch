@@ -365,7 +365,7 @@ def run_historic(days_back, bet, cap):
                     wl += 1
                     wl_notional += (bet/cap) - bet
                 else:
-                    print("ERROR SOMETHING HORRIBLE WENT WRONG")
+                    print("ERROR SOMETHING HORRIBLE WENT WRONG NO WON BUT NOT ENOUGH TRADES UNDER CAP")
                 print(f"wl:{wl},{wl_notional} tbd:{tbd} | ratio:{under}/{over} | ${dec["amount_under_cap"]} | time:{dec["trades_till_fill"]} | {dec["market"][:40]}")
             else:
                 no_trades += 1
@@ -441,11 +441,7 @@ def fetch_yesno_fast(limit=250, max_pages=100, days_back=360, offset=0,
 
 
 def run_active():
-    #fetch marketr from x date real time right away, search for createdAt (should return only a few markets)
-    #load saved trades, compare if new are in old, if not create bet at price
-    #save when "bet placed" make sure trades check only "takes if param happens after place time"
-    #check trades filterd by startDate
-    #periodically check if trades are finnished, maybe another script
+    #just gather all markets past time x, other script resolves them
     global old_markets, t
     now = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
     new_markets = fetch_yesno_fast(now=now)

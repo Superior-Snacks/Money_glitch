@@ -1,24 +1,22 @@
-import os, sys, json, time, random, glob
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Tuple, Optional
+import os, sys, json, time, random, glob, math
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ----------------- Config -----------------
+# ----------------- Constants -----------------
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
 DATA_TRADES  = "https://data-api.polymarket.com/trades"
 LOGS_DIR     = "logs"
 
-# pacing / loop
-MARKET_PAGE_LIMIT = 250
 TRADES_PAGE_LIMIT = 250
 LOOP_DEFAULT_SEC  = 3600  # 0 = single pass
 
-# rate limits / backoff
-RPS_TARGET            = 3.5    # ~3–4 req/s is gentle for Gamma + Data API
-_RPS_SCALE            = 1.0    # auto-scaled 0.3–1.0
+# Rate limiting with adaptive scale
+RPS_TARGET            = 3.5
+_RPS_SCALE            = 1.0
 _RPS_MIN              = 0.3
 _RPS_RECOVER_PER_SEC  = 0.03
 
@@ -35,7 +33,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-no-bet-scan/1.0"})
+    s.headers.update({"User-Agent": "pm-no-bet-scan/2.0"})
     return s
 
 SESSION = make_session()
@@ -89,7 +87,6 @@ def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
             continue
 
         if r.status_code < 400:
-            # success → gently recover RPS scale
             now = time.monotonic()
             _rps_recover(now - last_t)
             return r
@@ -128,19 +125,26 @@ def _parse_iso_to_epoch(s: str) -> Optional[int]:
 def _to_epoch_any(x):
     try:
         f = float(x)
-        return int(f/1000) if f > 1e12 else int(f)  # ms → s
+        return int(f/1000) if f > 1e12 else int(f)
     except Exception:
         return None
 
-# ----------------- Read rolling market logs -----------------
+# ----------------- FS helpers -----------------
 def ensure_dir(p):
     os.makedirs(p, exist_ok=True)
 
+def atomic_write_text(path: str, text: str):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+# ----------------- Read rolling market logs -----------------
 def read_unique_markets(folder_name: str) -> Dict[str, dict]:
     """
     Reads all logs/<folder_name>/markets_*.jsonl files,
     returns {conditionId: {"question":..., "time_found":..., "conditionId":...}}
-    using the EARLIEST time_found for each cid.
+    keeping the EARLIEST time_found per cid.
     """
     out_dir = os.path.join(LOGS_DIR, folder_name)
     paths = sorted(glob.glob(os.path.join(out_dir, "markets_*.jsonl")))
@@ -162,7 +166,6 @@ def read_unique_markets(folder_name: str) -> Dict[str, dict]:
                     tf  = rec.get("time_found")
                     if not cid or not q or not tf:
                         continue
-                    # keep earliest time_found
                     if (cid not in uniq) or (_parse_iso_to_epoch(tf) or 10**18) < (_parse_iso_to_epoch(uniq[cid]["time_found"]) or 10**18):
                         uniq[cid] = {"conditionId": cid, "question": q, "time_found": tf}
         except FileNotFoundError:
@@ -174,10 +177,6 @@ def read_unique_markets(folder_name: str) -> Dict[str, dict]:
 MARKET_META_CACHE: Dict[str, dict] = {}
 
 def fetch_market_meta_by_cid(cid: str) -> dict:
-    """
-    Fetch minimal metadata for one market from Gamma using conditionId.
-    Returns {category, subcategory, tags[]} all lowercased. Caches results.
-    """
     if not cid:
         return {}
     if cid in MARKET_META_CACHE:
@@ -201,20 +200,12 @@ def fetch_market_meta_by_cid(cid: str) -> dict:
         return {}
 
 def should_exclude_market(question: str, cid: str, excluded: List[str]) -> bool:
-    """
-    True if market should be skipped because any excluded token matches:
-      - question text
-      - category / subcategory / tags (from Gamma)
-    Matching is case-insensitive, substring-based.
-    """
     if not excluded:
         return False
     tokens = [e.strip().lower() for e in excluded if e.strip()]
     q_low = (question or "").lower()
-
     if any(tok in q_low for tok in tokens):
         return True
-
     meta = fetch_market_meta_by_cid(cid)
     fields = [meta.get("category",""), meta.get("subcategory","")] + meta.get("tags", [])
     for tok in tokens:
@@ -224,27 +215,20 @@ def should_exclude_market(question: str, cid: str, excluded: List[str]) -> bool:
 
 # ----------------- Trades pulling -----------------
 def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
-    """
-    Trades API helper: passes starting_before in **milliseconds** if provided.
-    Returns newest→older.
-    """
     params = {"market": cid, "sort": "desc", "limit": int(limit)}
     if starting_before_s is not None:
-        params["starting_before"] = int(starting_before_s * 1000)
+        params["starting_before"] = int(starting_before_s * 1000)  # ms
     if offset is not None:
         params["offset"] = int(offset)
     r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
     return r.json() or []
 
 def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_LIMIT):
-    """
-    Page back in time until we cross since_epoch_s. Returns list of trade dicts.
-    """
     out = []
     starting_before = None
     last_len = None
 
-    # timestamp-paging first
+    # timestamp paging first
     for _ in range(10000):
         data = fetch_trades_page_ms(cid, limit=page_limit, starting_before_s=starting_before)
         if not data:
@@ -254,11 +238,11 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
         if oldest_ts <= since_epoch_s:
             break
         starting_before = oldest_ts
-        if last_len == len(data):  # no progress
+        if last_len == len(data):
             break
         last_len = len(data)
 
-    # fallback to offset if needed
+    # offset fallback
     if (not out) or (min((_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out) > since_epoch_s):
         offset = 0
         for _ in range(2000):
@@ -271,7 +255,7 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
                 break
             offset += len(data)
 
-    # de-dup
+    # de-dup and cut since
     seen, uniq = set(), []
     for t in out:
         key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
@@ -279,7 +263,6 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
             continue
         seen.add(key); uniq.append(t)
 
-    # keep only trades >= since_epoch_s (we might have paged past)
     cut = []
     for t in uniq:
         ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
@@ -289,16 +272,9 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
 
 # ----------------- NO-only accounting -----------------
 def analyze_no_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
-    """
-    Inspect all trades (new→old order doesn't matter). Only consider outcome=='no'.
-    - lowest_no_px and totals at that px
-    - cumulative dollars/shares at/below cap
-    - success if dollars_under_cap >= bet_size_dollars
-    """
     no_trades = []
     for t in trades:
-        outcome = str(t.get("outcome","")).lower()
-        if outcome != "no":
+        if str(t.get("outcome","")).lower() != "no":
             continue
         try:
             p = float(t.get("price", 0) or 0.0)
@@ -322,12 +298,10 @@ def analyze_no_trades(trades: List[dict], cap: float, bet_size_dollars: float) -
             "success_fill": False
         }
 
-    # lowest ever NO price
     lowest_no_px = min(p for p,_ in no_trades)
-    low_dollars = sum(p*s for p,s in no_trades if p == lowest_no_px)
-    low_shares  = sum(s    for p,s in no_trades if p == lowest_no_px)
+    low_dollars = sum(p*s for p,s in no_trades if abs(p - lowest_no_px) < 1e-12)
+    low_shares  = sum(s    for p,s in no_trades if abs(p - lowest_no_px) < 1e-12)
 
-    # under/over cap
     under_cap = [(p,s) for (p,s) in no_trades if p <= cap + 1e-12]
     over_cap  = [(p,s) for (p,s) in no_trades if p  > cap + 1e-12]
 
@@ -346,11 +320,42 @@ def analyze_no_trades(trades: List[dict], cap: float, bet_size_dollars: float) -
         "success_fill": (under_cap_dollars >= bet_size_dollars - 1e-9),
     }
 
-# ----------------- Append snapshots -----------------
-def append_jsonl(path_base: str, record: dict):
-    ensure_dir(os.path.dirname(path_base))
-    with open(path_base, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+# ----------------- Overview helpers -----------------
+def mean(xs: List[float]) -> float:
+    return sum(xs)/len(xs) if xs else 0.0
+
+def pct(n: int, d: int) -> str:
+    return f"{(100.0*n/d):.2f}%" if d else "0.00%"
+
+def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: int, errors: int):
+    n = len(snapshots)
+    succ = sum(1 for s in snapshots if s.get("success_fill"))
+    no_no_trades = sum(1 for s in snapshots if s.get("no_trades",0)==0)
+
+    lows = [s["lowest_no_px"] for s in snapshots if s.get("lowest_no_px") is not None]
+    under_dollars = [s.get("under_cap_dollars",0.0) for s in snapshots]
+    under_shares  = [s.get("under_cap_shares",0.0) for s in snapshots]
+
+    print("\n===== PASS OVERVIEW =====")
+    print(f"Markets scanned:      {n}")
+    print(f"Skipped (filters):    {skipped}")
+    print(f"Errors (fetch/etc):   {errors}")
+    print(f"No NO-trades:         {no_no_trades}")
+    print(f"Cap:                  {cap}   Bet size: ${bet_size:.2f}")
+    print(f"Success fills:        {succ}  ({pct(succ, n)})")
+    print(f"Avg under-cap $:      ${mean(under_dollars):.2f}")
+    print(f"Avg under-cap shares: {mean(under_shares):.4f}")
+    if lows:
+        print(f"Lowest(ever) NO px:   min={min(lows):.4f}  mean={mean(lows):.4f}  max={max(lows):.4f}")
+    else:
+        print(f"Lowest(ever) NO px:   (no data)")
+
+    # Top 10 by under-cap dollars
+    topN = sorted(snapshots, key=lambda s: s.get("under_cap_dollars",0.0), reverse=True)[:10]
+    if topN:
+        print("\nTop 10 by under-cap dollars:")
+        for i, s in enumerate(topN, 1):
+            print(f"  {i:>2}. ${s.get('under_cap_dollars',0.0):>10.2f} | {s.get('question','')[:80]}")
 
 # ----------------- Main -----------------
 def main():
@@ -381,24 +386,31 @@ def main():
         uniq = read_unique_markets(folder)
         print(f"\n=== NO bet backtest (folder={folder}) | markets={len(uniq)} ===")
 
+        snapshots: List[dict] = []
+        skipped = 0
+        errors = 0
+
         for i, (cid, meta) in enumerate(uniq.items(), 1):
             q = meta["question"]
             since_epoch = _parse_iso_to_epoch(meta["time_found"]) or 0
 
-            if should_exclude_market(q, cid, excluded):
-                print(f"[{i}/{len(uniq)}] SKIP (filter: {excluded}) → {q}")
+            if excluded and should_exclude_market(q, cid, excluded):
+                skipped += 1
+                if i % 50 == 0 or len(uniq) <= 50:
+                    print(f"[{i}/{len(uniq)}] SKIP → {q}")
                 continue
 
             print(f"[{i}/{len(uniq)}] {q}  (cid={cid[:10]}…)  since={meta['time_found']}")
             try:
                 trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
             except Exception as e:
+                errors += 1
                 print(f"  [WARN trades] {e}")
                 continue
 
             stats = analyze_no_trades(trades, cap=cap, bet_size_dollars=bet_size)
 
-            # pretty prints while scanning
+            # Per-market printout
             print(f"    lowest NO px = {stats['lowest_no_px']}  "
                   f"(dollars={stats['lowest_no_dollars']}, shares={stats['lowest_no_shares']})")
             print(f"    under cap (<= {cap}) → dollars={stats['under_cap_dollars']}  "
@@ -414,15 +426,22 @@ def main():
                 "time_found": meta["time_found"],
                 "cap": cap,
                 "bet_size": bet_size,
-                "excluded": excluded,
+                "excluded_filters": excluded,
                 **stats
             }
-            append_jsonl(snap_path, snapshot)
+            snapshots.append(snapshot)
 
-        print(f"Snapshots appended → {snap_path}")
+        # ---------- Rewrite snapshot atomically (no growth over time) ----------
+        text = "\n".join(json.dumps(s, ensure_ascii=False) for s in snapshots) + ("\n" if snapshots else "")
+        atomic_write_text(snap_path, text)
+        print(f"\n[WRITE] {len(snapshots)} snapshot rows → {snap_path} (rewritten this pass)")
+
+        # ---------- Overview ----------
+        print_overview(snapshots, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)
+
         if loop_s <= 0:
             break
-        print(f"Sleeping {loop_s}s… (Ctrl+C to stop)")
+        print(f"\nSleeping {loop_s}s… (Ctrl+C to stop)")
         try:
             time.sleep(loop_s)
         except KeyboardInterrupt:
