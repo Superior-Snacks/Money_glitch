@@ -392,6 +392,7 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     print(f"Markets scanned:      {n}")
     print(f"Skipped (filters):    {skipped}")
     print(f"Errors (fetch/etc):   {errors}")
+    print(f"non active markets:   {no_trades}")
     print(f"Open markets:         {open_count}")
     print(f"Closed markets:       {closed_count}")
     print(f"Cap:                  {cap}   Bet size: ${bet_size:.2f}")
