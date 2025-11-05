@@ -320,6 +320,36 @@ def analyze_no_trades(trades: List[dict], cap: float, bet_size_dollars: float) -
         "success_fill": (under_cap_dollars >= bet_size_dollars - 1e-9),
     }
 
+def fetch_market(cid, limit=100, session=SESSION):
+    params = {
+        "limit": limit,
+        "conditionId": cid
+    }
+    try:
+        r = session.get(BASE_GAMMA, params=params, timeout=20)
+        r.raise_for_status()
+        market = json.loads(r)
+    except Exception as e:
+        print(f"[WARN] fetch failed at offset with: {e}")
+    return market
+
+def determin_market_status(cid):
+    market = fetch_market(cid)
+    if market.get("closed") == False:
+        return "TBD"
+    outcome_raw = market.get("outcomePrices", ["0", "0"])
+    outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
+    yes_p, no_p = float(outcome[0]), float(outcome[1])
+    if 0.02 < yes_p < 0.98 and 0.02 < no_p < 0.98:
+        return "TBD"
+    if no_p > yes_p:
+        return "NO"
+    elif no_p < yes_p:
+        return "YES"
+    else:
+        print("how?")
+        return "TBD"
+
 # ----------------- Overview helpers -----------------
 def mean(xs: List[float]) -> float:
     return sum(xs)/len(xs) if xs else 0.0
@@ -381,7 +411,11 @@ def main():
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
-    snap_path = os.path.join(out_dir, "no_bet_snapshots.jsonl")
+    snap_path = os.path.join(out_dir, "log_market_snapshots.jsonl")
+
+    out_dir = os.path.join(LOGS_DIR, folder)
+    ensure_dir(out_dir)
+    closed_path = os.path.join(out_dir, "log_closed_markets.jsonl")
 
     print(f"{dt_iso()} Starting scan…")
 
@@ -402,7 +436,11 @@ def main():
                 if i % 50 == 0 or len(uniq) <= 50:
                     print(f"[{i}/{len(uniq)}] SKIP → {q}")
                 continue
-
+            try:
+                status = determin_market_status(cid) #########################
+            except:
+                status = "TBD"
+                continue
             print(f"[{i}/{len(uniq)}] {q}  (cid={cid[:10]}…)  since={meta['time_found']}")
             try:
                 trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
@@ -424,6 +462,7 @@ def main():
             snapshot = {
                 "ts": dt_iso(),
                 "folder": folder,
+                "status": status,
                 "conditionId": cid,
                 "question": q,
                 "time_found": meta["time_found"],
@@ -438,6 +477,8 @@ def main():
         text = "\n".join(json.dumps(s, ensure_ascii=False) for s in snapshots) + ("\n" if snapshots else "")
         atomic_write_text(snap_path, text)
         print(f"\n[WRITE] {len(snapshots)} snapshot rows → {snap_path} (rewritten this pass)")
+
+
 
         # ---------- Overview ----------
         print_overview(snapshots, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)
