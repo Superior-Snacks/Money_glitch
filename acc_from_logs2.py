@@ -193,6 +193,7 @@ def fetch_market_full_by_cid(cid: str) -> dict:
         return m
     except Exception:
         MARKET_META_CACHE[cid] = {}
+        print(f"GOT NO MARKET FROM {cid}")
         return {}
 
 def norm_winner(m: dict) -> Optional[str]:
@@ -221,6 +222,9 @@ def current_status(m: dict) -> str:
         return win
     closed_flag = m.get("closed")
     return "TBD" if (closed_flag is not True) else "TBD"
+"""
+this seems to not be working !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"""
 
 # ----------------- Trades pulling -----------------
 def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
@@ -284,8 +288,11 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
 def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
     """
     Ascending timestamp. Accumulate NO trades at/under cap until bet dollars reached.
-    Returns fill_time/avg_px/shares/cost + under/over counts and lowest NO price seen.
+    Returns fill_time/avg_px/shares/cost + flags for 'had_any_trades' and 'no_trades_zero'.
     """
+    had_any_trades = bool(trades)
+
+    # collect NO-only trades (ts, price, size)
     no_trades = []
     for t in trades:
         if str(t.get("outcome","")).lower() != "no":
@@ -299,6 +306,8 @@ def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: fl
 
     if not no_trades:
         return {
+            "had_any_trades": had_any_trades,  # False => "non active"
+            "no_trades_zero": True,            # zero NO trades
             "success_fill": False,
             "fill_time": None,
             "avg_px": None,
@@ -341,11 +350,13 @@ def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: fl
 
     if fill_time is None:
         return {
+            "had_any_trades": had_any_trades,
+            "no_trades_zero": False,
             "success_fill": False,
             "fill_time": None,
             "avg_px": None,
-            "shares": shares,
-            "cost": cum_dollars,
+            "shares": round(shares, 6),
+            "cost": round(cum_dollars, 2),
             "lowest_no_px": round(lowest_no_px, 6),
             "under_cap_dollars": round(under_cap_dollars, 2),
             "under_cap_shares": round(under_cap_shares, 6),
@@ -355,6 +366,8 @@ def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: fl
 
     avg_px = vwap_num / shares if shares > 0 else None
     return {
+        "had_any_trades": had_any_trades,
+        "no_trades_zero": False,
         "success_fill": True,
         "fill_time": fill_time,
         "avg_px": round(avg_px, 6) if avg_px is not None else None,
@@ -377,7 +390,8 @@ def pct(n: int, d: int) -> str:
 def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: int, errors: int):
     n = len(snapshots)
     succ = sum(1 for s in snapshots if s.get("success_fill"))
-    no_trades = sum(1 for s in snapshots if s.get("no_trades_zero", False))
+    non_active = sum(1 for s in snapshots if s.get("had_any_trades") is False)          # zero trades total
+    no_trades_on_no = sum(1 for s in snapshots if s.get("no_trades_zero") is True)      # had trades but none on NO
 
     lows = [s["lowest_no_px"] for s in snapshots if s.get("lowest_no_px") is not None]
     under_dollars = [s.get("under_cap_dollars",0.0) for s in snapshots]
@@ -392,12 +406,13 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     print(f"Markets scanned:      {n}")
     print(f"Skipped (filters):    {skipped}")
     print(f"Errors (fetch/etc):   {errors}")
-    print(f"non active markets:   {no_trades}")
+    print(f"non active markets:   {non_active}")
     print(f"Open markets:         {open_count}")
     print(f"Closed markets:       {closed_count}")
     print(f"Cap:                  {cap}   Bet size: ${bet_size:.2f}")
     print(f"Total realized P/L:   {total_pl:+.2f}")
-    print(f"Success fills:        {succ}  ({pct(succ, n)})")
+    print(f"Success fills:        {succ}  ({(100.0*succ/n):.2f}% if n else 0)")
+    print(f"No trades on NO side: {no_trades_on_no}")
     print(f"Avg under-cap $:      ${mean(under_dollars):.2f}")
     print(f"Avg under-cap shares: {mean(under_shares):.4f}")
     if lows:
@@ -405,7 +420,6 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     else:
         print(f"Lowest(ever) NO px:   (no data)")
 
-    # Top 10 by under-cap dollars
     topN = sorted(snapshots, key=lambda s: s.get("under_cap_dollars",0.0), reverse=True)[:10]
     if topN:
         print("\nTop 10 by under-cap dollars:")

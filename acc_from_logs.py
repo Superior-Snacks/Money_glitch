@@ -365,9 +365,6 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     lows = [s["lowest_no_px"] for s in snapshots if s.get("lowest_no_px") is not None]
     under_dollars = [s.get("under_cap_dollars",0.0) for s in snapshots]
     under_shares  = [s.get("under_cap_shares",0.0) for s in snapshots]
-    open_markets = [s for s in snapshots if s.get("status") == "TBD"] #help
-    closed_markets = [s for s in snapshots if s.get("status") in ("YES", "NO")] #help
-    pl = ...
 
     print("\n===== PASS OVERVIEW =====")
     print(f"Markets scanned:      {n}")
