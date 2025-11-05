@@ -365,16 +365,19 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     lows = [s["lowest_no_px"] for s in snapshots if s.get("lowest_no_px") is not None]
     under_dollars = [s.get("under_cap_dollars",0.0) for s in snapshots]
     under_shares  = [s.get("under_cap_shares",0.0) for s in snapshots]
+    open_markets = [s for s in snapshots if s.get("status") == "TBD"] #help
+    closed_markets = [s for s in snapshots if s.get("status") in ("YES", "NO")] #help
+    pl = ...
 
     print("\n===== PASS OVERVIEW =====")
     print(f"Markets scanned:      {n}")
     print(f"Skipped (filters):    {skipped}")
     print(f"Errors (fetch/etc):   {errors}")
     print(f"No trades on market:  {no_no_trades}")
-    print(f"open markets:         {...}")
-    print(f"closed markets:       {...}")
+    print(f"open markets:         {...}") #help
+    print(f"closed markets:       {...}") #help
     print(f"Cap:                  {cap}   Bet size: ${bet_size:.2f}")
-    print(f"p/l:                  {...}")
+    print(f"p/l:                  {...}") #help
     print(f"Success fills:        {succ}  ({pct(succ, n)})")
     print(f"Avg under-cap $:      ${mean(under_dollars):.2f}")
     print(f"Avg under-cap shares: {mean(under_shares):.4f}")
@@ -437,7 +440,7 @@ def main():
                     print(f"[{i}/{len(uniq)}] SKIP → {q}")
                 continue
             try:
-                status = determin_market_status(cid) #########################
+                status = determin_market_status(cid) #correcct?
             except:
                 status = "TBD"
                 continue
@@ -462,7 +465,7 @@ def main():
             snapshot = {
                 "ts": dt_iso(),
                 "folder": folder,
-                "status": status,
+                "status": status, #allowed?
                 "conditionId": cid,
                 "question": q,
                 "time_found": meta["time_found"],
@@ -478,7 +481,10 @@ def main():
         atomic_write_text(snap_path, text)
         print(f"\n[WRITE] {len(snapshots)} snapshot rows → {snap_path} (rewritten this pass)")
 
-
+        #----------- want to write closed markets folder -----------
+        text = "\n".join(json.dumps(s, ensure_ascii=False) for s in snapshots if s.get("status") in ("YES", "NO")) + ("\n" if snapshots else "")
+        atomic_write_text(closed_path, text)
+        print(f"\n[WRITE] {len(snapshots)} snapshot rows → {snap_path} (rewritten this pass)")
 
         # ---------- Overview ----------
         print_overview(snapshots, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)
