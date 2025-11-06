@@ -56,7 +56,7 @@ GLOBAL_SLIP = 0.0  # 200 for 2.00%
 
 # ----- full-ticket helpers -----
 
-FULL_TICKET_DOLLARS = 100.0         # your per-market bet size
+FULL_TICKET_DOLLARS = 50         # your per-market bet size
 VM_GRACE_SECONDS    = 2              # require best ask under limit this long before "fill"
 VM_LIMIT_PAD        = 1.00           # 1.00 = exactly at cap; e.g. 1.02 means 2% looser than cap (capped at 1.00)
 VM_TIMEOUT_SECONDS  = 60 * 45        # cancel virtual maker if not filled after this long
@@ -1062,7 +1062,7 @@ def main():
 
     # 2️⃣ Initialize the manager
     mgr = WatchlistManager(
-        max_no_price=cap_for_raw(0.8, 600, 200),
+        max_no_price=0.5,
         min_notional=50.0,
         fee_bps=GLOBAL_FEE, slip_bps=GLOBAL_SLIP,
         dust_price=0.02, dust_min_notional=20.0,

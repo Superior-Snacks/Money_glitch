@@ -49,7 +49,7 @@ _created_cutoff = None
 
 # ---- ONE SIZE TO RULE THEM ALL ----
 STAKE_USD = 50.0  # change this once to control ALL per-order sizes
-RAW_CAP_NO = 0.60
+RAW_CAP_NO = 0.45
 GLOBAL_FEE = 0.0   # 600 for 6.00%
 GLOBAL_SLIP = 0.0  # 200 for 2.00%
 
@@ -116,7 +116,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "research-bot/1.0"})
+    s.headers.update({"User-Agent": "research-bot/2.0"})
     return s
 SESSION = make_session()
 
