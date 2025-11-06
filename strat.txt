@@ -1,0 +1,7 @@
+pl:0 einföld byrjun bet: 5 dollarar cap: 0.5 (lág upphæð safe? cap)
+pl:1000 hækka bet: 10, cap: 0.4
+taka break even profit initail pay-in
+pl:4000 hækka bet: 20, cap: 0.4
+pl:10000 hækka bet: 50 cap: 0.4
+pl:20000 hækka bet: 100 cap: 0.4
+taka profit hvert 10000, halda 10000 in rotation
