@@ -223,7 +223,7 @@ def current_status(m: dict) -> str:
     closed_flag = m.get("closed")
     return "TBD" if (closed_flag is not True) else "TBD"
 """
-this seems to not be working !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+this seems to not be working !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
 
 # ----------------- Trades pulling -----------------
