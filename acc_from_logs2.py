@@ -184,20 +184,26 @@ def read_unique_markets(folder_name: str) -> Dict[str, dict]:
 MARKET_META_CACHE: Dict[str, dict] = {}
 
 def fetch_market_full_by_cid(cid: str) -> dict:
-    """Fetch the single market row by conditionId."""
+    """Fetch a single market row by conditionId, with correct param name and safety."""
     if not cid:
         return {}
-    if cid in MARKET_META_CACHE:
+    if cid in MARKET_META_CACHE and MARKET_META_CACHE[cid]:
         return MARKET_META_CACHE[cid]
     try:
-        r = http_get_with_backoff(BASE_GAMMA, params={"conditionId": cid, "limit": 1}, timeout=15)
-        arr = r.json() or []
-        m = arr[0] if arr else {}
-        MARKET_META_CACHE[cid] = m
-        return m
-    except Exception:
+        # ✅ Correct param key (plural with underscore)
+        r = http_get_with_backoff(BASE_GAMMA, params={"condition_ids": cid, "limit": 1}, timeout=15)
+        rows = r.json() or []
+        # Gamma returns a list of dicts; find the exact matching one
+        for m in rows:
+            if m.get("conditionId") == cid:
+                MARKET_META_CACHE[cid] = m
+                return m
+        print(f"[WARN] Market {cid} not found in response (len={len(rows)})")
         MARKET_META_CACHE[cid] = {}
-        print(f"GOT NO MARKET FROM {cid}")
+        return {}
+    except Exception as e:
+        print(f"[ERROR fetch_market_full_by_cid] {cid}: {e}")
+        MARKET_META_CACHE[cid] = {}
         return {}
 
 def _parse_dt_any(v):
