@@ -222,11 +222,12 @@ def _parse_dt_any(v):
 
 def resolve_status(m: dict) -> tuple[bool, str | None, str]:
     """Return (is_resolved, winner, source_note) and print debug info."""
-
+    print(m.get("closed")) #debug
     q = m.get("question", "(unknown question)")
 
     # 1) explicit UMA resolution
-    uma = (m.get("umaResolutionStatus") or "").strip().lower()
+    uma = (m.get("umaResolutionStatus") or "NONE UMA").strip().lower()
+    print(uma) # debug
     if uma in {"yes", "no"}:
         print(f"[RESOLVE] UMA field → {uma.upper()} | {q}")
         return True, uma.upper(), "umaResolutionStatus"
@@ -237,7 +238,8 @@ def resolve_status(m: dict) -> tuple[bool, str | None, str]:
             return True, w, "umaResolutionStatus"
 
     # 2) generic winner field
-    w = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
+    w = (m.get("winningOutcome") or m.get("winner") or "NONE WINNER").strip().upper()
+    print(w) #debug
     if w in {"YES", "NO"}:
         print(f"[RESOLVE] WinningOutcome field → {w} | {q}")
         return True, w, "winningOutcome"
