@@ -1,6 +1,7 @@
-import os, sys, json, time, random, glob
+import os, sys, json, random, glob, time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
+from datetime import timedelta
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -13,6 +14,9 @@ LOGS_DIR     = "logs"
 
 TRADES_PAGE_LIMIT = 250
 LOOP_DEFAULT_SEC  = 3600  # 0 = single pass
+
+HINT_SPREAD = 0.98           # how close to 0/1 we require for decisive winner
+FINAL_GRACE = timedelta(days=2)   # wait this long after close before trusting price-only finals
 
 # Rate limiting with adaptive scale
 RPS_TARGET            = 3.5
@@ -196,32 +200,94 @@ def fetch_market_full_by_cid(cid: str) -> dict:
         print(f"GOT NO MARKET FROM {cid}")
         return {}
 
-def norm_winner(m: dict) -> Optional[str]:
-    for k in ["winningOutcome","resolvedOutcome","winner","resolveOutcome","resolution","outcome"]:
-        v = m.get(k)
-        if isinstance(v, str) and v.strip().lower() in ("yes","no"):
-            return v.strip().upper()
-    res = m.get("result") or m.get("resolutionData") or {}
-    if isinstance(res, dict):
-        for k in ["winner","winningOutcome","outcome"]:
-            v = res.get(k)
-            if isinstance(v, str) and v.strip().lower() in ("yes","no"):
-                return v.strip().upper()
-    return None
+def _parse_dt_any(v):
+    """Best-effort parse of ISO or epoch-like to aware UTC datetime."""
+    if not v:
+        return None
+    try:
+        if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().isdigit()):
+            ts = float(v)
+            if ts > 1e12:
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+    except Exception:
+        pass
+    try:
+        s = str(v).strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
 
-def resolved_ts_from_market(m: dict) -> Optional[int]:
-    for k in ["resolvedTime","resolveTime","resolutionTime","closedTime","endDate","closeTime"]:
-        ts = _parse_iso_to_epoch(m.get(k))
-        if ts: return ts
-    return None
+
+def resolve_status(m: dict) -> tuple[bool, str | None, str]:
+    """Return (is_resolved, winner, source_note) and print debug info."""
+
+    q = m.get("question", "(unknown question)")
+
+    # 1) explicit UMA resolution
+    uma = (m.get("umaResolutionStatus") or "").strip().lower()
+    if uma in {"yes", "no"}:
+        print(f"[RESOLVE] UMA field → {uma.upper()} | {q}")
+        return True, uma.upper(), "umaResolutionStatus"
+    if uma.startswith("resolved_"):
+        w = uma.split("_", 1)[1].upper()
+        if w in {"YES", "NO"}:
+            print(f"[RESOLVE] UMA resolved_* → {w} | {q}")
+            return True, w, "umaResolutionStatus"
+
+    # 2) generic winner field
+    w = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
+    if w in {"YES", "NO"}:
+        print(f"[RESOLVE] WinningOutcome field → {w} | {q}")
+        return True, w, "winningOutcome"
+
+    # 3) price-based fallback after grace period
+    if m.get("closed"):
+        end_dt = (
+            _parse_dt_any(m.get("closedTime"))
+            or _parse_dt_any(m.get("umaEndDate"))
+            or _parse_dt_any(m.get("endDate"))
+            or _parse_dt_any(m.get("updatedAt"))
+        )
+        age_ok = True if end_dt is None else (datetime.now(timezone.utc) - end_dt) >= FINAL_GRACE
+
+        raw = m.get("outcomePrices", ["0", "0"])
+        prices = json.loads(raw) if isinstance(raw, str) else (raw or ["0", "0"])
+        try:
+            y = float(prices[0])
+            n = float(prices[1])
+        except Exception:
+            y = n = None
+
+        if age_ok and y is not None and n is not None:
+            if y >= HINT_SPREAD and n <= 1 - HINT_SPREAD:
+                print(f"[RESOLVE] Price-based final → YES (y={y:.3f}, n={n:.3f}) | {q}")
+                return True, "YES", "terminal_outcomePrices"
+            if n >= HINT_SPREAD and y <= 1 - HINT_SPREAD:
+                print(f"[RESOLVE] Price-based final → NO (y={y:.3f}, n={n:.3f}) | {q}")
+                return True, "NO", "terminal_outcomePrices"
+
+        # Optional “strong hint”
+        if y is not None and n is not None:
+            if y >= 0.90 and n <= 0.10:
+                print(f"[HINT] Price hint YES (y={y:.3f}, n={n:.3f}) | {q}")
+                return True, "YES", "closed_price_hint_yes"
+            if n >= 0.90 and y <= 0.10:
+                print(f"[HINT] Price hint NO (y={y:.3f}, n={n:.3f}) | {q}")
+                return True, "NO", "closed_price_hint_no"
+
+    # unresolved
+    print(f"[RESOLVE] Unresolved/TBD | {q}")
+    return False, None, "unresolved"
+
 
 def current_status(m: dict) -> str:
     """Return 'YES', 'NO', or 'TBD'."""
-    win = norm_winner(m)
-    if win in ("YES","NO"):
-        return win
-    closed_flag = m.get("closed")
-    return "TBD" if (closed_flag is not True) else "TBD"
+    resolved, winner, src = resolve_status(m)
+    if resolved and winner in ("YES", "NO"):
+        return winner
+    return "TBD"
 """
 this seems to not be working !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
