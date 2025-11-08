@@ -502,3 +502,18 @@ af náðu gömul script að kaupa á svo lágu verði?
 2025-10,6943,1754,5189,25.263,74.737,19048,54396,25.935,74.065
 
 updatea current_trades til að taka öll historic trades, gefa summary (geta sim, hvað ef x bid á öll )
+
+===== PASS OVERVIEW =====
+Markets scanned:      1883
+Skipped (filters):    0
+Errors (fetch/etc):   0
+non active markets:   507
+Open markets:         1715
+Closed markets:       168
+Cap:                  0.5   Bet size: $10.00
+Total realized P/L:   +127.66
+Success fills:        299  (15.88% if n else 0)
+No trades on NO side: 602
+Avg under-cap $:      $172.05
+Avg under-cap shares: 829.8390
+Lowest(ever) NO px:   min=0.0010  mean=0.6757  max=0.9990
