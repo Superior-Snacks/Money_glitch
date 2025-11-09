@@ -548,3 +548,7 @@ No trades on NO side: 863
 Avg under-cap $:      $190.58
 Avg under-cap shares: 1077.6706
 Lowest(ever) NO px:   min=0.0010  mean=0.6594  max=0.9990
+
+
+add multi line cap n bet to see coverage, start a "collect all markets from here on, w/get all opne for begining, tmspt when, got/created,
+make run in background when comp off get markets from the last gotten market allow to be really slow inc trade volume or smthn to see if active market" 
