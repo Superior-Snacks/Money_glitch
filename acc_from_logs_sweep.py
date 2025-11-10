@@ -500,6 +500,7 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
                             closed_f_y += 1
                         elif item["status"] == "NO":
                             closed_f_n += 1
+            value_per_dollar = (realized_pl / cost_closed) if cost_closed > 0 else 0.0
             rows.append({
                 "cap": round(cap, 2),
                 "bet": int(bet),
