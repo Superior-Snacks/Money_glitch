@@ -512,6 +512,7 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
                 "cost_all": cost_all,
                 "cost_closed": cost_closed,
                 "realized_pl": round(realized_pl, 2),
+                "value_per_dollar": value_per_dollar,
             })
     return rows
 
