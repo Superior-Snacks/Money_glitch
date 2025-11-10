@@ -579,6 +579,21 @@ Avg under-cap $:      $162.76
 Avg under-cap shares: 1153.4802
 Lowest(ever) NO px:   min=0.0010  mean=0.6460  max=0.9990
 
+===== PASS OVERVIEW =====
+Markets scanned:      2604
+Skipped (filters):    0
+Errors (fetch/etc):   0
+non active markets:   820
+Open markets:         2266
+Closed markets:   all:338 no:236 yes:102
+Cap:                  0.4   Bet size: $100.00
+Total realized P/L:   +1357.44
+Success fills:        215  (8.26% if n else 0)
+No trades on NO side: 1017
+Avg under-cap $:      $169.28
+Avg under-cap shares: 1225.4789
+Lowest(ever) NO px:   min=0.0010  mean=0.6422  max=0.9990
+
 
 add multi line cap n bet to see coverage, start a "collect all markets from here on, w/get all opne for begining, tmspt when, got/created,
 make run in background when comp off get markets from the last gotten market allow to be really slow inc trade volume or smthn to see if active market" 

@@ -37,7 +37,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-no-bet-scan/2.2"})
+    s.headers.update({"User-Agent": "pm-no-bet-scan/2.3"})
     return s
 
 SESSION = make_session()
@@ -152,6 +152,9 @@ def _parse_dt_any(v):
     except Exception:
         return None
 
+def _iso_or_none(dt):
+    return dt.isoformat() if isinstance(dt, datetime) else None
+
 # ----------------- FS helpers -----------------
 def ensure_dir(p):
     os.makedirs(p, exist_ok=True)
@@ -216,9 +219,6 @@ def fetch_market_full_by_cid(cid: str) -> dict:
         return {}
 
 def resolve_status(m: dict) -> tuple[bool, Optional[str], str]:
-    """Return (is_resolved, winner, source_note). Winner is 'YES'/'NO'/None."""
-    q = m.get("question", "(unknown question)")
-
     uma = (m.get("umaResolutionStatus") or "").strip().lower()
     if uma in {"yes","no"}:
         return True, uma.upper(), "umaResolutionStatus"
@@ -265,6 +265,15 @@ def current_status(m: dict) -> str:
     if resolved and winner in ("YES","NO"):
         return winner
     return "TBD"
+
+def closed_time_iso(m: dict) -> Optional[str]:
+    dt = (
+        _parse_dt_any(m.get("closedTime"))
+        or _parse_dt_any(m.get("umaEndDate"))
+        or _parse_dt_any(m.get("endDate"))
+        or _parse_dt_any(m.get("updatedAt"))
+    )
+    return _iso_or_none(dt)
 
 # ----------------- Trades pulling -----------------
 def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
@@ -434,24 +443,26 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     closed_count = closed_yes + closed_no
 
     total_pl = sum(s.get("pl", 0.0) for s in snapshots if s.get("pl") is not None)
+    closed_with_fills = sum(1 for s in snapshots if s.get("closed_filled") is True)
 
     print("\n===== PASS OVERVIEW =====")
-    print(f"Markets scanned:      {n}")
-    print(f"Skipped (filters):    {skipped}")
-    print(f"Errors (fetch/etc):   {errors}")
-    print(f"non active markets:   {non_active}")
-    print(f"Open markets:         {open_count}")
-    print(f"Closed markets:   all:{closed_count} no:{closed_no} yes:{closed_yes}")
-    print(f"Cap:                  {cap}   Bet size: ${bet_size:.2f}")
-    print(f"Total realized P/L:   {total_pl:+.2f}")
-    print(f"Success fills:        {succ}  ({(100.0*succ/n):.2f}% if n else 0)")
-    print(f"No trades on NO side: {no_trades_on_no}")
-    print(f"Avg under-cap $:      ${mean(under_dollars):.2f}")
-    print(f"Avg under-cap shares: {mean(under_shares):.4f}")
+    print(f"Markets scanned:           {n}")
+    print(f"Skipped (filters):         {skipped}")
+    print(f"Errors (fetch/etc):        {errors}")
+    print(f"non active markets:        {non_active}")
+    print(f"Open markets:              {open_count}")
+    print(f"Closed markets:        all:{closed_count}  no:{closed_no}  yes:{closed_yes}")
+    print(f"Closed markets with fills: {closed_with_fills}")
+    print(f"Cap:                       {cap}   Bet size: ${bet_size:.2f}")
+    print(f"Total realized P/L:        {total_pl:+.2f}")
+    print(f"Success fills:             {succ}  ({(100.0*succ/n):.2f}% if n else 0)")
+    print(f"No trades on NO side:      {no_trades_on_no}")
+    print(f"Avg under-cap $:           ${mean(under_dollars):.2f}")
+    print(f"Avg under-cap shares:      {mean(under_shares):.4f}")
     if lows:
-        print(f"Lowest(ever) NO px:   min={min(lows):.4f}  mean={mean(lows):.4f}  max={max(lows):.4f}")
+        print(f"Lowest(ever) NO px:        min={min(lows):.4f}  mean={mean(lows):.4f}  max={max(lows):.4f}")
     else:
-        print(f"Lowest(ever) NO px:   (no data)")
+        print(f"Lowest(ever) NO px:        (no data)")
 
     topN = sorted(snapshots, key=lambda s: s.get("under_cap_dollars",0.0), reverse=True)[:10]
     if topN:
@@ -461,17 +472,13 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
 
 # ----------------- Sweep helpers (cap x bet → CSV) -----------------
 def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float]) -> List[dict]:
-    """
-    collected: list of {"status": 'YES'/'NO'/'TBD', "trades": [...]} for each market.
-    Returns rows for CSV with totals per (cap, bet).
-    """
     rows = []
     total_markets = len(collected)
     for cap in caps:
         for bet in bets:
             fills = 0
             realized_pl = 0.0
-            closed_w_pl = 0  # number of closed markets that had a filled position
+            closed_w_pl = 0
             for item in collected:
                 res = try_fill_no_from_trades(item["trades"], cap, bet)
                 if res["success_fill"]:
@@ -513,7 +520,6 @@ def main():
     ap = argparse.ArgumentParser(description="NO-bet scanner + cap/bet sweep CSV")
     ap.add_argument("--folder", required=False, help="Folder under logs/", default=None)
     ap.add_argument("--loop", type=int, default=LOOP_DEFAULT_SEC, help="Loop seconds (0=single pass)")
-    # No prompts for bet/cap; keep defaults but allow override via flags for the per-snapshot view
     ap.add_argument("--bet", type=float, default=10.0, help="Bet size used in per-market snapshot view")
     ap.add_argument("--cap", type=float, default=0.5, help="Cap used in per-market snapshot view")
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude (by question text)")
@@ -543,7 +549,7 @@ def main():
 
         snapshots: List[dict] = []
         closed_rows: List[dict] = []
-        collected_for_sweep: List[dict] = []  # store {status, trades} per market for the CSV grid
+        collected_for_sweep: List[dict] = []
         skipped = 0
         errors = 0
 
@@ -561,10 +567,12 @@ def main():
             try:
                 m = fetch_market_full_by_cid(cid)
                 status = current_status(m)  # 'YES', 'NO', 'TBD'
+                closed_iso = closed_time_iso(m)
             except Exception as e:
                 errors += 1
                 print(f"  [WARN meta] {e}")
                 status = "TBD"
+                closed_iso = None
 
             try:
                 trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
@@ -573,7 +581,6 @@ def main():
                 print(f"  [WARN trades] {e}")
                 continue
 
-            # For snapshot view (single cap/bet)
             stats = try_fill_no_from_trades(trades, cap=cap, bet_size_dollars=bet_size)
 
             print(f"    lowest NO px = {stats['lowest_no_px']}  "
@@ -589,15 +596,22 @@ def main():
                 payout = shares * (1.0 if status == "NO" else 0.0)
                 pl = round(payout - cost, 2)
 
+            closed_flag = status in ("YES","NO")
+            closed_filled = bool(closed_flag and stats["success_fill"])
+
             snapshot = {
                 "ts": dt_iso(),
                 "folder": folder,
                 "status": status,                     # 'YES' | 'NO' | 'TBD'
+                "closed": closed_flag,
+                "closed_time": closed_iso,            # ISO or None
+                "closed_filled": closed_filled,       # closed AND had a fill
                 "conditionId": cid,
                 "question": q,
                 "time_found": meta["time_found"],
                 "cap": cap,
                 "bet_size": bet_size,
+                "filled": bool(stats["success_fill"]),
                 **stats,
                 "pl": pl,
             }
@@ -605,16 +619,18 @@ def main():
 
             collected_for_sweep.append({"status": status, "trades": trades})
 
-            if status in ("YES","NO"):
+            if closed_flag:
                 closed_row = {
                     "ts": dt_iso(),
                     "conditionId": cid,
                     "question": q,
                     "status": status,
+                    "closed_time": closed_iso,
                     "time_found": meta["time_found"],
                     "cap": cap,
                     "bet_size": bet_size,
                     "filled": bool(stats["success_fill"]),
+                    "closed_filled": closed_filled,
                     "avg_px": stats["avg_px"],
                     "shares": stats["shares"],
                     "cost": stats["cost"],
