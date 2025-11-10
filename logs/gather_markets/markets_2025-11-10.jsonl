@@ -192,3 +192,6 @@
 {"time_found": "2025-11-10T14:08:33.223450+00:00", "conditionId": "0x30a832de727664bbae3a2b071a9bd4c39f3a6c7d7580218dcf43ebda0ab7c577", "question": "Will the highest temperature in New York City be between 47-48°F on November 12?"}
 {"time_found": "2025-11-10T14:08:33.223450+00:00", "conditionId": "0x240a6904262dee817a61cc60146acacdb7fdbd203e16d56c02b716a9f35e403d", "question": "Will the highest temperature in New York City be between 51-52°F on November 12?"}
 {"time_found": "2025-11-10T14:08:44.468216+00:00", "conditionId": "0xb51531a7efe8eb2bf710bdac95e79c338b95454a6ddc6cd15a4386e1b29e3b06", "question": "Will the highest temperature in New York City be 55°F or higher on November 12?"}
+{"time_found": "2025-11-10T15:28:32.018533+00:00", "conditionId": "0x56536276263f702828c6457027f0f8b7fdbf943089fff3cb5629b0201c3ae550", "question": "Will Sparta Rotterdam win on 2025-12-07?"}
+{"time_found": "2025-11-10T15:28:32.018533+00:00", "conditionId": "0x2d1e67fc340a64f3b5b403e322f3d37aa4e3dacb977aed00ec2afd55c0528bf2", "question": "Will Sparta Rotterdam vs. NAC Breda end in a draw?"}
+{"time_found": "2025-11-10T15:28:43.166120+00:00", "conditionId": "0xe9436f7bfc462b2739669104ed584993460731cd18044d0c83caa4991bea3b72", "question": "Will NAC Breda win on 2025-12-07?"}

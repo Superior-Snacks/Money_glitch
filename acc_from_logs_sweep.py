@@ -444,6 +444,9 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
 
     total_pl = sum(s.get("pl", 0.0) for s in snapshots if s.get("pl") is not None)
     closed_with_fills = sum(1 for s in snapshots if s.get("closed_filled") is True)
+    closed_with_fills_yes = sum(1 for s in snapshots if s.get("closed_filled") is True and (s.get("status") == "YES"))
+    closed_with_fills_no = sum(1 for s in snapshots if s.get("closed_filled") is True and (s.get("status") == "NO"))
+
 
     print("\n===== PASS OVERVIEW =====")
     print(f"Markets scanned:           {n}")
@@ -452,7 +455,7 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
     print(f"non active markets:        {non_active}")
     print(f"Open markets:              {open_count}")
     print(f"Closed markets:        all:{closed_count}  no:{closed_no}  yes:{closed_yes}")
-    print(f"Closed markets with fills: {closed_with_fills}")
+    print(f"Closed markets with fills: {closed_with_fills} no:{closed_with_fills_no} yes: {closed_with_fills_yes}")
     print(f"Cap:                       {cap}   Bet size: ${bet_size:.2f}")
     print(f"Total realized P/L:        {total_pl:+.2f}")
     print(f"Success fills:             {succ}  ({(100.0*succ/n):.2f}% if n else 0)")
