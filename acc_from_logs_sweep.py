@@ -484,14 +484,18 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
             closed_w_pl = 0
             closed_f_n = 0
             closed_f_y = 0
+            cost_all = 0
+            cost_closed = 0
             for item in collected:
                 res = try_fill_no_from_trades(item["trades"], cap, bet)
                 if res["success_fill"]:
                     fills += 1
+                    cost_all += res["cost"]
                     if item["status"] in ("YES","NO"):
                         payout = res["shares"] * (1.0 if item["status"] == "NO" else 0.0)
                         realized_pl += payout - res["cost"]
                         closed_w_pl += 1
+                        cost_closed += res["cost"]
                         if item["status"] == "YES":
                             closed_f_y += 1
                         elif item["status"] == "NO":
@@ -504,6 +508,8 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
                 "closed_with_fill": closed_w_pl,
                 "closed_y": closed_f_y,
                 "closed_no": closed_f_n,
+                "cost_all": cost_all,
+                "cost_closed": cost_closed,
                 "realized_pl": round(realized_pl, 2),
             })
     return rows
