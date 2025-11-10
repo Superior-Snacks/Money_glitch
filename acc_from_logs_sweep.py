@@ -482,6 +482,8 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
             fills = 0
             realized_pl = 0.0
             closed_w_pl = 0
+            closed_f_n = 0
+            closed_f_y = 0
             for item in collected:
                 res = try_fill_no_from_trades(item["trades"], cap, bet)
                 if res["success_fill"]:
@@ -490,12 +492,18 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
                         payout = res["shares"] * (1.0 if item["status"] == "NO" else 0.0)
                         realized_pl += payout - res["cost"]
                         closed_w_pl += 1
+                        if item["status"] == "YES":
+                            closed_f_y += 1
+                        elif item["status"] == "NO":
+                            closed_f_n += 1
             rows.append({
                 "cap": round(cap, 2),
                 "bet": int(bet),
                 "markets": total_markets,
                 "fills": fills,
                 "closed_with_fill": closed_w_pl,
+                "closed_y": closed_f_y,
+                "closed_no": closed_f_n,
                 "realized_pl": round(realized_pl, 2),
             })
     return rows
