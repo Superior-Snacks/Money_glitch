@@ -532,7 +532,7 @@ def main():
     ap.add_argument("--max_notional", type=float, default=500.0, help="Max $ threshold to read up to per cap per market")
 
     # Sweep ranges (cap x bet)
-    ap.add_argument("--caps_start", type=float, default=0.20)
+    ap.add_argument("--caps_start", type=float, default=0.30)
     ap.add_argument("--caps_stop",  type=float, default=0.80)
     ap.add_argument("--caps_step",  type=float, default=0.05)
     ap.add_argument("--bets_start", type=int,   default=5)
