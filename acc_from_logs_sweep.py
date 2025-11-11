@@ -519,7 +519,7 @@ def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float])
 def write_sweep_csv(path: str, rows: List[dict]):
     ensure_dir(os.path.dirname(path))
     with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["cap","bet","markets","fills","closed_with_fill","realized_pl"])
+        w = csv.DictWriter(f, fieldnames=["cap","bet","markets","fills","closed_with_fill","closed_y","closed_no","cost_all","cost_closed","realized_pl","value_per_dollar"])
         w.writeheader()
         w.writerows(rows)
 
@@ -538,7 +538,7 @@ def sweep_bet_list(start=5, stop=500, step=5) -> List[int]:
 def main():
     ap = argparse.ArgumentParser(description="NO-bet scanner + cap/bet sweep CSV")
     ap.add_argument("--folder", required=False, help="Folder under logs/", default=None)
-    ap.add_argument("--loop", type=int, default=LOOP_DEFAULT_SEC, help="Loop seconds (0=single pass)")
+    ap.add_argument("--loop", type=int, default=0, help="Loop seconds (0=single pass)")
     ap.add_argument("--bet", type=float, default=10.0, help="Bet size used in per-market snapshot view")
     ap.add_argument("--cap", type=float, default=0.5, help="Cap used in per-market snapshot view")
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude (by question text)")
