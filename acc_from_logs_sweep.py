@@ -281,6 +281,7 @@ def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=No
     if offset is not None:
         params["offset"] = int(offset)
     r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
+    print(f"page offset:{offset}")
     return r.json() or []
 
 # ----------------- Live-fill accumulation for multiple caps -----------------
