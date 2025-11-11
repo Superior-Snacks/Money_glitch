@@ -1,0 +1,16 @@
+{
+  "ts": "2025-11-11T16:20:16.129788+00:00",
+  "markets_scanned": 3079,
+  "skipped": 0,
+  "errors": 0,
+  "view_cap": 0.4,
+  "view_bet": 5.0,
+  "closed_total": 421,
+  "closed_with_fill": 156,
+  "closed_yes": 123,
+  "closed_no": 298,
+  "success_fills": 517,
+  "realized_pl_total": 3261.6,
+  "lowest_no_px_min": 0.001,
+  "lowest_no_px_mean": 0.6535198446153846
+}
