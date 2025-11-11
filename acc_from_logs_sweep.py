@@ -37,7 +37,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-no-bet-scan/2.3"})
+    s.headers.update({"User-Agent": "pm-no-bet-scan/2.4-livefills"})
     return s
 
 SESSION = make_session()
@@ -205,7 +205,6 @@ def fetch_market_full_by_cid(cid: str) -> dict:
     if cid in MARKET_META_CACHE and MARKET_META_CACHE[cid]:
         return MARKET_META_CACHE[cid]
     try:
-        # NOTE: gamma expects 'condition_ids' (plural, underscore)
         r = http_get_with_backoff(BASE_GAMMA, params={"condition_ids": cid, "limit": 1}, timeout=15)
         rows = r.json() or []
         for m in rows:
@@ -226,7 +225,6 @@ def resolve_status(m: dict) -> tuple[bool, Optional[str], str]:
         w = uma.split("_",1)[1].upper()
         if w in {"YES","NO"}:
             return True, w, "umaResolutionStatus"
-
     w = (m.get("winningOutcome") or m.get("winner") or "").strip().upper()
     if w in {"YES","NO"}:
         return True, w, "winningOutcome"
@@ -275,7 +273,7 @@ def closed_time_iso(m: dict) -> Optional[str]:
     )
     return _iso_or_none(dt)
 
-# ----------------- Trades pulling -----------------
+# ----------------- Trades pulling (paged) -----------------
 def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
     params = {"market": cid, "sort": "desc", "limit": int(limit)}
     if starting_before_s is not None:
@@ -285,139 +283,150 @@ def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=No
     r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
     return r.json() or []
 
-def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_LIMIT) -> List[dict]:
-    out = []
-    starting_before = None
-    last_len = None
-
-    for _ in range(10000):
-        data = fetch_trades_page_ms(cid, limit=page_limit, starting_before_s=starting_before)
-        if not data:
-            break
-        out.extend(data)
-        oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-        if oldest_ts <= since_epoch_s:
-            break
-        starting_before = oldest_ts
-        if last_len == len(data):
-            break
-        last_len = len(data)
-
-    if (not out) or (min((_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out) > since_epoch_s):
-        offset = 0
-        for _ in range(2000):
-            data = fetch_trades_page_ms(cid, limit=page_limit, offset=offset)
-            if not data:
-                break
-            out.extend(data)
-            oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-            if oldest_ts <= since_epoch_s:
-                break
-            offset += len(data)
-
-    seen, uniq = set(), []
-    for t in out:
-        key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
-        if key in seen:
-            continue
-        seen.add(key); uniq.append(t)
-
-    cut = []
-    for t in uniq:
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
-        if ts >= since_epoch_s:
-            cut.append(t)
-    cut.sort(key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
-    return cut
-
-# ----------------- NO-only fill + stats -----------------
-def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
-    had_any_trades = bool(trades)
-
-    no_trades = []
-    for t in trades:
-        if str(t.get("outcome","")).lower() != "no":
-            continue
-        p = float(t.get("price") or 0.0)
-        s = float(t.get("size") or 0.0)
-        if p <= 0 or s <= 0:
-            continue
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
-        no_trades.append((ts, p, s))
-
-    if not no_trades:
-        return {
-            "had_any_trades": had_any_trades,
-            "no_trades_zero": True,
-            "success_fill": False,
-            "fill_time": None,
-            "avg_px": None,
+# ----------------- Live-fill accumulation for multiple caps -----------------
+def _init_caps_state(caps: List[float], max_notional: float):
+    # For each cap track progress and stats
+    return {
+        round(cap, 2): {
+            "cum_dollars": 0.0,
+            "vwap_num": 0.0,
             "shares": 0.0,
-            "cost": 0.0,
-            "lowest_no_px": None,
-            "under_cap_dollars": 0.0,
+            "fill_time": None,
+            "success": False,
+            "under_cap_seen": 0.0,     # all dollars under cap seen (may exceed max_notional)
             "under_cap_shares": 0.0,
             "under_cap_trades": 0,
             "over_cap_trades": 0,
+        } for cap in caps
+    }
+
+def _apply_trades_page_to_caps(trades: List[dict], caps_state: dict, since_epoch_s: int, lowest_holder: dict, max_notional: float):
+    """
+    trades: a desc-by-time page from API
+    caps_state: dict per-cap aggregator (mutates)
+    lowest_holder: {"lowest": float or None}
+    Returns: (any_progress: bool, all_caps_filled: bool)
+    """
+    any_progress = False
+
+    # we want ASC by timestamp to simulate chronological fills
+    trades_sorted = sorted(trades, key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
+
+    for t in trades_sorted:
+        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
+        if ts < since_epoch_s:
+            # page contains older trades than our start; skip those
+            continue
+
+        if str(t.get("outcome","")).lower() != "no":
+            # still track lowest across all NO trades only
+            continue
+
+        try:
+            p = float(t.get("price") or 0.0)
+            s = float(t.get("size")  or 0.0)
+        except Exception:
+            continue
+        if p <= 0 or s <= 0:
+            continue
+
+        # lowest ever NO price
+        if lowest_holder["lowest"] is None or p < lowest_holder["lowest"]:
+            lowest_holder["lowest"] = p
+
+        # Update each cap
+        for cap, st in caps_state.items():
+            if st["success"]:
+                continue  # already filled for this cap
+
+            if p <= cap + 1e-12:
+                # track everything seen under cap
+                st["under_cap_trades"] += 1
+                dollars = p * s
+                st["under_cap_seen"] += dollars
+                st["under_cap_shares"] += s
+
+                # take only up to remaining for the simulated bet
+                need = max(0.0, max_notional - st["cum_dollars"])
+                take = min(need, dollars)
+                if take > 0:
+                    st["cum_dollars"] += take
+                    st["vwap_num"] += (take / p) * p  # equals 'take', but keep formula clear
+                    st["shares"] += (take / p)
+                    any_progress = True
+                    if st["cum_dollars"] >= max_notional - 1e-9:
+                        st["fill_time"] = ts
+                        st["success"] = True
+            else:
+                st["over_cap_trades"] += 1
+
+    all_filled = all(st["success"] for st in caps_state.values())
+    return any_progress, all_filled
+
+def fetch_until_caps_filled(cid: str, since_epoch_s: int, caps: List[float], max_notional: float):
+    """
+    Pages trades and accumulates per-cap fills concurrently.
+    Stops when *every* cap reaches max_notional (success) or no more data / boundary reached.
+    Returns dict:
+      {
+        'lowest_no_px': float|None,
+        'caps': {
+           cap: {
+              success, fill_time, shares, cost, avg_px,
+              under_cap_seen, under_cap_shares, under_cap_trades, over_cap_trades
+           }, ...
+        }
+      }
+    """
+    caps_state = _init_caps_state(caps, max_notional)
+    lowest_holder = {"lowest": None}
+
+    out = []
+    starting_before = None
+    last_page_len = None
+
+    # Page newest->older by timestamp_before; inside page we process ASC
+    for _ in range(10000):
+        data = fetch_trades_page_ms(cid, limit=TRADES_PAGE_LIMIT, starting_before_s=starting_before)
+        if not data:
+            break
+        out_len_before = sum(1 for _ in data)
+        any_progress, all_filled = _apply_trades_page_to_caps(data, caps_state, since_epoch_s, lowest_holder, max_notional)
+
+        # compute oldest ts on this page
+        oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
+
+        if all_filled:
+            break
+        if oldest_ts <= since_epoch_s:
+            # we've crossed the boundary; remaining older pages won't help
+            break
+
+        starting_before = oldest_ts
+        if last_page_len == out_len_before and not any_progress:
+            # no progress between pages → stop
+            break
+        last_page_len = out_len_before
+
+    # finalize per-cap metrics
+    caps_out = {}
+    for cap, st in caps_state.items():
+        avg_px = (st["cum_dollars"] / st["shares"]) if st["shares"] > 1e-12 else None
+        caps_out[cap] = {
+            "success": st["success"],
+            "fill_time": st["fill_time"],
+            "avg_px": round(avg_px, 6) if avg_px is not None else None,
+            "shares": round(st["shares"], 6),
+            "cost": round(st["cum_dollars"], 2),
+            "under_cap_dollars_seen": round(st["under_cap_seen"], 2),
+            "under_cap_shares": round(st["under_cap_shares"], 6),
+            "under_cap_trades": st["under_cap_trades"],
+            "over_cap_trades": st["over_cap_trades"],
         }
 
-    no_trades.sort(key=lambda x: x[0])
-    lowest_no_px = min(p for _, p, _ in no_trades)
-
-    under = [(ts,p,s) for (ts,p,s) in no_trades if p <= cap + 1e-12]
-    over  = [(ts,p,s) for (ts,p,s) in no_trades if p  > cap + 1e-12]
-
-    under_cap_dollars = sum(p*s for _,p,s in under)
-    under_cap_shares  = sum(    s for _,p,s in under)
-
-    cum_dollars = 0.0
-    vwap_num = 0.0
-    shares = 0.0
-    fill_time = None
-
-    for ts, p, s in under:
-        dollars = p * s
-        need = max(0.0, bet_size_dollars - cum_dollars)
-        take_dollars = min(dollars, need)
-        if take_dollars > 0:
-            take_shares = take_dollars / p
-            vwap_num += p * take_shares
-            shares += take_shares
-            cum_dollars += take_dollars
-            if cum_dollars >= bet_size_dollars - 1e-9:
-                fill_time = ts
-                break
-
-    if fill_time is None:
-        return {
-            "had_any_trades": had_any_trades,
-            "no_trades_zero": False,
-            "success_fill": False,
-            "fill_time": None,
-            "avg_px": None,
-            "shares": round(shares, 6),
-            "cost": round(cum_dollars, 2),
-            "lowest_no_px": round(lowest_no_px, 6),
-            "under_cap_dollars": round(under_cap_dollars, 2),
-            "under_cap_shares": round(under_cap_shares, 6),
-            "under_cap_trades": len(under),
-            "over_cap_trades": len(over),
-        }
-
-    avg_px = vwap_num / shares if shares > 0 else None
     return {
-        "had_any_trades": had_any_trades,
-        "no_trades_zero": False,
-        "success_fill": True,
-        "fill_time": fill_time,
-        "avg_px": round(avg_px, 6) if avg_px is not None else None,
-        "shares": round(shares, 6),
-        "cost": round(bet_size_dollars, 2),
-        "lowest_no_px": round(lowest_no_px, 6),
-        "under_cap_dollars": round(under_cap_dollars, 2),
-        "under_cap_shares": round(under_cap_shares, 6),
-        "under_cap_trades": len(under),
-        "over_cap_trades": len(over),
+        "lowest_no_px": (round(lowest_holder["lowest"], 6) if lowest_holder["lowest"] is not None else None),
+        "caps": caps_out
     }
 
 # ----------------- Overview helpers -----------------
@@ -427,121 +436,22 @@ def mean(xs: List[float]) -> float:
 def pct(n: int, d: int) -> str:
     return f"{(100.0*n/d):.2f}%" if d else "0.00%"
 
-def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: int, errors: int):
-    n = len(snapshots)
-    succ = sum(1 for s in snapshots if s.get("success_fill"))
-    non_active = sum(1 for s in snapshots if s.get("had_any_trades") is False)
-    no_trades_on_no = sum(1 for s in snapshots if s.get("no_trades_zero") is True)
-
-    lows = [s["lowest_no_px"] for s in snapshots if s.get("lowest_no_px") is not None]
-    under_dollars = [s.get("under_cap_dollars",0.0) for s in snapshots]
-    under_shares  = [s.get("under_cap_shares",0.0) for s in snapshots]
-
-    open_count = sum(1 for s in snapshots if s.get("status") == "TBD")
-    closed_yes = sum(1 for s in snapshots if s.get("status") == "YES")
-    closed_no  = sum(1 for s in snapshots if s.get("status") == "NO")
-    closed_count = closed_yes + closed_no
-
-    total_pl = sum(s.get("pl", 0.0) for s in snapshots if s.get("pl") is not None)
-    closed_with_fills = sum(1 for s in snapshots if s.get("closed_filled") is True)
-    closed_with_fills_yes = sum(1 for s in snapshots if s.get("closed_filled") is True and (s.get("status") == "YES"))
-    closed_with_fills_no = sum(1 for s in snapshots if s.get("closed_filled") is True and (s.get("status") == "NO"))
-
-
+def print_overview(rows_written: int, skipped: int, errors: int):
     print("\n===== PASS OVERVIEW =====")
-    print(f"Markets scanned:           {n}")
-    print(f"Skipped (filters):         {skipped}")
-    print(f"Errors (fetch/etc):        {errors}")
-    print(f"non active markets:        {non_active}")
-    print(f"Open markets:              {open_count}")
-    print(f"Closed markets:        all:{closed_count}  no:{closed_no}  yes:{closed_yes}")
-    print(f"Closed markets with fills: {closed_with_fills} no:{closed_with_fills_no} yes: {closed_with_fills_yes}")
-    print(f"Cap:                       {cap}   Bet size: ${bet_size:.2f}")
-    print(f"Total realized P/L:        {total_pl:+.2f}")
-    print(f"Success fills:             {succ}  ({(100.0*succ/n):.2f}% if n else 0)")
-    print(f"No trades on NO side:      {no_trades_on_no}")
-    print(f"Avg under-cap $:           ${mean(under_dollars):.2f}")
-    print(f"Avg under-cap shares:      {mean(under_shares):.4f}")
-    if lows:
-        print(f"Lowest(ever) NO px:        min={min(lows):.4f}  mean={mean(lows):.4f}  max={max(lows):.4f}")
-    else:
-        print(f"Lowest(ever) NO px:        (no data)")
-
-    topN = sorted(snapshots, key=lambda s: s.get("under_cap_dollars",0.0), reverse=True)[:10]
-    if topN:
-        print("\nTop 10 by under-cap dollars:")
-        for i, s in enumerate(topN, 1):
-            print(f"  {i:>2}. ${s.get('under_cap_dollars',0.0):>10.2f} | {s.get('question','')[:80]}")
-
-# ----------------- Sweep helpers (cap x bet → CSV) -----------------
-def sweep_caps_bets(collected: List[dict], caps: List[float], bets: List[float]) -> List[dict]:
-    rows = []
-    total_markets = len(collected)
-    for cap in caps:
-        for bet in bets:
-            fills = 0
-            realized_pl = 0.0
-            closed_w_pl = 0
-            closed_f_n = 0
-            closed_f_y = 0
-            cost_all = 0
-            cost_closed = 0
-            for item in collected:
-                res = try_fill_no_from_trades(item["trades"], cap, bet)
-                if res["success_fill"]:
-                    fills += 1
-                    cost_all += res["cost"]
-                    if item["status"] in ("YES","NO"):
-                        payout = res["shares"] * (1.0 if item["status"] == "NO" else 0.0)
-                        realized_pl += payout - res["cost"]
-                        closed_w_pl += 1
-                        cost_closed += res["cost"]
-                        if item["status"] == "YES":
-                            closed_f_y += 1
-                        elif item["status"] == "NO":
-                            closed_f_n += 1
-            value_per_dollar = (realized_pl / cost_closed) if cost_closed > 0 else 0.0
-            rows.append({
-                "cap": round(cap, 2),
-                "bet": int(bet),
-                "markets": total_markets,
-                "fills": fills,
-                "closed_with_fill": closed_w_pl,
-                "closed_y": closed_f_y,
-                "closed_no": closed_f_n,
-                "cost_all": cost_all,
-                "cost_closed": cost_closed,
-                "realized_pl": round(realized_pl, 2),
-                "value_per_dollar": value_per_dollar,
-            })
-    return rows
-
-def write_sweep_csv(path: str, rows: List[dict]):
-    ensure_dir(os.path.dirname(path))
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["cap","bet","markets","fills","closed_with_fill","closed_y","closed_no","cost_all","cost_closed","realized_pl","value_per_dollar"])
-        w.writeheader()
-        w.writerows(rows)
-
-def sweep_cap_list(start=0.30, stop=0.80, step=0.05) -> List[float]:
-    vals = []
-    x = start
-    while x <= stop + 1e-9:
-        vals.append(round(x, 2))
-        x += step
-    return vals
-
-def sweep_bet_list(start=5, stop=500, step=5) -> List[int]:
-    return list(range(start, stop+1, step))
+    print(f"CSV rows written:  {rows_written}")
+    print(f"Skipped (filters): {skipped}")
+    print(f"Errors:            {errors}")
 
 # ----------------- Main -----------------
 def main():
-    ap = argparse.ArgumentParser(description="NO-bet scanner + cap/bet sweep CSV")
+    ap = argparse.ArgumentParser(description="Live fill logger: caps 0.30–0.70 while paging trades; early stop when max notional is reached per cap.")
     ap.add_argument("--folder", required=False, help="Folder under logs/", default=None)
     ap.add_argument("--loop", type=int, default=0, help="Loop seconds (0=single pass)")
-    ap.add_argument("--bet", type=float, default=10.0, help="Bet size used in per-market snapshot view")
-    ap.add_argument("--cap", type=float, default=0.5, help="Cap used in per-market snapshot view")
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude (by question text)")
+    ap.add_argument("--max_notional", type=float, default=500.0, help="Max dollars per cap to simulate before stopping fetch for that market")
+    ap.add_argument("--caps_start", type=float, default=0.30)
+    ap.add_argument("--caps_stop",  type=float, default=0.70)
+    ap.add_argument("--caps_step",  type=float, default=0.05)
     args = ap.parse_args()
 
     if args.folder:
@@ -550,27 +460,43 @@ def main():
         folder = input("Folder name under logs/: ").strip()
 
     loop_s   = args.loop
-    bet_size = float(args.bet)
-    cap      = float(args.cap)
-
     excluded = [x.strip().lower() for x in (args.exclude or "").split(",") if x.strip()]
+
+    # build caps list
+    caps = []
+    x = args.caps_start
+    while x <= args.caps_stop + 1e-9:
+        caps.append(round(x, 2))
+        x += args.caps_step
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
-    snap_path   = os.path.join(out_dir, "log_market_snapshots.jsonl")   # rewritten each pass
-    closed_path = os.path.join(out_dir, "log_closed_markets.jsonl")     # rewritten each pass
 
-    print(f"{dt_iso()} Starting scan…")
+    # CSV for per-pass live fills (rewritten each pass)
+    live_csv_path = os.path.join(out_dir, "live_fills_caps_030_070.csv")
+    # snapshots + closed JSONLs preserved (if you still want them)
+    snap_path   = os.path.join(out_dir, "log_market_snapshots.jsonl")
+    closed_path = os.path.join(out_dir, "log_closed_markets.jsonl")
+
+    print(f"{dt_iso()} Starting live-fill scan… caps={caps} max_notional={args.max_notional}")
+
+    # CSV header
+    header = [
+        "conditionId","question","time_found","status","closed_time",
+        "lowest_no_px","cap","filled","fill_time","avg_px","shares","cost",
+        "under_cap_dollars_seen","under_cap_shares","under_cap_trades","over_cap_trades",
+        "pl_if_resolved"
+    ]
 
     while True:
         uniq = read_unique_markets(folder)
-        print(f"\n=== NO bet backtest (folder={folder}) | markets={len(uniq)} ===")
+        print(f"\n=== LIVE NO fills (folder={folder}) | markets={len(uniq)} ===")
 
-        snapshots: List[dict] = []
-        closed_rows: List[dict] = []
-        collected_for_sweep: List[dict] = []
         skipped = 0
         errors = 0
+        rows_for_csv = []
+        snapshots_for_jsonl = []
+        closed_rows_for_jsonl = []
 
         for i, (cid, meta) in enumerate(uniq.items(), 1):
             q = meta["question"]
@@ -583,9 +509,10 @@ def main():
                 continue
 
             print(f"[{i}/{len(uniq)}] {q}  (cid={cid[:10]}…)  since={meta['time_found']}")
+
             try:
                 m = fetch_market_full_by_cid(cid)
-                status = current_status(m)  # 'YES', 'NO', 'TBD'
+                status = current_status(m)  # 'YES','NO','TBD'
                 closed_iso = closed_time_iso(m)
             except Exception as e:
                 errors += 1
@@ -593,90 +520,105 @@ def main():
                 status = "TBD"
                 closed_iso = None
 
+            # === LIVE FILL paging with early-stop per-cap ===
             try:
-                trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
+                live = fetch_until_caps_filled(cid, since_epoch, caps, args.max_notional)
             except Exception as e:
                 errors += 1
-                print(f"  [WARN trades] {e}")
+                print(f"  [WARN trades/live] {e}")
                 continue
 
-            stats = try_fill_no_from_trades(trades, cap=cap, bet_size_dollars=bet_size)
+            lowest_no_px = live["lowest_no_px"]
 
-            print(f"    lowest NO px = {stats['lowest_no_px']}  "
-                  f"under_cap$: {stats['under_cap_dollars']}  shares: {stats['under_cap_shares']}  "
-                  f"trades<=cap: {stats['under_cap_trades']}  trades>cap: {stats['over_cap_trades']}")
-            print(f"    SUCCESS FILL @ ${bet_size}: {'YES' if stats['success_fill'] else 'NO'}"
-                  + (f"  avg_px={stats['avg_px']}  fill_time={datetime.fromtimestamp(stats['fill_time'], tz=timezone.utc).isoformat()}" if stats['success_fill'] else ""))
+            # Emit one CSV row per cap
+            for cap in caps:
+                st = live["caps"][cap]
+                filled = st["success"]
+                fill_time_iso = datetime.fromtimestamp(st["fill_time"], tz=timezone.utc).isoformat() if st["fill_time"] else None
 
-            pl = None
-            if stats["success_fill"] and status in ("YES","NO"):
-                cost   = float(stats["cost"])
-                shares = float(stats["shares"])
-                payout = shares * (1.0 if status == "NO" else 0.0)
-                pl = round(payout - cost, 2)
+                # realized P/L if resolved and we filled at this cap
+                pl_if_resolved = None
+                if filled and status in ("YES","NO"):
+                    # NO pays 1 on NO; 0 on YES
+                    payout = st["shares"] * (1.0 if status == "NO" else 0.0)
+                    pl_if_resolved = round(payout - st["cost"], 2)
 
-            closed_flag = status in ("YES","NO")
-            closed_filled = bool(closed_flag and stats["success_fill"])
+                rows_for_csv.append({
+                    "conditionId": cid,
+                    "question": q,
+                    "time_found": meta["time_found"],
+                    "status": status,
+                    "closed_time": closed_iso,
+                    "lowest_no_px": lowest_no_px,
+                    "cap": cap,
+                    "filled": "YES" if filled else "NO",
+                    "fill_time": fill_time_iso,
+                    "avg_px": st["avg_px"],
+                    "shares": st["shares"],
+                    "cost": st["cost"],
+                    "under_cap_dollars_seen": st["under_cap_dollars_seen"],
+                    "under_cap_shares": st["under_cap_shares"],
+                    "under_cap_trades": st["under_cap_trades"],
+                    "over_cap_trades": st["over_cap_trades"],
+                    "pl_if_resolved": pl_if_resolved,
+                })
 
+            # (Optional) keep JSONL snapshots similar to before at a single reference cap (mid)
+            ref_cap = 0.50
+            ref = live["caps"].get(round(ref_cap, 2), None)
             snapshot = {
                 "ts": dt_iso(),
                 "folder": folder,
-                "status": status,                     # 'YES' | 'NO' | 'TBD'
-                "closed": closed_flag,
-                "closed_time": closed_iso,            # ISO or None
-                "closed_filled": closed_filled,       # closed AND had a fill
+                "status": status,
+                "closed": status in ("YES","NO"),
+                "closed_time": closed_iso,
                 "conditionId": cid,
                 "question": q,
                 "time_found": meta["time_found"],
-                "cap": cap,
-                "bet_size": bet_size,
-                "filled": bool(stats["success_fill"]),
-                **stats,
-                "pl": pl,
+                "ref_cap": ref_cap,
+                "lowest_no_px": lowest_no_px,
+                **({} if ref is None else {
+                    "filled": ref["success"],
+                    "avg_px": ref["avg_px"],
+                    "shares": ref["shares"],
+                    "cost": ref["cost"],
+                    "under_cap_dollars_seen": ref["under_cap_dollars_seen"],
+                    "under_cap_shares": ref["under_cap_shares"],
+                    "under_cap_trades": ref["under_cap_trades"],
+                    "over_cap_trades": ref["over_cap_trades"],
+                })
             }
-            snapshots.append(snapshot)
+            snapshots_for_jsonl.append(snapshot)
 
-            collected_for_sweep.append({"status": status, "trades": trades})
-
-            if closed_flag:
-                closed_row = {
+            if status in ("YES","NO"):
+                closed_rows_for_jsonl.append({
                     "ts": dt_iso(),
                     "conditionId": cid,
                     "question": q,
                     "status": status,
                     "closed_time": closed_iso,
                     "time_found": meta["time_found"],
-                    "cap": cap,
-                    "bet_size": bet_size,
-                    "filled": bool(stats["success_fill"]),
-                    "closed_filled": closed_filled,
-                    "avg_px": stats["avg_px"],
-                    "shares": stats["shares"],
-                    "cost": stats["cost"],
-                    "pl": pl,
-                }
-                closed_rows.append(closed_row)
+                    "lowest_no_px": lowest_no_px,
+                })
 
-        # ---------- Rewrite snapshot ----------
-        snap_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in snapshots)
-        atomic_write_text(snap_path, snap_text + ("\n" if snapshots else ""))
-        print(f"\n[WRITE] {len(snapshots)} snapshot rows → {snap_path} (rewritten this pass)")
+        # ---------- Rewrite LIVE CSV this pass ----------
+        ensure_dir(os.path.dirname(live_csv_path))
+        with open(live_csv_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=header)
+            w.writeheader()
+            w.writerows(rows_for_csv)
+        print(f"\n[WRITE] {len(rows_for_csv)} rows → {live_csv_path} (rewritten this pass)")
 
-        # ---------- Rewrite closed-markets (with P/L) ----------
-        closed_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in closed_rows)
-        atomic_write_text(closed_path, closed_text + ("\n" if closed_rows else ""))
-        print(f"[WRITE] {len(closed_rows)} closed rows (with P/L) → {closed_path} (rewritten this pass)")
-
-        # ---------- Sweep caps × bets → CSV ----------
-        caps_list = sweep_cap_list(0.30, 0.80, 0.05)
-        bets_list = sweep_bet_list(5, 500, 5)
-        sweep_rows = sweep_caps_bets(collected_for_sweep, caps_list, bets_list)
-        sweep_path = os.path.join(LOGS_DIR, folder, f"cap_bet_sweep_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.csv")
-        write_sweep_csv(sweep_path, sweep_rows)
-        print(f"[SWEEP] wrote {len(sweep_rows)} rows → {sweep_path}")
+        # ---------- Rewrite snapshot / closed (optional, as before) ----------
+        snap_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in snapshots_for_jsonl)
+        atomic_write_text(snap_path, snap_text + ("\n" if snapshots_for_jsonl else ""))
+        closed_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in closed_rows_for_jsonl)
+        atomic_write_text(closed_path, closed_text + ("\n" if closed_rows_for_jsonl else ""))
+        print(f"[WRITE] snapshots={len(snapshots_for_jsonl)} → {snap_path}")
+        print(f"[WRITE] closed={len(closed_rows_for_jsonl)} → {closed_path}")
 
         # ---------- Overview ----------
-        print_overview(snapshots, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)
+        print_overview(rows_written=len(rows_for_csv), skipped=skipped, errors=errors)
 
         if loop_s <= 0:
             break
