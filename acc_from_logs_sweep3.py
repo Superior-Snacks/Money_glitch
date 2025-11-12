@@ -158,6 +158,22 @@ def _iso_or_none(dt):
     return dt.isoformat() if isinstance(dt, datetime) else None
 
 # ----------------- FS helpers -----------------
+def _fmt_cap_spread_line(caps_result: dict, caps: list[float]) -> str:
+    """
+    Build a compact one-line summary of the cap spread, sorted ascending.
+    Format per cap: 0.40:✓$500/12.5@0.398  (✓ if success==True else ·)
+    """
+    parts = []
+    for c in sorted(caps):
+        st = caps_result.get(round(c,2), {}) or {}
+        ok  = "✓" if st.get("success") else "·"
+        cost = st.get("cost", 0.0) or 0.0
+        sh   = st.get("shares", 0.0) or 0.0
+        avg  = st.get("avg_px")
+        avg_s = f"{avg:.3f}" if isinstance(avg, (int,float)) else "--"
+        parts.append(f"{c:.2f}:{ok}${cost:.0f}/{sh:.2f}@{avg_s}")
+    return " | ".join(parts)
+
 def ensure_dir(p):
     os.makedirs(p, exist_ok=True)
 
@@ -608,6 +624,12 @@ def main():
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude (by question text)")
     ap.add_argument("--open_cache_max_age_days", type=float, default=2.0, help="Snapshot cache age limit for OPEN markets")
     ap.add_argument("--recheck_all", action="store_true", help="Ignore caches and recompute for every market")
+
+    #debug
+    ap.add_argument("--debug_caps", action="store_true",
+                help="Print per-market cap spread (compact) after computing caps.")
+    ap.add_argument("--debug_caps_mode", choices=["compact","full"], default="compact",
+                help="Compact one-line summary or full multiline dump per cap.")
     args = ap.parse_args()
 
     folder = args.folder.strip() if args.folder else input("Folder name under logs/: ").strip()
