@@ -606,7 +606,7 @@ def main():
 
     # filtering + caching
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude (by question text)")
-    ap.add_argument("--open_cache_max_age_days", type=float, default=1.0, help="Snapshot cache age limit for OPEN markets")
+    ap.add_argument("--open_cache_max_age_days", type=float, default=2.0, help="Snapshot cache age limit for OPEN markets")
     ap.add_argument("--recheck_all", action="store_true", help="Ignore caches and recompute for every market")
     args = ap.parse_args()
 
