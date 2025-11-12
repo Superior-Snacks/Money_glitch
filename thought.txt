@@ -595,6 +595,7 @@ Avg under-cap $:      $215.84
 Avg under-cap shares: 1629.1633
 Lowest(ever) NO px:   min=0.0010  mean=0.6441  max=0.9990
 
+see a day of loss!
 ===== PASS OVERVIEW =====
 Markets scanned:      3503
 Skipped (filters):    0
