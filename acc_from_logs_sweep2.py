@@ -37,7 +37,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-maker-backtest/1.0"})
+    s.headers.update({"User-Agent": "pm-maker-backtest/2.0"})
     return s
 
 SESSION = make_session()

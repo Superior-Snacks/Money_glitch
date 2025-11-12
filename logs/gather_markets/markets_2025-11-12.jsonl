@@ -167,3 +167,54 @@
 {"time_found": "2025-11-12T17:34:48.591542+00:00", "conditionId": "0x2e247b9f626b75884108d1e0dab2c7ce0634a7e53e6d22cfcab7aa202914bd1e", "question": "Will Keir Starmer say \"Gentleman\" or \"Lady\" 6+ times during the next Prime Minister's Questions?"}
 {"time_found": "2025-11-12T17:34:48.591542+00:00", "conditionId": "0x0df6f490cf790d77f9e5070dfb1c52dae0828b6b55602f60658eaa59bda8b08c", "question": "Will Keir Starmer say \"Scotland\" during the next Prime Minister's Questions?"}
 {"time_found": "2025-11-12T17:34:48.591542+00:00", "conditionId": "0x3df5201a451dc73ec57fae309da70b0f2f3a323d0aa061c27ead1f2276d0aacd", "question": "Will Keir Starmer say \"Access\" during the next Prime Minister's Questions?"}
+{"time_found": "2025-11-12T18:08:08.882476+00:00", "conditionId": "0x3bf191c10dda5ebb8086ff098b82f2905fa771e1ec42b7046cddd4065ed7ebaa", "question": "Paradex FDV above $10B one day after launch?"}
+{"time_found": "2025-11-12T18:08:08.882476+00:00", "conditionId": "0x4af05d4f9fd8cf4845e3e3b53f1104ac1736d0a3030c51161fd4ea89b0096284", "question": "Paradex FDV above $750M one day after launch?"}
+{"time_found": "2025-11-12T18:08:08.882476+00:00", "conditionId": "0xdc78ffe18b311b9827e4f257155baa8decce1eb79cfc4104f0e4e8c488a5d0bd", "question": "Paradex FDV above $1.5B one day after launch?"}
+{"time_found": "2025-11-12T18:08:08.882476+00:00", "conditionId": "0x3850d3151af5f95433bcb9a335b77c31a2eb9b7f7aad2df2e03f46716106d3e0", "question": "Paradex FDV above $5B one day after launch?"}
+{"time_found": "2025-11-12T18:08:08.882476+00:00", "conditionId": "0xc070b151788030ecfce8e5633059925d7267313a450397d1f8da34a01b944dde", "question": "Paradex FDV above $3B one day after launch?"}
+{"time_found": "2025-11-12T18:35:39.807462+00:00", "conditionId": "0xcc19360552f1ae9185972c6b95fcf9eee612ef596cca0ca30b1062275242058d", "question": "Will CA Lanús vs. CA Tucumán end in a draw?"}
+{"time_found": "2025-11-12T18:35:39.807462+00:00", "conditionId": "0xf34e22013b78a23833336094f0c4592f773758584e4cb800b16c6194923deea8", "question": "Will CA Lanús win on 2025-11-14?"}
+{"time_found": "2025-11-12T18:35:39.807462+00:00", "conditionId": "0x1cefe0558b6f4ff1c77069f1fe57634fa27a06e6e688270a4b191db390e5b00e", "question": "Will CA Newell's Old Boys vs. Racing Club end in a draw?"}
+{"time_found": "2025-11-12T18:35:39.807462+00:00", "conditionId": "0xd7d8d5a65895b385f1b5773df5e5df4dd47f48e2e11cdad98380071732b7bc87", "question": "Will CA Independiente win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xe30c4383c210d0b31b223caa6aae0dc5ffe503fef18d7de8577ad63b2fcc185e", "question": "Will CA Tucumán win on 2025-11-14?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x5d4716010dbf4823d8b847876b5db342fddacbf4997c46eeba535b5eace6041a", "question": "Will CA Independiente vs. CA Rosario Central end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xec71f4b1d2aff606c3c5ebb7fef43e95320493acf1187c8b593a35d1ffc07864", "question": "Will CA Newell's Old Boys win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xabce286a6d70432f29a79ddd403156a80bdf98a618591c785e4ccedf9d4f8646", "question": "Will CA Rosario Central win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x53b89a15dc5637eb96712ea385f89eb382f90c6f2a1e41bf80c8e2a6e889aab5", "question": "Will Instituto AC Córdoba win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x50c9d852e9280a01938d25715fa44545516dda62ad5a87768d600e24522f5992", "question": "Will CA Vélez Sarsfield vs. CA River Plate end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x7fcfd2ef90f60882a4393e2485104ce1dedf25dcd12931ec462468264bf41416", "question": "Will Racing Club win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xd57d54469efda5d4bd67fbf54770b144e1665cb6b588b59da66aafe20c2dd555", "question": "Will Instituto AC Córdoba vs. CA Talleres end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xbb17790ae87235f0a56886882e289779964822ec2a6b065af1b32216f6f6e4c8", "question": "Will CA Vélez Sarsfield win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x451e55af70f0206803f5b2344bd72a53092ab5a03e8cd4bbf0993db49e948bd1", "question": "Will CA River Plate win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x2a356c1475f7112ee9a28e3219a3a17d01b7e656ecf5dda7cdae585df80b82bb", "question": "Will CA Aldosivi win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x4fd388d710075b7aee6b989d5f1cdd8c01a67506352f226068b867fe4960c440", "question": "Will CA Talleres win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x8358cbc32ce53e02972a4d566edf9efc22c263513b41dbd269c396b5767cf595", "question": "Will CD Riestra win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x11988301987fc5e71269ad7815978ce65460e6fa00aa41738a5f5a04acd8345f", "question": "Will CA Aldosivi vs. CA San Martín de San Juan end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xfabe52e94958da81f666bbc92d7ed614f932d2caddb6af30fad694a4cac9a849", "question": "Will CD Godoy Cruz Antonio Tomba vs. CD Riestra end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xd046599899089a4e695e1fff59ed221d03f4227d5fc9b14a33d9b83c83288166", "question": "Will CA Boca Juniors win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0xb29bb3c7afb0d5f883baa7476167387aa639c2ffc0fa3647abc658a9329ea158", "question": "Will CD Godoy Cruz Antonio Tomba win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x84d6cbe93acb200da57e82eb2e152c4bcce4b8e4fa02f7abfefb20ec0754face", "question": "Will CA San Martín de San Juan win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x0a03c3a0115b737132590cf119e63fea458a9b81fe02cd46f1ce2e0102678463", "question": "Will CA Barracas Central vs. CA Huracán end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x057fc5d34287d38d4b764b0ab6c6bd32de6872b99aa328674f46b3cf437be42f", "question": "Will CA Tigre win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x68c1fa95e127acb0011afb34933e4bd53d26fec39eea5b12761361ee8e708467", "question": "Will CA Boca Juniors vs. CA Tigre end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x01b8adbb6dbfefdde82caf7efffc0f14b640ca3a824e46fc4fb86eac1b742da3", "question": "Will Estudiantes de La Plata win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x53e9901c394e6aa7b40ea342267d7717ca20f80ddcd46bf16e0f31aa8484f624", "question": "Will CA Huracán win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x46f8fd9d6694bec4b3e8f7b67d7ce84654adca94fed337472da5c82bcc5a2438", "question": "Will CA Barracas Central win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x443b3bc90b53e56004da76a8089a2c64a512e9ebacbdd1956f727ae39e84482c", "question": "Will CA Banfield win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x30eaf906aa8c80e66586af84863c2a933ad29c1a98b6b1b544d1513143376185", "question": "Will CA Central Córdoba vs. CA Banfield end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x8b80547fe067a9bcb957af4d5a4799217140537a06b015ca9253e5a545d20f5d", "question": "Will AA Argentinos Juniors win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x4a78502b61aeafc896961a00ee1dacfae941e22cbdc32c09954c5492eaf75b51", "question": "Will Estudiantes de La Plata vs. AA Argentinos Juniors end in a draw?"}
+{"time_found": "2025-11-12T18:35:50.985797+00:00", "conditionId": "0x45c0936d23856e139f7f8f8f49f16899490f8294eb7bcdd975dadbbd7196afde", "question": "Will CA Central Córdoba win on 2025-11-16?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x783350d95c239b7501a206951d9415a3741b7c3c71f393f8b4b8015ed832fb3c", "question": "Will CA San Lorenzo de Almagro win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x3b899ec03ec419ea7551819c123a638e3fb8852e45c40d89073382573a19a5c5", "question": "Will CA Belgrano win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x1d03e2cd9d6e5c3d94c880476f7a340cbbf5235bf6cb7fd841442a2885c6369e", "question": "Will CA San Lorenzo de Almagro vs. CA Sarmiento end in a draw?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x1570dd8a25feb4a0f7cceb38cb970e3122759ae6a69d62083a210e3cf93acd3d", "question": "Will CA Belgrano vs. CA Unión end in a draw?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0xaa274231cff241192af940d575c921b00eda35360d3298fb3b410b3189403068", "question": "Will CA Unión win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x2a5fae856f01ea07f9105c4400caea8bf7dd943d66c4227911957904602dec91", "question": "Will CA Sarmiento win on 2025-11-15?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0xcff589d67f6b6d457d369d5604da64a36c2037de21245643ba315fc4aa2d0270", "question": "Will CSyD Defensa y Justicia vs. CS Independiente Rivadavia end in a draw?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0xbb5dea23fd201dfc17c260948f8c077bb1bef6717daf4c157ce433b34a251462", "question": "Will CSyD Defensa y Justicia win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x10dc94062ec36f3292bb56daf8ea9b1e6779f0b106d2ebb37666aa030d995ce7", "question": "Will CS Independiente Rivadavia win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x783bb1ec9b9b0ec168b5243028c12950319aa8a1915ad19e454c334fcc616710", "question": "Will Gimnasia y Esgrima de La Plata win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x28dd38ce9800145a1459c89d2bd063f49879613f6ba78b29798b0354ae63ffba", "question": "Will CA Platense win on 2025-11-17?"}
+{"time_found": "2025-11-12T18:36:02.319122+00:00", "conditionId": "0x754dd32a8946a0119b62d4a06d9e1627ab9380f391d682ca80d80ed191e627ef", "question": "Will CA Platense vs. Gimnasia y Esgrima de La Plata end in a draw?"}
+{"time_found": "2025-11-12T18:36:25.087291+00:00", "conditionId": "0x09192a302b78cc9c584dd2991ae7db009702b15c4c1f5ee6fbb5016e9b0ac71c", "question": "Will Netanyahu be pardoned in 2025?"}

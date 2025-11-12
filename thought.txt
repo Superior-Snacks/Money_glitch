@@ -596,6 +596,22 @@ Avg under-cap shares: 1629.1633
 Lowest(ever) NO px:   min=0.0010  mean=0.6441  max=0.9990
 
 ===== PASS OVERVIEW =====
+Markets scanned:      3503
+Skipped (filters):    0
+Errors (fetch/etc):   12
+non active markets:   930
+Open markets:         3000
+Closed markets:   all:503 no:352 yes:151
+closed filled:    all:182 no:61 yes:121
+Cap:                  0.4   Bet size: $5.00
+Total realized P/L:   +705.23
+Success fills:        551  (15.73% if n else 0)
+No trades on NO side: 1132
+Avg under-cap $:      $231.90
+Avg under-cap shares: 1771.2005
+Lowest(ever) NO px:   min=0.0010  mean=0.6457  max=0.9990
+
+===== PASS OVERVIEW =====
 Markets scanned:      2604
 Skipped (filters):    0
 Errors (fetch/etc):   0
