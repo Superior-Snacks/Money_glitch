@@ -41,7 +41,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-maker-backtest/1.1"})
+    s.headers.update({"User-Agent": "pm-maker-backtest/1.2-caps-cache"})
     return s
 
 SESSION = make_session()
@@ -168,13 +168,32 @@ def atomic_write_text(path: str, text: str):
         f.write(text)
     os.replace(tmp, path)
 
+def atomic_write_jsonl(path: str, rows: List[dict]):
+    ensure_dir(os.path.dirname(path))
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+def _read_jsonl_index(path: str, key="conditionId") -> dict:
+    idx = {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                cid = row.get(key)
+                if cid:
+                    idx[cid] = row
+    except FileNotFoundError:
+        pass
+    return idx
+
 # ======================= Load markets from logs ===================
 def read_unique_markets(folder_name: str) -> Dict[str, dict]:
-    """
-    Reads logs/<folder>/markets_*.jsonl with:
-      {"time_found": ISO, "conditionId": str, "question": str}
-    Keeps earliest time_found per conditionId.
-    """
     out_dir = os.path.join(LOGS_DIR, folder_name)
     paths = sorted(glob.glob(os.path.join(out_dir, "markets_*.jsonl")))
     uniq = {}
@@ -213,7 +232,6 @@ def fetch_market_full_by_cid(cid: str) -> dict:
     if cid in MARKET_META_CACHE and MARKET_META_CACHE[cid]:
         return MARKET_META_CACHE[cid]
     try:
-        # NOTE: current gamma param uses 'condition_ids'
         r = http_get_with_backoff(BASE_GAMMA, params={"condition_ids": cid, "limit": 1}, timeout=15)
         rows = r.json() or []
         for m in rows:
@@ -227,9 +245,6 @@ def fetch_market_full_by_cid(cid: str) -> dict:
         return {}
 
 def resolve_status(m: dict):
-    """
-    Returns (is_resolved: bool, winner: Optional['YES'|'NO'], source_tag: str)
-    """
     uma = (m.get("umaResolutionStatus") or "").strip().lower()
     if uma in {"yes","no"}:
         return True, uma.upper(), "umaResolutionStatus"
@@ -242,7 +257,6 @@ def resolve_status(m: dict):
     if w in {"YES","NO"}:
         return True, w, "winningOutcome"
 
-    # Price hint fallback after close + grace
     if m.get("closed"):
         end_dt = (
             _parse_dt_any(m.get("closedTime"))
@@ -305,8 +319,8 @@ def _init_caps_state_maker(caps: List[float], max_notional: float):
             "under_cap_shares": 0.0,
             "under_cap_trades": 0,
             "over_cap_trades": 0,
-            "avg_under_px_num": 0.0,  # for weighted avg
-            "avg_under_px_den": 0.0,
+            "avg_under_px_num": 0.0,  # weighted avg numerator: sum(p*s)
+            "avg_under_px_den": 0.0,  # denominator: sum(s)
             "lowest_no_px": None,
             "timeline": [],  # (cum_dollars, ts, trades_seen_no)
         } for cap in caps
@@ -314,8 +328,7 @@ def _init_caps_state_maker(caps: List[float], max_notional: float):
 
 def _apply_trades_to_maker_buckets(trades: List[dict], caps_state: dict, since_epoch_s: int, acc: dict):
     """
-    acc: dict with overall stats for the market:
-      {"no_low": None|float, "no_high": None|float, "trades_seen_no": int}
+    acc: {"no_low": None|float, "no_high": None|float, "trades_seen_no": int}
     """
     any_progress = False
     trades_sorted = sorted(
@@ -338,7 +351,6 @@ def _apply_trades_to_maker_buckets(trades: List[dict], caps_state: dict, since_e
         if p <= 0 or s <= 0:
             continue
 
-        # overall NO price range + NO trades count since baseline
         acc["trades_seen_no"] += 1
         if acc["no_low"] is None or p < acc["no_low"]:   acc["no_low"]  = p
         if acc["no_high"] is None or p > acc["no_high"]: acc["no_high"] = p
@@ -362,15 +374,9 @@ def _apply_trades_to_maker_buckets(trades: List[dict], caps_state: dict, since_e
     return any_progress
 
 def build_maker_buckets(cid: str, since_epoch_s: int, caps: List[float], max_notional: float):
-    """
-    Pages trades once and builds totals for each cap (maker semantics).
-    Stops early when all caps have seen ≥ max_notional at/under cap.
-    Also returns overall NO-price low/high and NO trades count since baseline.
-    """
     caps_state = _init_caps_state_maker(caps, max_notional)
     starting_before = None
     last_len = None
-
     acc = {"no_low": None, "no_high": None, "trades_seen_no": 0}
 
     for _ in range(10000):
@@ -415,10 +421,6 @@ def build_maker_buckets(cid: str, since_epoch_s: int, caps: List[float], max_not
     }
 
 def maker_fill_at(cap: float, bet: float, bucket: dict):
-    """
-    Maker fill decision: if cumulative NO notional at/under cap since time_found >= bet → filled at cap.
-    Returns (filled, avg_px(cap or None), shares, fill_ts or None, trades_to_fill or None)
-    """
     seen = float(bucket.get("under_cap_dollars_seen", 0.0))
     if seen + 1e-9 < bet:
         return False, None, 0.0, None, None
@@ -426,7 +428,6 @@ def maker_fill_at(cap: float, bet: float, bucket: dict):
     fill_ts = None
     trades_to_fill = None
     for entry in bucket.get("timeline", []):
-        # entry can be (cum, ts) from older logs or (cum, ts, trades)
         if len(entry) == 3:
             cum, ts, tcount = entry
         else:
@@ -439,6 +440,60 @@ def maker_fill_at(cap: float, bet: float, bucket: dict):
 
     shares = bet / cap
     return True, cap, round(shares, 6), fill_ts, trades_to_fill
+
+# ======================= Cache: caps spread =======================
+def load_caps_cache(path: str) -> dict:
+    idx = {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                    cid = row.get("conditionId")
+                    if cid:
+                        idx[cid] = row
+                except Exception:
+                    continue
+    except FileNotFoundError:
+        pass
+    return idx
+
+def cache_is_usable(cache_row: dict, caps: List[float], max_notional: float) -> bool:
+    if not cache_row:
+        return False
+    # caps must match exactly (order-insensitive) to be strictly safe
+    if sorted(cache_row.get("caps_list", [])) != sorted([round(x,2) for x in caps]):
+        return False
+    built = float(cache_row.get("max_notional_built", 0.0) or 0.0)
+    if built + 1e-9 < float(max_notional):
+        return False
+    return True
+
+def should_force_finalize(prev_snap_idx: dict, cid: str, current_status: str) -> bool:
+    """True iff last snapshot had TBD and now closed (YES/NO)."""
+    if current_status not in ("YES","NO"):
+        return False
+    prev = prev_snap_idx.get(cid)
+    if not prev:
+        return False
+    return prev.get("status") == "TBD"
+
+def make_cache_row(cid: str, status: str, closed_time: Optional[str], time_found_epoch: int,
+                   caps: List[float], max_notional: float, buckets_res: dict, finalized: bool) -> dict:
+    return {
+        "conditionId": cid,
+        "status": status,
+        "closed_time": closed_time,
+        "time_found_epoch": time_found_epoch,
+        "caps": buckets_res["caps"],   # full spread per cap
+        "caps_list": [round(x,2) for x in caps],
+        "max_notional_built": float(max_notional),
+        "finalized": bool(finalized),
+        "no_low": buckets_res.get("no_low"),
+        "no_high": buckets_res.get("no_high"),
+        "trades_seen_no": buckets_res.get("trades_seen_no"),
+        "built_at": dt_iso(),
+    }
 
 # ======================= Overview helpers =========================
 def mean(xs: List[float]) -> float:
@@ -481,17 +536,6 @@ def print_view_overview(view_snapshots: List[dict], bet_size: float, cap: float,
         print("Lowest(ever) NO px:        (no data)")
 
 # ======================= Sweep (cap×bet) ==========================
-def sweep_cap_list(start=0.20, stop=0.80, step=0.05) -> List[float]:
-    vals = []
-    x = start
-    while x <= stop + 1e-9:
-        vals.append(round(x, 2))
-        x += step
-    return vals
-
-def sweep_bet_list(start=5, stop=500, step=5) -> List[int]:
-    return list(range(start, stop+1, step))
-
 def sweep_caps_bets_maker(collected: List[dict], caps: List[float], bets: List[float]) -> List[dict]:
     rows = []
     total_markets = len(collected)
@@ -557,7 +601,7 @@ def write_sweep_csv(path: str, rows: List[dict]):
 
 # ======================= Main ====================================
 def main():
-    ap = argparse.ArgumentParser(description="Polymarket NO-maker backtest (multi-cap buckets + single view + sweep) with debug/probe.")
+    ap = argparse.ArgumentParser(description="Polymarket NO-maker backtest with caps spread cache (finalize on close), debug probe, and sweep.")
     ap.add_argument("--folder", required=False, help="Folder under logs/", default=None)
     ap.add_argument("--loop", type=int, default=0, help="Loop seconds (0=single pass)")
 
@@ -574,10 +618,13 @@ def main():
     ap.add_argument("--caps_step",  type=float, default=0.05)
     ap.add_argument("--bets_start", type=int,   default=5)
     ap.add_argument("--bets_stop",  type=int,   default=500)
-    ap.add_argument("--bets_step",  type:int,   default=5)
+    ap.add_argument("--bets_step",  type=int,   default=5)
 
     # Keyword filtering
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude by question text")
+
+    # Cache controls
+    ap.add_argument("--recheck_all", action="store_true", help="Ignore cache; rebuild all spreads from time_found")
 
     args = ap.parse_args()
 
@@ -621,13 +668,21 @@ def main():
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
-    snap_path   = os.path.join(out_dir, "log_market_snapshots.jsonl")   # rewritten each pass (view)
-    closed_path = os.path.join(out_dir, "log_closed_markets.jsonl")     # rewritten each pass (view)
-    print(f"{dt_iso()} Starting maker scan… view_cap={view_cap} bet=${bet_size:.2f} | caps={caps} max_notional={args.max_notional}")
+    snap_path     = os.path.join(out_dir, "log_market_snapshots.jsonl")   # rewritten each pass (view)
+    closed_path   = os.path.join(out_dir, "log_closed_markets.jsonl")     # rewritten each pass (view)
+    cache_path    = os.path.join(out_dir, "caps_cache.jsonl")             # rewritten each pass (caps spread)
+    pass_summary  = os.path.join(out_dir, "pass_summary.json")
+
+    print(f"{dt_iso()} Starting maker scan… view_cap={view_cap} bet=${bet_size:.2f} | caps={caps} max_notional={args.max_notional} recheck_all={args.recheck_all}")
 
     while True:
         uniq = read_unique_markets(folder)
         print(f"\n=== MAKER NO (folder={folder}) | markets={len(uniq)} ===")
+
+        # For transition detection (open→closed)
+        prev_snap_idx = _read_jsonl_index(snap_path)
+        closed_idx    = _read_jsonl_index(closed_path)
+        cache_idx     = load_caps_cache(cache_path)
 
         skipped = 0
         errors = 0
@@ -657,20 +712,53 @@ def main():
                 status = "TBD"
                 closed_iso = None
 
-            # Build maker buckets for all caps (early-stopping when possible)
-            try:
-                buckets_res = build_maker_buckets(cid, since_epoch, caps, args.max_notional)
-                buckets = buckets_res["caps"]
-                no_low  = buckets_res["no_low"]
-                no_high = buckets_res["no_high"]
-                trades_no = buckets_res["trades_seen_no"]
-            except Exception as e:
-                errors += 1
-                print(f"  [WARN trades/buckets] {e}")
-                continue
+            # ---------- Decide data source: cache vs rebuild ----------
+            use_cache = False
+            force_finalize = should_force_finalize(prev_snap_idx, cid, status)
+            cached_row = cache_idx.get(cid)
+            if not args.recheck_all and cached_row and not force_finalize:
+                if cached_row.get("finalized") is True:
+                    use_cache = True
+                elif cache_is_usable(cached_row, caps, args.max_notional):
+                    use_cache = True
 
-            # For sweep later
-            collected_for_sweep.append({"status": status, "buckets": buckets})
+            if use_cache:
+                # Use cached buckets
+                buckets_res = {
+                    "caps": cached_row["caps"],
+                    "no_low": cached_row.get("no_low"),
+                    "no_high": cached_row.get("no_high"),
+                    "trades_seen_no": cached_row.get("trades_seen_no"),
+                }
+                print("    [CACHE] using cached caps spread (finalized=%s, max_notional_built=%.2f)" %
+                      (cached_row.get("finalized"), cached_row.get("max_notional_built", 0.0)))
+            else:
+                # Need to rebuild (either recheck_all, first time, upgrade, or finalize-on-close)
+                try:
+                    buckets_res = build_maker_buckets(cid, since_epoch, caps, args.max_notional)
+                except Exception as e:
+                    errors += 1
+                    print(f"  [WARN trades/buckets] {e}")
+                    continue
+
+                # Finalize if closed now (and was open before), else keep non-final
+                finalized = bool(force_finalize or status in ("YES","NO"))
+                cache_row = make_cache_row(
+                    cid=cid,
+                    status=status,
+                    closed_time=closed_iso,
+                    time_found_epoch=since_epoch,
+                    caps=caps,
+                    max_notional=args.max_notional,
+                    buckets_res=buckets_res,
+                    finalized=finalized
+                )
+                cache_idx[cid] = cache_row  # stage
+
+            buckets = buckets_res["caps"]
+            no_low  = buckets_res.get("no_low")
+            no_high = buckets_res.get("no_high")
+            trades_no = buckets_res.get("trades_seen_no")
 
             # ---- CAP SPREAD debug line
             parts = []
@@ -682,9 +770,9 @@ def main():
                 parts.append(f"{c:0.2f}:·${usd}/{int(sh)}@{('--' if avg is None else f'{avg:0.3f}')}")
             print("    [CAP SPREAD] " + " | ".join(parts))
 
-            # ---- BASIC quick probe (0.40 @ $5), report timestamp & NO trades till fill
+            # ---- BASIC quick probe (0.40 @ $5)
             b_basic = buckets.get(round(BASIC_CAP,2), {})
-            b_filled, _, b_shares, b_fill_ts, b_trades_fill = maker_fill_at(BASIC_CAP, BASIC_DOLLARS, b_basic)
+            b_filled, _, _b_shares, b_fill_ts, b_trades_fill = maker_fill_at(BASIC_CAP, BASIC_DOLLARS, b_basic)
             if b_filled:
                 ft_iso = datetime.fromtimestamp(b_fill_ts, tz=timezone.utc).isoformat() if b_fill_ts else None
                 print(f"    BASIC cap={BASIC_CAP:.2f} @ ${BASIC_DOLLARS:.0f} → filled at {ft_iso} (NO trades_to_fill={b_trades_fill})")
@@ -703,7 +791,6 @@ def main():
             uc_trades    = b_view.get("under_cap_trades", 0)
             oc_trades    = b_view.get("over_cap_trades", 0)
 
-            # Realized P/L (only if closed and filled). Maker cost is exactly bet_size when filled.
             pl_view = None
             closed_flag = status in ("YES","NO")
             closed_filled = bool(closed_flag and filled_view)
@@ -733,7 +820,9 @@ def main():
                 "over_cap_trades": oc_trades,
                 "lowest_no_px": lowest_no_px,
                 "fill_time": (datetime.fromtimestamp(fill_ts, tz=timezone.utc).isoformat() if fill_ts else None),
-                "pl": pl_view
+                "pl": pl_view,
+                # embed spread for auditing
+                "caps_spread": buckets,
             }
             view_snapshots.append(snapshot)
 
@@ -752,16 +841,24 @@ def main():
                     "avg_px": (avg_px_view if filled_view else None),
                     "shares": (shares_view if filled_view else 0.0),
                     "cost": (bet_size if filled_view else 0.0),
-                    "pl": pl_view
+                    "pl": pl_view,
+                    # also embed spread
+                    "caps_spread": buckets,
                 })
 
-        # ---------- Write JSONL snapshots / closed (rewritten each pass) ----------
-        snap_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in view_snapshots)
-        atomic_write_text(snap_path, snap_text + ("\n" if view_snapshots else ""))
-        closed_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in view_closed_rows)
-        atomic_write_text(closed_path, closed_text + ("\n" if view_closed_rows else ""))
+            # For sweep later
+            collected_for_sweep.append({"status": status, "buckets": buckets})
+
+        # ---------- Rewrite snapshot / closed for view cap ----------
+        atomic_write_text(snap_path, "\n".join(json.dumps(s, ensure_ascii=False) for s in view_snapshots) + ("\n" if view_snapshots else ""))
+        atomic_write_text(closed_path, "\n".join(json.dumps(s, ensure_ascii=False) for s in view_closed_rows) + ("\n" if view_closed_rows else ""))
         print(f"[WRITE] snapshots={len(view_snapshots)} → {snap_path}")
         print(f"[WRITE] closed={len(view_closed_rows)} → {closed_path}")
+
+        # ---------- Rewrite cache (merge staged cache_idx) ----------
+        # (We re-emit everything we currently hold in memory.)
+        atomic_write_jsonl(cache_path, list(cache_idx.values()))
+        print(f"[CACHE] wrote {len(cache_idx)} entries → {cache_path}")
 
         # ---------- Sweep caps × bets → CSV (maker) ----------
         sweep_rows = sweep_caps_bets_maker(collected_for_sweep, caps=sorted(caps), bets=bets)
@@ -769,7 +866,24 @@ def main():
         write_sweep_csv(sweep_path, sweep_rows)
         print(f"[SWEEP] wrote {len(sweep_rows)} rows → {sweep_path}")
 
-        # ---------- Overview for the single-cap/bet view ----------
+        # ---------- Overview ----------
+        summary = {
+            "ts": dt_iso(),
+            "markets_scanned": len(view_snapshots),
+            "skipped": skipped,
+            "errors": errors,
+            "view_cap": view_cap,
+            "view_bet": bet_size,
+            "closed_total": sum(1 for s in view_snapshots if s.get("closed")),
+            "closed_with_fill": sum(1 for s in view_snapshots if s.get("closed_filled")),
+            "closed_yes": sum(1 for s in view_snapshots if s.get("status") == "YES"),
+            "closed_no": sum(1 for s in view_snapshots if s.get("status") == "NO"),
+            "success_fills": sum(1 for s in view_snapshots if s.get("filled")),
+            "realized_pl_total": round(sum(s.get("pl", 0.0) for s in view_snapshots if s.get("pl") is not None), 2),
+        }
+        atomic_write_text(pass_summary, json.dumps(summary, ensure_ascii=False, indent=2))
+        print(f"[WRITE] pass summary → {pass_summary}")
+
         print_view_overview(view_snapshots, bet_size=bet_size, cap=view_cap, skipped=skipped, errors=errors)
 
         if loop_s <= 0:
