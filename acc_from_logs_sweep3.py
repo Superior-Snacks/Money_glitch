@@ -1,4 +1,4 @@
-import os, sys, json, random, glob, time, csv
+import os, sys, json, random, glob, time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -7,7 +7,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import argparse
 
-# ----------------- Constants -----------------
+# ============================ Constants ============================
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
 DATA_TRADES  = "https://data-api.polymarket.com/trades"
 LOGS_DIR     = "logs"
@@ -15,10 +15,8 @@ LOGS_DIR     = "logs"
 TRADES_PAGE_LIMIT = 250
 LOOP_DEFAULT_SEC  = 3600  # 0 = single pass
 
-HINT_SPREAD = 0.98                  # decisive price hint barrier
-FINAL_GRACE = timedelta(days=2)     # grace after close before trusting prices
-
-CACHE_VERSION = 1  # bump if cache format/semantics change
+HINT_SPREAD = 0.98                  # how close to 0/1 we require for decisive winner
+FINAL_GRACE = timedelta(days=2)     # wait this long after close before price-only finals
 
 # Rate limiting with adaptive scale
 RPS_TARGET            = 3.5
@@ -26,7 +24,11 @@ _RPS_SCALE            = 1.0
 _RPS_MIN              = 0.3
 _RPS_RECOVER_PER_SEC  = 0.03
 
-# ----------------- Session + pacing -----------------
+# BASIC probe for quick liquidity sanity (cap, dollars)
+BASIC_CAP = 0.40
+BASIC_DOLLARS = 5.00
+
+# ============================ Session / pacing ============================
 def make_session():
     s = requests.Session()
     retry = Retry(
@@ -39,7 +41,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-no-bet-scan/2.6-cached-final+basic"})
+    s.headers.update({"User-Agent": "pm-no-bet-scan/2.6-first-run-time_found"})
     return s
 
 SESSION = make_session()
@@ -118,7 +120,7 @@ def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
 
         r.raise_for_status()
 
-# ----------------- Time utils -----------------
+# ============================ Time utils ============================
 def dt_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -157,23 +159,7 @@ def _parse_dt_any(v):
 def _iso_or_none(dt):
     return dt.isoformat() if isinstance(dt, datetime) else None
 
-# ----------------- FS helpers -----------------
-def _fmt_cap_spread_line(caps_result: dict, caps: list[float]) -> str:
-    """
-    Build a compact one-line summary of the cap spread, sorted ascending.
-    Format per cap: 0.40:✓$500/12.5@0.398  (✓ if success==True else ·)
-    """
-    parts = []
-    for c in sorted(caps):
-        st = caps_result.get(round(c,2), {}) or {}
-        ok  = "✓" if st.get("success") else "·"
-        cost = st.get("cost", 0.0) or 0.0
-        sh   = st.get("shares", 0.0) or 0.0
-        avg  = st.get("avg_px")
-        avg_s = f"{avg:.3f}" if isinstance(avg, (int,float)) else "--"
-        parts.append(f"{c:.2f}:{ok}${cost:.0f}/{sh:.2f}@{avg_s}")
-    return " | ".join(parts)
-
+# ============================ FS helpers ============================
 def ensure_dir(p):
     os.makedirs(p, exist_ok=True)
 
@@ -183,26 +169,34 @@ def atomic_write_text(path: str, text: str):
         f.write(text)
     os.replace(tmp, path)
 
-def load_jsonl_by_key(path: str, key: str) -> Dict[str, dict]:
-    out = {}
+def _read_jsonl_index(path: str, key="conditionId") -> dict:
+    """Build a quick presence index {cid: last_row} from a jsonl file if it exists."""
+    idx = {}
     try:
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
-                line = line.strip()
-                if not line: continue
                 try:
-                    rec = json.loads(line)
+                    row = json.loads(line)
                 except Exception:
                     continue
-                k = rec.get(key)
-                if k:
-                    out[k] = rec
+                cid = row.get(key)
+                if cid:
+                    idx[cid] = row
     except FileNotFoundError:
         pass
-    return out
+    return idx
 
-# ----------------- Read rolling market logs -----------------
+def _first_run_for_market(cid: str, snap_idx: dict, closed_idx: dict) -> bool:
+    """True if we have never written a snapshot/closed row for this market."""
+    return (cid not in snap_idx) and (cid not in closed_idx)
+
+# ============================ Read rolling market logs ============================
 def read_unique_markets(folder_name: str) -> Dict[str, dict]:
+    """
+    Reads all logs/<folder_name>/markets_*.jsonl files,
+    returns {conditionId: {"question":..., "time_found":..., "conditionId":...}}
+    keeping the EARLIEST time_found per cid.
+    """
     out_dir = os.path.join(LOGS_DIR, folder_name)
     paths = sorted(glob.glob(os.path.join(out_dir, "markets_*.jsonl")))
     uniq = {}
@@ -232,7 +226,7 @@ def read_unique_markets(folder_name: str) -> Dict[str, dict]:
     print(f"[READ] files={len(paths)} rows≈{total} unique_by_cid={len(uniq)} bad_lines={bad}")
     return uniq
 
-# ----------------- Market meta / status -----------------
+# ============================ Market meta / status ============================
 MARKET_META_CACHE: Dict[str, dict] = {}
 
 def fetch_market_full_by_cid(cid: str) -> dict:
@@ -241,7 +235,7 @@ def fetch_market_full_by_cid(cid: str) -> dict:
     if cid in MARKET_META_CACHE and MARKET_META_CACHE[cid]:
         return MARKET_META_CACHE[cid]
     try:
-        # gamma expects 'condition_ids' plural with underscore
+        # NOTE: gamma expects 'condition_ids' (plural, underscore)
         r = http_get_with_backoff(BASE_GAMMA, params={"condition_ids": cid, "limit": 1}, timeout=15)
         rows = r.json() or []
         for m in rows:
@@ -311,7 +305,7 @@ def closed_time_iso(m: dict) -> Optional[str]:
     )
     return _iso_or_none(dt)
 
-# ----------------- Trades pulling -----------------
+# ============================ Trades pulling (paged) ============================
 def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
     params = {"market": cid, "sort": "desc", "limit": int(limit)}
     if starting_before_s is not None:
@@ -321,53 +315,7 @@ def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=No
     r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
     return r.json() or []
 
-def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_LIMIT) -> List[dict]:
-    out = []
-    starting_before = None
-    last_len = None
-
-    for _ in range(10000):
-        data = fetch_trades_page_ms(cid, limit=page_limit, starting_before_s=starting_before)
-        if not data:
-            break
-        out.extend(data)
-        oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-        if oldest_ts <= since_epoch_s:
-            break
-        starting_before = oldest_ts
-        if last_len == len(data):
-            break
-        last_len = len(data)
-
-    if (not out) or (min((_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out) > since_epoch_s):
-        offset = 0
-        for _ in range(2000):
-            data = fetch_trades_page_ms(cid, limit=page_limit, offset=offset)
-            if not data:
-                break
-            out.extend(data)
-            oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-            if oldest_ts <= since_epoch_s:
-                break
-            offset += len(data)
-
-    # de-dup and cut since; sort ASC
-    seen, uniq = set(), []
-    for t in out:
-        key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
-        if key in seen:
-            continue
-        seen.add(key); uniq.append(t)
-
-    cut = []
-    for t in uniq:
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
-        if ts >= since_epoch_s:
-            cut.append(t)
-    cut.sort(key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
-    return cut
-
-# ----------------- Multi-cap accumulation -----------------
+# ============================ Live multi-cap fill engine ============================
 def _init_caps_state(caps: List[float], max_notional: float):
     return {
         round(cap, 2): {
@@ -379,12 +327,23 @@ def _init_caps_state(caps: List[float], max_notional: float):
             "under_cap_shares": 0.0,
             "under_cap_trades": 0,
             "over_cap_trades": 0,
+            "trades_to_fill": None,  # count of NO trades (since baseline) consumed until success
         } for cap in caps
     }
 
-def _apply_trades_page_to_caps(trades: List[dict], caps_state: dict, since_epoch_s: int, lowest_holder: dict, max_notional: float):
+def _apply_trades_page_to_caps(
+    trades: List[dict],
+    caps_state: dict,
+    since_epoch_s: int,
+    lowest_holder: dict,
+    max_notional: float,
+    counters: dict
+):
     any_progress = False
-    trades_sorted = sorted(trades, key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
+    trades_sorted = sorted(
+        trades,
+        key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
+    )
     for t in trades_sorted:
         ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
         if ts < since_epoch_s:
@@ -398,6 +357,8 @@ def _apply_trades_page_to_caps(trades: List[dict], caps_state: dict, since_epoch
             continue
         if p <= 0 or s <= 0:
             continue
+
+        counters["trades_seen"] += 1  # NO-side trade since baseline
 
         if lowest_holder["lowest"] is None or p < lowest_holder["lowest"]:
             lowest_holder["lowest"] = p
@@ -419,6 +380,7 @@ def _apply_trades_page_to_caps(trades: List[dict], caps_state: dict, since_epoch
                     if st["cum_dollars"] >= max_notional - 1e-9:
                         st["fill_time"] = ts
                         st["success"] = True
+                        st["trades_to_fill"] = counters["trades_seen"]
             else:
                 st["over_cap_trades"] += 1
 
@@ -430,12 +392,15 @@ def fetch_until_caps_filled(cid: str, since_epoch_s: int, caps: List[float], max
     lowest_holder = {"lowest": None}
     starting_before = None
     last_page_len = None
+    counters = {"trades_seen": 0}
 
     for _ in range(10000):
         data = fetch_trades_page_ms(cid, limit=TRADES_PAGE_LIMIT, starting_before_s=starting_before)
         if not data:
             break
-        any_progress, all_filled = _apply_trades_page_to_caps(data, caps_state, since_epoch_s, lowest_holder, max_notional)
+        any_progress, all_filled = _apply_trades_page_to_caps(
+            data, caps_state, since_epoch_s, lowest_holder, max_notional, counters
+        )
         oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
         if all_filled:
             break
@@ -459,112 +424,16 @@ def fetch_until_caps_filled(cid: str, since_epoch_s: int, caps: List[float], max
             "under_cap_shares": round(st["under_cap_shares"], 6),
             "under_cap_trades": st["under_cap_trades"],
             "over_cap_trades": st["over_cap_trades"],
+            "trades_to_fill": st["trades_to_fill"],
         }
 
     return {
         "lowest_no_px": (round(lowest_holder["lowest"], 6) if lowest_holder["lowest"] is not None else None),
+        "trades_seen": counters["trades_seen"],
         "caps": caps_out
     }
 
-# Build caps from entire trade history (for final closed recompute)
-def build_caps_from_all_trades(trades: List[dict], since_epoch_s: int, caps: List[float], max_notional: float):
-    caps_state = _init_caps_state(caps, max_notional)
-    lowest = None
-    # sort asc by ts
-    trades_sorted = sorted(trades, key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
-    for t in trades_sorted:
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
-        if ts < since_epoch_s:
-            continue
-        if str(t.get("outcome","")).lower() != "no":
-            continue
-        p = float(t.get("price") or 0.0)
-        s = float(t.get("size")  or 0.0)
-        if p <= 0 or s <= 0:
-            continue
-        if lowest is None or p < lowest:
-            lowest = p
-        for cap, st in caps_state.items():
-            if st["success"]:
-                continue
-            if p <= cap + 1e-12:
-                st["under_cap_trades"] += 1
-                dollars = p * s
-                st["under_cap_seen"] += dollars
-                st["under_cap_shares"] += s
-                need = max(0.0, max_notional - st["cum_dollars"])
-                take = min(need, dollars)
-                if take > 0:
-                    st["cum_dollars"] += take
-                    st["shares"] += (take / p)
-                    if st["cum_dollars"] >= max_notional - 1e-9:
-                        st["fill_time"] = ts
-                        st["success"] = True
-            else:
-                st["over_cap_trades"] += 1
-
-    caps_out = {}
-    for cap, st in caps_state.items():
-        avg_px = (st["cum_dollars"] / st["shares"]) if st["shares"] > 1e-12 else None
-        caps_out[cap] = {
-            "success": st["success"],
-            "fill_time": st["fill_time"],
-            "avg_px": round(avg_px, 6) if avg_px is not None else None,
-            "shares": round(st["shares"], 6),
-            "cost": round(st["cum_dollars"], 2),
-            "under_cap_dollars_seen": round(st["under_cap_seen"], 2),
-            "under_cap_shares": round(st["under_cap_shares"], 6),
-            "under_cap_trades": st["under_cap_trades"],
-            "over_cap_trades": st["over_cap_trades"],
-        }
-    return {
-        "lowest_no_px": (round(lowest, 6) if lowest is not None else None),
-        "caps": caps_out
-    }
-
-# ----------------- "Basic" 0.40 @ $5 metrics -----------------
-def basic_fill_from_trades(trades: List[dict], since_epoch_s: int, cap: float = 0.40, bet: float = 5.0) -> Tuple[Optional[int], int]:
-    """
-    Returns (fill_time_epoch_or_None, trades_processed_count) for NO trades at/under cap
-    until cumulative dollars >= bet. Trades are processed in ascending timestamp.
-    """
-    cum = 0.0
-    count = 0
-    fill_ts = None
-    for t in sorted(trades, key=lambda x: _to_epoch_any(x.get("timestamp") or x.get("time") or x.get("ts") or 0) or 0):
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
-        if ts < since_epoch_s:  # respect time_found
-            continue
-        if str(t.get("outcome","")).lower() != "no":
-            continue
-        p = float(t.get("price") or 0.0)
-        s = float(t.get("size")  or 0.0)
-        if p <= 0 or s <= 0:
-            continue
-        if p <= cap + 1e-12:
-            count += 1
-            dollars = p * s
-            need = max(0.0, bet - cum)
-            take = min(need, dollars)
-            if take > 0:
-                cum += take
-                if cum >= bet - 1e-9 and fill_ts is None:
-                    fill_ts = ts
-                    break
-    return fill_ts, count
-
-# ----------------- Cache helpers -----------------
-def caps_cache_matches(rec: dict, caps: List[float], max_notional: float) -> bool:
-    if not rec or not rec.get("caps_cache") or not rec.get("finalized", False):
-        return False
-    if float(rec.get("max_notional", -1)) != float(max_notional):
-        return False
-    cached_caps = {float(k): v for k, v in rec["caps_cache"].items()}
-    need = set(round(c, 2) for c in caps)
-    have = set(round(c, 2) for c in cached_caps.keys())
-    return need.issubset(have)
-
-# ----------------- Overview helpers -----------------
+# ============================ Overview helpers ============================
 def mean(xs: List[float]) -> float:
     return sum(xs)/len(xs) if xs else 0.0
 
@@ -574,23 +443,26 @@ def pct(n: int, d: int) -> str:
 def print_view_overview(view_snapshots: List[dict], bet_size: float, cap: float, skipped: int, errors: int):
     n = len(view_snapshots)
     succ = sum(1 for s in view_snapshots if s.get("filled"))
+    non_active = 0  # reserved
+    lows = [s["lowest_no_px"] for s in view_snapshots if s.get("lowest_no_px") is not None]
+    under_dollars = [s.get("under_cap_dollars_seen",0.0) for s in view_snapshots]
+    under_shares  = [s.get("under_cap_shares",0.0) for s in view_snapshots]
+
     open_count = sum(1 for s in view_snapshots if s.get("status") == "TBD")
     closed_yes = sum(1 for s in view_snapshots if s.get("status") == "YES")
     closed_no  = sum(1 for s in view_snapshots if s.get("status") == "NO")
     closed_count = closed_yes + closed_no
+
     total_pl = sum(s.get("pl", 0.0) for s in view_snapshots if s.get("pl") is not None)
     closed_with_fills = sum(1 for s in view_snapshots if s.get("closed_filled") is True)
     closed_with_fills_yes = sum(1 for s in view_snapshots if s.get("closed_filled") is True and s.get("status") == "YES")
     closed_with_fills_no  = sum(1 for s in view_snapshots if s.get("closed_filled") is True and s.get("status") == "NO")
 
-    lows = [s["lowest_no_px"] for s in view_snapshots if s.get("lowest_no_px") is not None]
-    under_dollars = [s.get("under_cap_dollars_seen",0.0) for s in view_snapshots]
-    under_shares  = [s.get("under_cap_shares",0.0) for s in view_snapshots]
-
     print("\n===== PASS OVERVIEW (view cap/bet) =====")
     print(f"Markets scanned:           {n}")
     print(f"Skipped (filters):         {skipped}")
     print(f"Errors (fetch/etc):        {errors}")
+    print(f"non active markets:        {non_active}")
     print(f"Open markets:              {open_count}")
     print(f"Closed markets:        all:{closed_count}  no:{closed_no}  yes:{closed_yes}")
     print(f"Closed markets with fills: {closed_with_fills}  no:{closed_with_fills_no}  yes:{closed_with_fills_yes}")
@@ -604,32 +476,25 @@ def print_view_overview(view_snapshots: List[dict], bet_size: float, cap: float,
     else:
         print(f"Lowest(ever) NO px:        (no data)")
 
-# ----------------- Main -----------------
+# ============================ Main ============================
 def main():
-    ap = argparse.ArgumentParser(description="NO-bet scanner with final closed cache, multi-cap fills, basic=cap0.40@$5, and single-cap/bet view.")
+    ap = argparse.ArgumentParser(description="NO-bet scanner with first-run baseline= time_found, live multi-cap fills, BASIC probe, snapshots & closed caches.")
     ap.add_argument("--folder", required=False, help="Folder under logs/", default=None)
     ap.add_argument("--loop", type=int, default=0, help="Loop seconds (0=single pass)")
 
-    # view cap/bet (kept for interactive overview + logs)
+    # single-cap/bet view (kept for overview + logs)
     ap.add_argument("--bet", type=float, default=None, help="Bet size for view overview (prompted if omitted)")
     ap.add_argument("--cap", type=float, default=None, help="Cap for view overview (prompted if omitted)")
 
     # live fill controls
-    ap.add_argument("--max_notional", type=float, default=500.0, help="Max $ per cap before stopping per-market fetch")
+    ap.add_argument("--max_notional", type=float, default=500.0, help="Max $ per cap bucket before stopping fetch for that cap")
     ap.add_argument("--caps_start", type=float, default=0.20)
     ap.add_argument("--caps_stop",  type=float, default=0.80)
     ap.add_argument("--caps_step",  type=float, default=0.05)
 
-    # filtering + caching
+    # filtering
     ap.add_argument("--exclude", type=str, default="", help="Comma-separated keywords to exclude (by question text)")
-    ap.add_argument("--open_cache_max_age_days", type=float, default=2.0, help="Snapshot cache age limit for OPEN markets")
-    ap.add_argument("--recheck_all", action="store_true", help="Ignore caches and recompute for every market")
 
-    #debug
-    ap.add_argument("--debug_caps", action="store_true",
-                help="Print per-market cap spread (compact) after computing caps.")
-    ap.add_argument("--debug_caps_mode", choices=["compact","full"], default="compact",
-                help="Compact one-line summary or full multiline dump per cap.")
     args = ap.parse_args()
 
     folder = args.folder.strip() if args.folder else input("Folder name under logs/: ").strip()
@@ -658,7 +523,7 @@ def main():
 
     excluded = [x.strip().lower() for x in (args.exclude or "").split(",") if x.strip()]
 
-    # Build caps list (include the view cap to avoid re-fetch)
+    # Build caps list (include the view cap to avoid re-fetch discrepancy)
     caps = []
     x = args.caps_start
     while x <= args.caps_stop + 1e-9:
@@ -673,26 +538,32 @@ def main():
     ensure_dir(out_dir)
     snap_path     = os.path.join(out_dir, "log_market_snapshots.jsonl")   # rewritten each pass
     closed_path   = os.path.join(out_dir, "log_closed_markets.jsonl")     # rewritten each pass
-    pass_summary  = os.path.join(out_dir, "pass_summary.json")
+    pass_summary  = os.path.join(out_dir, "pass_summary.json")            # per-pass tallies for view cap
 
     print(f"{dt_iso()} Starting scan… view_cap={view_cap} bet=${bet_size:.2f} | caps={caps} max_notional={args.max_notional}")
 
     while True:
+        # present cache presence (for first-run detection)
+        snap_idx   = _read_jsonl_index(snap_path)
+        closed_idx = _read_jsonl_index(closed_path)
+
         uniq = read_unique_markets(folder)
-        print(f"\n=== NO fills (folder={folder}) | markets={len(uniq)} ===")
+        print(f"\n=== LIVE NO fills (folder={folder}) | markets={len(uniq)} ===")
 
         skipped = 0
         errors = 0
         view_snapshots = []
         view_closed_rows = []
 
-        # Load existing caches
-        closed_cache_prev   = load_jsonl_by_key(closed_path, "conditionId")
-        snapshot_cache_prev = load_jsonl_by_key(snap_path, "conditionId")
-
         for i, (cid, meta) in enumerate(uniq.items(), 1):
             q = meta["question"]
-            since_epoch = _parse_iso_to_epoch(meta["time_found"]) or 0
+            # ===== first-run baseline: always use time_found =====
+            if _first_run_for_market(cid, snap_idx, closed_idx):
+                since_epoch = _parse_iso_to_epoch(meta["time_found"]) or 0
+            else:
+                # On subsequent runs we still default to time_found for stability;
+                # you can add flags later to change this behavior (e.g., recheck/backfill).
+                since_epoch = _parse_iso_to_epoch(meta["time_found"]) or 0
 
             if excluded and any(tok in q.lower() for tok in excluded):
                 skipped += 1
@@ -712,146 +583,36 @@ def main():
                 status = "TBD"
                 closed_iso = None
 
-            # ---------- Decide source of cap results ----------
-            caps_result = None
-            lowest_no_px = None
-            basic_fill_time_epoch = None
-            basic_trades_count = 0
+            # Live multi-cap fills with early stop (baseline: since time_found)
+            try:
+                live = fetch_until_caps_filled(cid, since_epoch, caps, args.max_notional)
+            except Exception as e:
+                errors += 1
+                print(f"  [WARN trades/live] {e}")
+                continue
 
-            if args.recheck_all:
-                if status in ("YES","NO"):
-                    try:
-                        trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                        live = build_caps_from_all_trades(trades, since_epoch, caps, args.max_notional)
-                        lowest_no_px = live.get("lowest_no_px")
-                        caps_result = live["caps"]
-                        # basic: 0.40 @ $5
-                        basic_fill_time_epoch, basic_trades_count = basic_fill_from_trades(trades, since_epoch, 0.40, 5.0)
-                    except Exception as e:
-                        errors += 1
-                        print(f"  [WARN closed recompute (recheck_all)] {e}")
-                        caps_result = {c: {"success": False, "fill_time": None, "avg_px": None, "shares": 0.0, "cost": 0.0,
-                                           "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
-                                           "under_cap_trades": 0, "over_cap_trades": 0} for c in caps}
-                else:
-                    try:
-                        live = fetch_until_caps_filled(cid, since_epoch, caps, args.max_notional)
-                        lowest_no_px = live.get("lowest_no_px")
-                        caps_result = live["caps"]
-                        # for basic metrics on open, we still need trades — fetch minimally
-                        trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                        basic_fill_time_epoch, basic_trades_count = basic_fill_from_trades(trades, since_epoch, 0.40, 5.0)
-                    except Exception as e:
-                        errors += 1
-                        print(f"  [WARN open fetch (recheck_all)] {e}")
-                        caps_result = {c: {"success": False, "fill_time": None, "avg_px": None, "shares": 0.0, "cost": 0.0,
-                                           "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
-                                           "under_cap_trades": 0, "over_cap_trades": 0} for c in caps}
+            lowest_no_px = live["lowest_no_px"]
+            trades_seen  = live["trades_seen"]
+
+            # ---- Debug cap spread line
+            parts = []
+            for c in caps:
+                st = live["caps"][c]
+                p = st["avg_px"]
+                parts.append(f"{c:0.2f}:·${int(st['under_cap_dollars_seen'])}/{int(st['under_cap_shares'])}@{('--' if p is None else f'{p:0.3f}')}")
+            print("    [CAP SPREAD] " + " | ".join(parts))
+
+            # ---- BASIC quick probe (0.40 @ $5), report timestamp & trades till fill
+            basic = live["caps"].get(round(BASIC_CAP,2))
+            if basic and basic["success"] and basic["cost"] >= BASIC_DOLLARS - 1e-9:
+                ft = datetime.fromtimestamp(basic["fill_time"], tz=timezone.utc).isoformat() if basic["fill_time"] else None
+                print(f"    BASIC cap={BASIC_CAP:.2f} @ ${BASIC_DOLLARS:.0f} → filled at {ft} (NO trades_seen_to_fill={basic.get('trades_to_fill')})")
             else:
-                if status in ("YES","NO"):
-                    closed_prev = closed_cache_prev.get(cid)
-                    if caps_cache_matches(closed_prev, caps, args.max_notional):
-                        cached_caps = {float(k): v for k, v in closed_prev["caps_cache"].items()}
-                        caps_result = {c: cached_caps.get(c, {"success": False, "fill_time": None, "avg_px": None, "shares": 0.0,
-                                                              "cost": 0.0, "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
-                                                              "under_cap_trades": 0, "over_cap_trades": 0}) for c in caps}
-                        lowest_no_px = closed_prev.get("lowest_no_px")
-                        # reuse basic if present, else compute once
-                        basic_fill_time_epoch = closed_prev.get("basic_fill_time_040_5_epoch")
-                        basic_trades_count = int(closed_prev.get("basic_trades_to_fill_040_5", 0))
-                        if basic_fill_time_epoch is None:
-                            try:
-                                trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                                basic_fill_time_epoch, basic_trades_count = basic_fill_from_trades(trades, since_epoch, 0.40, 5.0)
-                            except Exception as e:
-                                errors += 1
-                                print(f"  [WARN closed basic recompute] {e}")
-                    else:
-                        try:
-                            trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                            live = build_caps_from_all_trades(trades, since_epoch, caps, args.max_notional)
-                            lowest_no_px = live.get("lowest_no_px")
-                            caps_result = live["caps"]
-                            basic_fill_time_epoch, basic_trades_count = basic_fill_from_trades(trades, since_epoch, 0.40, 5.0)
-                        except Exception as e:
-                            errors += 1
-                            print(f"  [WARN closed recompute] {e}")
-                            caps_result = {c: {"success": False, "fill_time": None, "avg_px": None, "shares": 0.0, "cost": 0.0,
-                                               "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
-                                               "under_cap_trades": 0, "over_cap_trades": 0} for c in caps}
-                else:
-                    cached_caps = None
-                    prev = snapshot_cache_prev.get(cid)
-                    if prev and prev.get("caps_cache") and prev.get("max_notional") == args.max_notional:
-                        computed_at = prev.get("computed_at")
-                        fresh_ok = False
-                        try:
-                            if computed_at:
-                                comp_dt = _parse_dt_any(computed_at)
-                                if comp_dt:
-                                    age_days = (datetime.now(timezone.utc) - comp_dt).total_seconds() / 86400.0
-                                    fresh_ok = (age_days <= args.open_cache_max_age_days)
-                        except Exception:
-                            fresh_ok = False
-                        if fresh_ok:
-                            cached_caps = {float(k): v for k,v in prev["caps_cache"].items()}
+                print(f"    BASIC cap={BASIC_CAP:.2f} @ ${BASIC_DOLLARS:.0f} → not filled since time_found (trades_seen={trades_seen})")
 
-                    if cached_caps:
-                        missing = [c for c in caps if c not in cached_caps or not cached_caps[c].get("success")]
-                        if missing:
-                            try:
-                                live = fetch_until_caps_filled(cid, since_epoch, missing, args.max_notional)
-                                lowest_no_px = live.get("lowest_no_px")
-                                caps_result = dict(cached_caps)
-                                for c in missing:
-                                    caps_result[c] = live["caps"][c]
-                            except Exception as e:
-                                errors += 1
-                                print(f"  [WARN open missing caps fetch] {e}")
-                                caps_result = dict(cached_caps)
-                        else:
-                            caps_result = dict(cached_caps)
-                        # ensure basic present (may not be in snapshot cache)
-                        try:
-                            trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                            basic_fill_time_epoch, basic_trades_count = basic_fill_from_trades(trades, since_epoch, 0.40, 5.0)
-                        except Exception as e:
-                            errors += 1
-                            print(f"  [WARN open basic compute] {e}")
-                    else:
-                        try:
-                            live = fetch_until_caps_filled(cid, since_epoch, caps, args.max_notional)
-                            lowest_no_px = live.get("lowest_no_px")
-                            caps_result = live["caps"]
-                            # need trades once to compute basic trade count reliably
-                            trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                            basic_fill_time_epoch, basic_trades_count = basic_fill_from_trades(trades, since_epoch, 0.40, 5.0)
-                        except Exception as e:
-                            errors += 1
-                            print(f"  [WARN open fetch] {e}")
-                            caps_result = {c: {"success": False, "fill_time": None, "avg_px": None, "shares": 0.0, "cost": 0.0,
-                                               "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
-                                               "under_cap_trades": 0, "over_cap_trades": 0} for c in caps}
-
-            # -------- Compute view snapshot & (optionally) realized P/L --------
-            st_view = caps_result.get(round(view_cap,2), {"success": False, "avg_px": None, "shares": 0.0, "cost": 0.0,
-                                                          "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
-                                                          "under_cap_trades": 0, "over_cap_trades": 0})
-            if args.debug_caps:
-                if args.debug_caps_mode == "compact":
-                    line = _fmt_cap_spread_line(caps_result, caps)
-                    print(f"    [CAP SPREAD] {line}")
-                else:
-                    print("    [CAP SPREAD FULL]")
-                    for c in sorted(caps):
-                        st = caps_result.get(round(c,2), {}) or {}
-                        print(f"      cap={c:.2f} success={st.get('success')} "
-                            f"cost={st.get('cost')} shares={st.get('shares')} avg_px={st.get('avg_px')} "
-                            f"under_cap_seen={st.get('under_cap_dollars_seen')} "
-                            f"under_cap_shares={st.get('under_cap_shares')} "
-                            f"under_cap_trades={st.get('under_cap_trades')} "
-                            f"over_cap_trades={st.get('over_cap_trades')}")
-            filled_view = bool(st_view.get("success"))
+            # ---- Single-cap/bet "view" snapshot
+            st_view = live["caps"][round(view_cap,2)]
+            filled_view = st_view["success"]
             pl_view = None
             closed_flag = status in ("YES","NO")
             closed_filled = bool(closed_flag and filled_view)
@@ -859,17 +620,10 @@ def main():
                 payout = st_view["shares"] * (1.0 if status == "NO" else 0.0)
                 pl_view = round(payout - st_view["cost"], 2)
 
-            # -------- Per-market output lines --------
-            # (Short per-market print)
-            print(f"    lowest NO px = {lowest_no_px} | view under_cap$: {st_view.get('under_cap_dollars_seen',0.0)} "
-                  f"shares:{st_view.get('under_cap_shares',0.0)} trades<=cap:{st_view.get('under_cap_trades',0)} "
-                  f"→ filled:{'YES' if filled_view else 'NO'}")
-            if basic_fill_time_epoch:
-                print(f"    BASIC cap=0.40 @ $5 → fill_time={datetime.fromtimestamp(basic_fill_time_epoch, tz=timezone.utc).isoformat()} trades_to_fill={basic_trades_count}")
-            else:
-                print(f"    BASIC cap=0.40 @ $5 → not filled since time_found (trades_seen={basic_trades_count})")
+            print(f"    lowest NO px = {lowest_no_px if lowest_no_px is not None else '--'} | "
+                  f"view under_cap$: {st_view['under_cap_dollars_seen']} shares:{st_view['under_cap_shares']} "
+                  f"trades<=cap: {st_view['under_cap_trades']} → filled:{'YES' if filled_view else 'NO'}")
 
-            # -------- Build snapshot row --------
             snapshot = {
                 "ts": dt_iso(),
                 "folder": folder,
@@ -881,63 +635,41 @@ def main():
                 "question": q,
                 "time_found": meta["time_found"],
                 "cap": view_cap,
-                "bet_size": bet_size,  # reference only
+                "bet_size": bet_size,  # reference only; max_notional is actual per-cap spend ceiling
                 "filled": filled_view,
-                "avg_px": st_view.get("avg_px"),
-                "shares": st_view.get("shares"),
-                "cost": st_view.get("cost"),
-                "under_cap_dollars_seen": st_view.get("under_cap_dollars_seen"),
-                "under_cap_shares": st_view.get("under_cap_shares"),
-                "under_cap_trades": st_view.get("under_cap_trades"),
-                "over_cap_trades": st_view.get("over_cap_trades"),
+                "avg_px": st_view["avg_px"],
+                "shares": st_view["shares"],
+                "cost": st_view["cost"],
+                "under_cap_dollars_seen": st_view["under_cap_dollars_seen"],
+                "under_cap_shares": st_view["under_cap_shares"],
+                "under_cap_trades": st_view["under_cap_trades"],
+                "over_cap_trades": st_view["over_cap_trades"],
                 "lowest_no_px": lowest_no_px,
                 "pl": pl_view,
-                # cache metadata for OPEN snapshot reuse
-                "caps_cache": {str(float(k)): v for k,v in caps_result.items()},
-                "max_notional": args.max_notional,
-                "cache_version": CACHE_VERSION,
-                "computed_at": dt_iso(),
-                "finalized": bool(closed_flag),
-                # BASIC metrics
-                "basic_fill_time_040_5": (datetime.fromtimestamp(basic_fill_time_epoch, tz=timezone.utc).isoformat()
-                                          if basic_fill_time_epoch else None),
-                "basic_fill_time_040_5_epoch": basic_fill_time_epoch,
-                "basic_trades_to_fill_040_5": basic_trades_count,
+                # useful debug
+                "trades_seen_since_baseline": trades_seen,
             }
             view_snapshots.append(snapshot)
 
-            # -------- If closed, prepare a closed row (finalized) --------
             if closed_flag:
-                closed_row = {
+                view_closed_rows.append({
                     "ts": dt_iso(),
                     "conditionId": cid,
                     "question": q,
                     "status": status,
                     "closed_time": closed_iso,
                     "time_found": meta["time_found"],
-                    # freeze the entire caps_result as final cache
-                    "caps_cache": {str(float(k)): v for k,v in caps_result.items()},
-                    "max_notional": args.max_notional,
-                    "cache_version": CACHE_VERSION,
-                    "computed_at": dt_iso(),
-                    "lowest_no_px": lowest_no_px,
-                    "finalized": True,
-                    # also store view info & P/L (handy)
-                    "view_cap": view_cap,
-                    "view_filled": filled_view,
-                    "view_avg_px": st_view.get("avg_px"),
-                    "view_shares": st_view.get("shares"),
-                    "view_cost": st_view.get("cost"),
-                    "view_pl": pl_view,
-                    # BASIC metrics (persist so we can reuse)
-                    "basic_fill_time_040_5": (datetime.fromtimestamp(basic_fill_time_epoch, tz=timezone.utc).isoformat()
-                                              if basic_fill_time_epoch else None),
-                    "basic_fill_time_040_5_epoch": basic_fill_time_epoch,
-                    "basic_trades_to_fill_040_5": basic_trades_count,
-                }
-                view_closed_rows.append(closed_row)
+                    "cap": view_cap,
+                    "bet_size": bet_size,
+                    "filled": filled_view,
+                    "closed_filled": closed_filled,
+                    "avg_px": st_view["avg_px"],
+                    "shares": st_view["shares"],
+                    "cost": st_view["cost"],
+                    "pl": pl_view
+                })
 
-        # ---------- Rewrite snapshot / closed ----------
+        # ---------- Rewrite snapshot / closed for view cap ----------
         snap_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in view_snapshots)
         atomic_write_text(snap_path, snap_text + ("\n" if view_snapshots else ""))
         closed_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in view_closed_rows)
@@ -948,7 +680,7 @@ def main():
         # ---------- Overview (view cap/bet) ----------
         print_view_overview(view_snapshots, bet_size=bet_size, cap=view_cap, skipped=skipped, errors=errors)
 
-        # ---------- Compact pass summary ----------
+        # ---------- Also write a compact pass summary JSON ----------
         summary = {
             "ts": dt_iso(),
             "markets_scanned": len(view_snapshots),
@@ -963,7 +695,11 @@ def main():
             "success_fills": sum(1 for s in view_snapshots if s.get("filled")),
             "realized_pl_total": round(sum(s.get("pl", 0.0) for s in view_snapshots if s.get("pl") is not None), 2),
             "lowest_no_px_min": min((s.get("lowest_no_px") for s in view_snapshots if s.get("lowest_no_px") is not None), default=None),
-            "lowest_no_px_mean": (sum(s.get("lowest_no_px") for s in view_snapshots if s.get("lowest_no_px") is not None) / max(1, sum(1 for s in view_snapshots if s.get("lowest_no_px") is not None))),
+            "lowest_no_px_mean": (
+                (sum(s.get("lowest_no_px") for s in view_snapshots if s.get("lowest_no_px") is not None) /
+                 max(1, sum(1 for s in view_snapshots if s.get("lowest_no_px") is not None)))
+                if any(s.get("lowest_no_px") is not None for s in view_snapshots) else None
+            ),
         }
         atomic_write_text(pass_summary, json.dumps(summary, ensure_ascii=False, indent=2))
         print(f"[WRITE] pass summary → {pass_summary}")
