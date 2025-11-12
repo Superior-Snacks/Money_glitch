@@ -837,6 +837,20 @@ def main():
             st_view = caps_result.get(round(view_cap,2), {"success": False, "avg_px": None, "shares": 0.0, "cost": 0.0,
                                                           "under_cap_dollars_seen": 0.0, "under_cap_shares": 0.0,
                                                           "under_cap_trades": 0, "over_cap_trades": 0})
+            if args.debug_caps:
+                if args.debug_caps_mode == "compact":
+                    line = _fmt_cap_spread_line(caps_result, caps)
+                    print(f"    [CAP SPREAD] {line}")
+                else:
+                    print("    [CAP SPREAD FULL]")
+                    for c in sorted(caps):
+                        st = caps_result.get(round(c,2), {}) or {}
+                        print(f"      cap={c:.2f} success={st.get('success')} "
+                            f"cost={st.get('cost')} shares={st.get('shares')} avg_px={st.get('avg_px')} "
+                            f"under_cap_seen={st.get('under_cap_dollars_seen')} "
+                            f"under_cap_shares={st.get('under_cap_shares')} "
+                            f"under_cap_trades={st.get('under_cap_trades')} "
+                            f"over_cap_trades={st.get('over_cap_trades')}")
             filled_view = bool(st_view.get("success"))
             pl_view = None
             closed_flag = status in ("YES","NO")
