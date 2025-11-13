@@ -524,17 +524,21 @@ def main():
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
-    snap_path   = os.path.join(out_dir, "log_market_snapshots.jsonl")   # rewritten each pass
+    open_path   = os.path.join(out_dir, "log_open_markets.jsonl")   # rewritten each pass
     closed_path = os.path.join(out_dir, "log_closed_markets.jsonl")     # rewritten each pass
 
     print(f"{dt_iso()} Starting scan…")
 
     while True:
         uniq = read_unique_markets(folder)
+        #checka closed ef closed folder, fetch úr closed !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+        #checka oppen f open, fech úr open !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+        
+        #bera saman við uniq sameina, henda dupes
         print(f"\n=== NO bet backtest (folder={folder}) | markets={len(uniq)} ===")
 
-        snapshots: List[dict] = []
-        closed_rows: List[dict] = []
+        open_markets: List[dict] = []
+        closed_markets: List[dict] = []
         skipped = 0
         errors = 0
 
@@ -548,8 +552,9 @@ def main():
                 if i % 50 == 0 or len(uniq) <= 50:
                     print(f"[{i}/{len(uniq)}] SKIP → {q}")
                 continue
-
             print(f"[{i}/{len(uniq)}] {q}  (cid={cid[:10]}…)  since={meta['time_found']}")
+
+            #checka ef closed, ef closed nota prev cap_spread !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
             try:
                 m = fetch_market_full_by_cid(cid)
                 status = current_status(m)  # 'YES', 'NO', 'TBD'
@@ -557,17 +562,21 @@ def main():
                 errors += 1
                 print(f"  [WARN meta] {e}")
                 status = "TBD"
+            
+            #checka ef það er prev cap_spread, updatea since epoc frá þeim tíma!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             try:
-                trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
+                trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)#ef of mikið af trades taka break bæta I break list og bæta við rerun
+                                                                                            #fjarlæga early end og hægja á + randomizea fech
+                                                                                            #MUNA AÐ BÆTA VIÐ CAP SREAD TIME END
             except Exception as e:
                 errors += 1
                 print(f"  [WARN trades] {e}")
                 continue
 
-            stats = try_fill_no_from_trades(trades, cap=cap, bet_size_dollars=bet_size)
+            stats = try_fill_no_from_trades(trades, cap=cap, bet_size_dollars=bet_size)#update-a til að skila cap spread fjarlægja early end
 
-            # Per-market printout
+            # Per-market printout UPDATE FYRIR INFO SEM ÉG VIL
             print(f"    lowest NO px = {stats['lowest_no_px']}  "
                   f"under_cap$: {stats['under_cap_dollars']}  shares: {stats['under_cap_shares']}  "
                   f"trades<=cap: {stats['under_cap_trades']}  trades>cap: {stats['over_cap_trades']}")
@@ -582,52 +591,44 @@ def main():
                 # NO pays 1 on NO; 0 on YES
                 payout = shares * (1.0 if status == "NO" else 0.0)
                 pl = round(payout - cost, 2)
-
-            snapshot = {
-                "ts": dt_iso(),
-                "folder": folder,
-                "status": status,                     # 'YES' | 'NO' | 'TBD'
-                "conditionId": cid,
-                "question": q,
-                "time_found": meta["time_found"],
-                "cap": cap,
-                "bet_size": bet_size,
-                # stats from fill attempt
-                **stats,
-                "pl": pl,                             # realized P/L if resolved and filled, else None
-            }
-            snapshots.append(snapshot)
+            #UPDATE FYRIR CAP SPREAD OG SPREAD TIME OG OPEN FILE OG CLOSED FILE
+            if status not in ("YES","NO"):
+                open_rows = {
+                    "ts": dt_iso(),
+                    "status": status,                     # 'YES' | 'NO' | 'TBD'
+                    "conditionId": cid,
+                    "question": q,
+                    "time_found": meta["time_found"],
+                    "cap_spread": cap_spread,
+                    "cap_ts":cap_ts
+                }
+                open_markets.append(open_rows)
 
             # If market is closed (YES/NO), write a closed row with P/L (may be None if not filled)
             if status in ("YES","NO"):
                 closed_row = {
                     "ts": dt_iso(),
+                    "status": status,                     # 'YES' | 'NO' | 'TBD'
                     "conditionId": cid,
                     "question": q,
-                    "status": status,
                     "time_found": meta["time_found"],
-                    "cap": cap,
-                    "bet_size": bet_size,
-                    "filled": bool(stats["success_fill"]),
-                    "avg_px": stats["avg_px"],
-                    "shares": stats["shares"],
-                    "cost": stats["cost"],
-                    "pl": pl,  # could be negative/positive/None if not filled
+                    "cap_spread": cap_spread,
+                    "cap_ts":cap_ts
                 }
-                closed_rows.append(closed_row)
+                closed_markets.append(closed_row)
 
         # ---------- Rewrite snapshot atomically (no growth over time) ----------
-        snap_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in snapshots)
-        atomic_write_text(snap_path, snap_text + ("\n" if snapshots else ""))
-        print(f"\n[WRITE] {len(snapshots)} snapshot rows → {snap_path} (rewritten this pass)")
+        snap_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in open_markets)
+        atomic_write_text(open_path, snap_text + ("\n" if open_markets else ""))
+        print(f"\n[WRITE] {len(open_markets)} snapshot rows → {open_path} (rewritten this pass)")
 
         # ---------- Rewrite closed-markets (with P/L) ----------
-        closed_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in closed_rows)
-        atomic_write_text(closed_path, closed_text + ("\n" if closed_rows else ""))
-        print(f"[WRITE] {len(closed_rows)} closed rows (with P/L) → {closed_path} (rewritten this pass)")
+        closed_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in closed_markets)
+        atomic_write_text(closed_path, closed_text + ("\n" if closed_markets else ""))
+        print(f"[WRITE] {len(closed_markets)} closed rows (with P/L) → {closed_path} (rewritten this pass)")
 
         # ---------- Overview ----------
-        print_overview(snapshots, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)
+        print_overview(open_markets, closed_markets, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)#add opne n closed markets logic
 
         if loop_s <= 0:
             break
