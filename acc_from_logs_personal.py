@@ -84,7 +84,7 @@ def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
         try:
             r = SESSION.get(url, params=params or {}, timeout=timeout)
         except requests.RequestException:
-            time.sleep(back + random.random()*0.2)
+            time.sleep(back + random.random()*0.4)
             back = min(back*1.7, 20.0)
             tries += 1
             if tries >= max_tries:
