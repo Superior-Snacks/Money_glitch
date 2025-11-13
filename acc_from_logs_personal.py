@@ -225,7 +225,6 @@ def _parse_dt_any(v):
     except Exception:
         return None
 
-
 def resolve_status(m: dict) -> tuple[bool, str | None, str]:
     """Return (is_resolved, winner, source_note) and print debug info."""
     print(m.get("closed")) #debug
@@ -289,16 +288,12 @@ def resolve_status(m: dict) -> tuple[bool, str | None, str]:
     print(f"[RESOLVE] Unresolved/TBD | {q}")
     return False, None, "unresolved"
 
-
 def current_status(m: dict) -> str:
     """Return 'YES', 'NO', or 'TBD'."""
     resolved, winner, src = resolve_status(m)
     if resolved and winner in ("YES", "NO"):
         return winner
     return "TBD"
-"""
-this seems to not be working !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-"""
 
 # ----------------- Trades pulling -----------------
 def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
@@ -644,3 +639,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
+breyta logic fyrir fill I fill á dict, refeer í það til að calck allt
+imoprta decision logic fra sw2-3
+hafa cap_spread reference log með timestamp fyrir seinasta trade checked, checka trades síðan þá ef of mörg trades, pull back come back later
+3 logs open, closed, cap_spread
+foundtmsp,conid,spread,spreadtmsp,tradecount,flags:status,list:trades till fill cap
+"""
