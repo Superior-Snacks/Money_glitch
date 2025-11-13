@@ -80,6 +80,7 @@ def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
     tries = 0
     last_t = time.monotonic()
     while True:
+        time.sleep(back + random.random(1,9)*0.4)
         _rate_limit()
         try:
             r = SESSION.get(url, params=params or {}, timeout=timeout)
