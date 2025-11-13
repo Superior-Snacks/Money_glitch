@@ -423,6 +423,9 @@ def fetch_all_trades_since(
     uniq.sort(key=lambda t: _epoch_from_trade(t) or 0)
     return uniq
 
+#------------------ collect shares at price -----------------
+def collect_price_shares(trades):
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # ----------------- NO-only fill + stats -----------------
 def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
     """
