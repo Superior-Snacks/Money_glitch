@@ -14,6 +14,7 @@ LOGS_DIR     = "logs"
 
 TRADES_PAGE_LIMIT = 250
 LOOP_DEFAULT_SEC  = 3600  # 0 = single pass
+cap_spread={0.3:0.0,0.35:0.0,0.4:0.0,0.45:0.0,0.5:0.0,0.55:0.0,0.6:0.0,0.65:0.0,0.7:0.0}
 
 HINT_SPREAD = 0.98           # how close to 0/1 we require for decisive winner
 FINAL_GRACE = timedelta(days=2)   # wait this long after close before trusting price-only finals
@@ -645,4 +646,5 @@ imoprta decision logic fra sw2-3
 hafa cap_spread reference log með timestamp fyrir seinasta trade checked, checka trades síðan þá ef of mörg trades, pull back come back later
 3 logs open, closed, cap_spread
 foundtmsp,conid,spread,spreadtmsp,tradecount,flags:status,list:trades till fill cap
+cap_spread={0.3:0.0,0.35:0.0,0.4:0.0,0.45:0.0,0.5:0.0,0.55:0.0,0.6:0.0,0.65:0.0,0.7:0.0}
 """
