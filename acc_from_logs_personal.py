@@ -506,6 +506,8 @@ def print_overview(snapshots: List[dict], bet_size: float, cap: float, skipped: 
 # ----------------- Main -----------------
 def main():
     folder = input("Folder name under logs/: ").strip()
+    open_folder = "log_open_markets.jsonl"
+    closed_folder = "log_closed_markets.jsonl"
     try:
         bet_size = float(input("Bet size $ [10.0]: ").strip() or "10.0")
     except:
@@ -524,14 +526,14 @@ def main():
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
-    open_path   = os.path.join(out_dir, "log_open_markets.jsonl")   # rewritten each pass
-    closed_path = os.path.join(out_dir, "log_closed_markets.jsonl")     # rewritten each pass
+    open_path   = os.path.join(out_dir, open_folder)   # rewritten each pass
+    closed_path = os.path.join(out_dir, closed_folder)     # rewritten each pass
 
     print(f"{dt_iso()} Starting scan…")
 
     while True:
         uniq = read_unique_markets(folder)
-        #checka closed ef closed folder, fetch úr closed !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+        open_from_folder = open_logs()
         #checka oppen f open, fech úr open !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
         
         #bera saman við uniq sameina, henda dupes
