@@ -533,7 +533,8 @@ def main():
 
     while True:
         uniq = read_unique_markets(folder)
-        open_from_folder = open_logs()
+        open_from_folder = open_logs(open_folder)
+        closed_from_folder = open_logs(closed_folder)
         #checka oppen f open, fech úr open !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
         
         #bera saman við uniq sameina, henda dupes
