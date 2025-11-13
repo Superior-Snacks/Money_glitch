@@ -629,7 +629,7 @@ def main():
 
         # ---------- Overview ----------
         print_overview(open_markets, closed_markets, bet_size=bet_size, cap=cap, skipped=skipped, errors=errors)#add opne n closed markets logic
-
+        #ADD RERUN FOR MARKETS WITH TOO MANY TRADES
         if loop_s <= 0:
             break
         print(f"\nSleeping {loop_s}s… (Ctrl+C to stop)")
