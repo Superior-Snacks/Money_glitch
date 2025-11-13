@@ -648,3 +648,33 @@ Lowest(ever) NO px:        min=0.0010  mean=0.6575  max=0.9990
 add multi line cap n bet to see coverage, start a "collect all markets from here on, w/get all opne for begining, tmspt when, got/created,
 make run in background when comp off get markets from the last gotten market allow to be really slow inc trade volume or smthn to see if active market" 
 
+
+Request Parameters
+Name	Required	Type	Description
+id	no	string	id of trade to fetch
+taker	no	string	address to get trades for where it is included as a taker
+maker	no	string	address to get trades for where it is included as a maker
+market	no	string	market for which to get the trades (condition ID)
+before	no	string	unix timestamp representing the cutoff up to which trades that happened before then can be included
+after	no	string	unix timestamp representing the cutoff for which trades that happened after can be included
+
+A Trade object is of the form:
+Name	Type	Description
+id	string	trade id
+taker_order_id	string	hash of taker order (market order) that catalyzed the trade
+market	string	market id (condition id)
+asset_id	string	asset id (token id) of taker order (market order)
+side	string	buy or sell
+size	string	size
+fee_rate_bps	string	the fees paid for the taker order expressed in basic points
+price	string	limit price of taker order
+status	string	trade status (see above)
+match_time	string	time at which the trade was matched
+last_update	string	timestamp of last status update
+outcome	string	human readable outcome of the trade
+maker_address	string	funder address of the taker of the trade
+owner	string	api key of taker of the trade
+transaction_hash	string	hash of the transaction where the trade was executed
+bucket_index	integer	index of bucket for trade in case trade is executed in multiple transactions
+maker_orders	MakerOrder[]	list of the maker trades the taker trade was filled against
+type	string	side of the trade: TAKER or MAKER

@@ -297,62 +297,130 @@ def current_status(m: dict) -> str:
     return "TBD"
 
 # ----------------- Trades pulling -----------------
-def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=None, offset=None):
-    params = {"market": cid, "sort": "desc", "limit": int(limit)}
-    if starting_before_s is not None:
-        params["starting_before"] = int(starting_before_s * 1000)  # ms
-    if offset is not None:
-        params["offset"] = int(offset)
+def _epoch_from_trade(t) -> Optional[int]:
+    """
+    Prefer Polymarket 'match_time' (unix seconds string), then 'last_update',
+    then any legacy 'timestamp'/'time'/'ts'. Accepts seconds or ms.
+    """
+    cand = (
+        t.get("match_time") or
+        t.get("last_update") or
+        t.get("timestamp") or
+        t.get("time") or
+        t.get("ts")
+    )
+    if cand is None:
+        return None
+    try:
+        x = float(cand)
+        if x > 1e12:  # ms -> s
+            x /= 1000.0
+        return int(x)
+    except Exception:
+        # last resort: try ISO 8601
+        try:
+            return int(datetime.fromisoformat(str(cand).replace("Z","+00:00"))
+                       .astimezone(timezone.utc).timestamp())
+        except Exception:
+            return None
+
+
+# ---------- One page using 'after'/'before' ----------
+def fetch_trades_page_ms(
+    cid: str,
+    *,
+    limit: int = TRADES_PAGE_LIMIT,
+    after: Optional[int] = None,
+    before: Optional[int] = None
+) -> List[dict]:
+    """
+    Uses Polymarket trades params:
+      market=<cid>, after=<unix_s>, before=<unix_s>, limit=<n>
+    Returns raw list (no sorting). Server order is typically ASC when using 'after'.
+    """
+    params = {"market": cid, "limit": int(limit)}
+    if after is not None:
+        params["after"] = int(after)
+    if before is not None:
+        params["before"] = int(before)
     r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
     return r.json() or []
 
-def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_LIMIT) -> List[dict]:
-    out = []
-    starting_before = None
-    last_len = None
 
-    # timestamp paging first
-    for _ in range(10000):
-        data = fetch_trades_page_ms(cid, limit=page_limit, starting_before_s=starting_before)
-        if not data:
-            break
-        out.extend(data)
-        oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-        if oldest_ts <= since_epoch_s:
-            break
-        starting_before = oldest_ts
-        if last_len == len(data):
-            break
-        last_len = len(data)
+# ---------- Full forward pagination from baseline ----------
+def fetch_all_trades_since(
+    cid: str,
+    since_epoch_s: int,
+    page_limit: int = TRADES_PAGE_LIMIT,
+    hard_cap_pages: int = 5000
+) -> List[dict]:
+    """
+    Forward-paginates with 'after' from 'since_epoch_s'.
+    Handles same-timestamp pages by bumping cursor by +1s.
+    De-dups by trade id. Returns ASC by _epoch_from_trade(t).
+    """
+    cursor = int(since_epoch_s)
+    seen_ids: set = set()
+    uniq: List[dict] = []
+    last_total = 0
+    stagnant_pages = 0
 
-    # offset fallback
-    if (not out) or (min((_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out) > since_epoch_s):
-        offset = 0
-        for _ in range(2000):
-            data = fetch_trades_page_ms(cid, limit=page_limit, offset=offset)
-            if not data:
+    for _ in range(hard_cap_pages):
+        page = fetch_trades_page_ms(cid, limit=page_limit, after=cursor)
+        if not page:
+            break
+
+        # collect + de-dup
+        added = 0
+        max_ts_on_page: Optional[int] = None
+
+        for t in page:
+            tid = t.get("id")
+            if not tid:
+                # composite fallback key if id missing
+                tid = f"{t.get('taker_order_id')}-{t.get('market')}-{t.get('price')}-{t.get('size')}-{t.get('side')}-{t.get('outcome')}-{t.get('bucket_index')}"
+            if tid in seen_ids:
+                continue
+
+            ts = _epoch_from_trade(t)
+            if ts is None:
+                continue
+            # Only keep trades at/after baseline
+            if ts < since_epoch_s:
+                continue
+
+            seen_ids.add(tid)
+            uniq.append(t)
+            added += 1
+            if (max_ts_on_page is None) or (ts > max_ts_on_page):
+                max_ts_on_page = ts
+
+        # Advance cursor.
+        # If the newest trade had the same timestamp as cursor, bump by +1s to avoid looping.
+        if max_ts_on_page is None:
+            # page had no valid times >= baseline; advance by +1 to try to escape
+            cursor += 1
+        else:
+            cursor = max(cursor, max_ts_on_page)
+            cursor += 1  # ensure strictly-after on next request
+
+        # Simple stagnation detection (no growth across pages)
+        if len(uniq) == last_total:
+            stagnant_pages += 1
+            if stagnant_pages >= 3:
+                # three pages in a row with no growth → likely we're stuck at the frontier
                 break
-            out.extend(data)
-            oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-            if oldest_ts <= since_epoch_s:
-                break
-            offset += len(data)
+        else:
+            stagnant_pages = 0
+            last_total = len(uniq)
 
-    # de-dup and cut since; then sort ASC by timestamp
-    seen, uniq = set(), []
-    for t in out:
-        key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
-        if key in seen: 
-            continue
-        seen.add(key); uniq.append(t)
+        # soft stop if short page (likely no more after this)
+        if len(page) < page_limit:
+            break
 
-    cut = []
-    for t in uniq:
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
-        if ts >= since_epoch_s:
-            cut.append(t)
-    cut.sort(key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
-    return cut
+    # Sort ASC by our normalized epoch for downstream logic
+    uniq.sort(key=lambda t: _epoch_from_trade(t) or 0)
+    return uniq
 
 # ----------------- NO-only fill + stats -----------------
 def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
@@ -532,12 +600,17 @@ def main():
     print(f"{dt_iso()} Starting scan…")
 
     while True:
-        uniq = read_unique_markets(folder)
+        markets_from_folders = read_unique_markets(folder)
         open_from_folder = open_logs(open_folder)
         closed_from_folder = open_logs(closed_folder)
-        #checka oppen f open, fech úr open !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-        
-        #bera saman við uniq sameina, henda dupes
+        temp = closed_from_folder + open_from_folder
+        taken_cids = {m["conditionId"] for m in temp}
+
+        uniq = {
+            cid: meta
+            for cid, meta in markets_from_folders.items()
+            if cid not in taken_cids
+        }
         print(f"\n=== NO bet backtest (folder={folder}) | markets={len(uniq)} ===")
 
         open_markets: List[dict] = []
@@ -557,7 +630,13 @@ def main():
                 continue
             print(f"[{i}/{len(uniq)}] {q}  (cid={cid[:10]}…)  since={meta['time_found']}")
 
-            #checka ef closed, ef closed nota prev cap_spread !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+            #checka ef closed, ef closed nota prev cap_spread !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            try:
+                if meta["status"] in ["YES", "NO", "TBD"]:
+                    continue
+            except:
+                continue#EKIII BÚIÐ FUCKING LAGA PLIZZZ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                
             try:
                 m = fetch_market_full_by_cid(cid)
                 status = current_status(m)  # 'YES', 'NO', 'TBD'
@@ -566,7 +645,11 @@ def main():
                 print(f"  [WARN meta] {e}")
                 status = "TBD"
             
-            #checka ef það er prev cap_spread, updatea since epoc frá þeim tíma!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            try:
+                if meta["cap_ts"]:
+                    since_epoch = _parse_iso_to_epoch(meta["cap_ts"]) or 0
+            except:
+                continue
 
             try:
                 trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)#ef of mikið af trades taka break bæta I break list og bæta við rerun
