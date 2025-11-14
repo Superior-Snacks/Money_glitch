@@ -5,6 +5,9 @@ from typing import List, Tuple
 
 LOGS_DIR = "logs"
 
+# Toggle this if you want to silence debug later
+DEBUG = True
+
 
 def dt_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -30,7 +33,8 @@ def load_rows(path: str) -> List[dict]:
 def get_cap_entry(row: dict, cap: float) -> Tuple[float, float, int]:
     """
     For a given market row and cap, return (shares, dollars, trades)
-    for that cap. All values default to 0 if missing.
+    at that cap. 'dollars' here is the total cost you'd pay if you
+    bought all NO-shares under this cap at actual trade prices.
     """
     spread = row.get("cap_spread") or {}
     caps_dict = spread.get("caps") or {}
@@ -45,7 +49,7 @@ def get_cap_entry(row: dict, cap: float) -> Tuple[float, float, int]:
     except Exception:
         shares = 0.0
     try:
-        dollars = float(st.get("dollars", 0.0))
+        dollars = float(st.get("dollars", 0.0))  # cost if you bought all that NO
     except Exception:
         dollars = 0.0
     try:
@@ -56,7 +60,28 @@ def get_cap_entry(row: dict, cap: float) -> Tuple[float, float, int]:
     return shares, dollars, trades
 
 
-def build_status_report(folder: str, cap: float) -> str:
+def build_status_report(folder: str, cap: float, bet: float) -> str:
+    """
+    BUY-NO strategy with fixed bet:
+
+      • You place a limit BUY order for NO at price 'cap'.
+      • You are willing to spend at most 'bet' dollars in that market.
+      • From the trade history, cap_spread gives us:
+            full_shares, full_cost (dollars)
+        = "what if you bought ALL NO under this cap".
+
+      • We then compute:
+            effective_cost = min(bet, full_cost)
+            scale         = effective_cost / full_cost
+            eff_shares    = full_shares * scale
+
+      • P/L per market:
+            If market resolves NO:  P/L = eff_shares - effective_cost
+            If market resolves YES: P/L = -effective_cost
+
+      • Max loss per market = effective_cost <= bet
+      • If full_cost < bet: you are only partially filled (couldn't spend full bet).
+    """
     out_dir = os.path.join(LOGS_DIR, folder)
     open_path = os.path.join(out_dir, "log_open_markets_cap_spread.jsonl")
     closed_path = os.path.join(out_dir, "log_closed_markets_cap_spread.jsonl")
@@ -66,9 +91,10 @@ def build_status_report(folder: str, cap: float) -> str:
     all_rows = open_rows + closed_rows
 
     lines: List[str] = []
-    lines.append("=== PROJECT STATUS REPORT (MAKER NO) ===")
+    lines.append("=== PROJECT STATUS REPORT (BUY NO, LIMIT MAKER, FIXED BET) ===")
     lines.append(f"Folder: {folder}")
     lines.append(f"Cap under analysis: {cap:.3f}")
+    lines.append(f"Max spend per market (bet): {bet:.2f}")
     lines.append(f"Generated at: {dt_iso()}")
     lines.append("")
 
@@ -94,74 +120,135 @@ def build_status_report(folder: str, cap: float) -> str:
     lines.append(f"  Closed (YES/NO):  {closed_markets}")
     lines.append("")
 
-    # ---- Cap-specific stats ----
-    filled_markets = 0
+    # ---- Cap-specific stats (using effective bet per market) ----
+    filled_markets = 0              # markets where you actually spend >0 at this cap
     filled_open_markets = 0
     filled_closed_markets = 0
 
     closed_no_trades = 0
     open_no_trades = 0
 
-    realized_pl = 0.0          # maker-NO realized P/L (closed markets only)
-    total_premium = 0.0        # Σ dollars over all filled markets
-    total_shares = 0.0         # Σ shares over all filled markets
+    realized_pl = 0.0               # realized P/L on closed entered markets
+    total_cost = 0.0                # Σ effective_cost over all entered markets
+    total_shares = 0.0              # Σ eff_shares over all entered markets
 
-    cost_entered_markets = 0.0  # Σ (shares - dollars) over all filled markets (max risk ever taken)
-    locked_money_open = 0.0     # Σ (shares - dollars) over OPEN filled markets
+    cost_entered_markets = 0.0      # same as total_cost
 
-    profitable_markets = 0      # closed filled markets with pl >= 0
-    losing_markets = 0          # closed filled markets with pl < 0
+    locked_money_open = 0.0         # Σ effective_cost over OPEN entered markets
 
-    # For win-rate as “NO wins vs YES wins” among filled closed markets
-    closed_no_filled = 0        # closed markets (with fills) that resolved NO
-    closed_yes_filled = 0       # closed markets (with fills) that resolved YES
+    profitable_markets = 0          # closed entered markets with pl >= 0
+    losing_markets = 0              # closed entered markets with pl < 0
+
+    closed_no_filled = 0            # closed entered markets that resolved NO
+    closed_yes_filled = 0           # closed entered markets that resolved YES
+
+    # ---- Per-market debug header ----
+    if DEBUG:
+        print("\n=== PER-MARKET DEBUG (BUY NO, cap={:.3f}, bet={:.2f}) ===".format(cap, bet))
 
     for r in all_rows:
+        cid = r.get("conditionId", "unknown")
+        q = r.get("question", "").strip()
         status = r.get("status")
         is_closed = status in ("YES", "NO")
         is_open = not is_closed
 
-        shares, dollars, trades = get_cap_entry(r, cap)
+        full_shares, full_cost, trades = get_cap_entry(r, cap)
+        has_liquidity = (trades > 0) or (full_shares > 0) or (full_cost > 0)
 
-        has_trades = (trades > 0) or (shares > 0) or (dollars > 0)
+        debug_info = {
+            "cid": cid,
+            "status": status,
+            "has_liq": has_liquidity,
+            "full_shares": full_shares,
+            "full_cost": full_cost,
+            "trades": trades,
+            "entered": False,
+            "effective_cost": 0.0,
+            "scale": 0.0,
+            "eff_shares": 0.0,
+            "pl_if_NO": 0.0,
+            "pl_if_YES": 0.0,
+            "reason": "",
+        }
 
-        if is_closed and not has_trades:
+        if is_closed and not has_liquidity:
             closed_no_trades += 1
-        if is_open and not has_trades:
+            debug_info["reason"] = "closed_no_liquidity"
+        if is_open and not has_liquidity:
             open_no_trades += 1
+            if not debug_info["reason"]:
+                debug_info["reason"] = "open_no_liquidity"
 
-        if not has_trades:
-            continue  # nothing happened at this cap in this market
+        if not has_liquidity:
+            if DEBUG:
+                print(f"[DEBUG] cid={cid[:10]} status={status:3} → no liquidity at cap; skipped")
+            continue  # nothing available at this cap in this market
 
-        # This market had fills at this cap
+        if full_cost <= 0:
+            debug_info["reason"] = "full_cost<=0"
+            if DEBUG:
+                print(
+                    f"[DEBUG] cid={cid[:10]} status={status:3} "
+                    f"full_shares={full_shares:.4f} full_cost={full_cost:.4f} → invalid full_cost; skipped"
+                )
+            continue  # degenerate case
+
+        # You don't spend more than bet
+        effective_cost = min(bet, full_cost)
+        if effective_cost <= 0:
+            debug_info["reason"] = "effective_cost<=0"
+            if DEBUG:
+                print(
+                    f"[DEBUG] cid={cid[:10]} status={status:3} full_cost={full_cost:.4f} "
+                    f"→ effective_cost={effective_cost:.4f} <= 0; skipped"
+                )
+            continue  # should not happen given bet > 0
+
+        scale = effective_cost / full_cost
+        eff_shares = full_shares * scale
+
+        # P/L if NO and if YES for this hypothetical position
+        pl_if_NO = eff_shares - effective_cost
+        pl_if_YES = -effective_cost
+
+        debug_info.update(
+            {
+                "entered": True,
+                "effective_cost": effective_cost,
+                "scale": scale,
+                "eff_shares": eff_shares,
+                "pl_if_NO": pl_if_NO,
+                "pl_if_YES": pl_if_YES,
+            }
+        )
+
+        if DEBUG:
+            print(
+                f"[DEBUG] cid={cid[:10]} status={status:3} "
+                f"liq=True full_shares={full_shares:.4f} full_cost={full_cost:.4f} trades={trades} | "
+                f"eff_cost={effective_cost:.4f} scale={scale:.4f} eff_shares={eff_shares:.4f} | "
+                f"PL_if_NO={pl_if_NO:.4f} PL_if_YES={pl_if_YES:.4f}"
+            )
+
+        # Aggregate stats now use eff_shares and effective_cost
         filled_markets += 1
-        total_premium += dollars
-        total_shares += shares
-
-        # Max risk for maker NO at this cap for this market
-        max_risk = shares - dollars  # (1 - p)*s summed across trades
-
-        cost_entered_markets += max_risk
+        total_cost += effective_cost
+        total_shares += eff_shares
+        cost_entered_markets += effective_cost
 
         if is_open:
             filled_open_markets += 1
-            locked_money_open += max_risk
+            locked_money_open += effective_cost  # max loss if YES
         else:
             filled_closed_markets += 1
 
-            # Track resolution side for win-rate among filled closed markets
             if status == "NO":
                 closed_no_filled += 1
+                pl_mkt = pl_if_NO
             else:  # YES
                 closed_yes_filled += 1
-
-            # Realized P/L for maker NO:
-            #   Closed NO:   P/L = +premium
-            #   Closed YES:  P/L = premium - shares
-            if status == "NO":
-                pl_mkt = dollars
-            else:  # YES
-                pl_mkt = dollars - shares
+                pl_mkt = pl_if_YES
 
             realized_pl += pl_mkt
             if pl_mkt >= 0:
@@ -170,110 +257,106 @@ def build_status_report(folder: str, cap: float) -> str:
                 losing_markets += 1
 
     # ---- Summary section: cap-specific counts ----
-    lines.append("=== CAP-SPECIFIC COUNTS (at this cap) ===")
+    lines.append("=== CAP-SPECIFIC COUNTS (at this cap, with bet) ===")
     lines.append(f"Cap: {cap:.3f}")
-    lines.append(f"Markets with ANY fills at this cap: {filled_markets}")
-    lines.append(f"  Filled OPEN markets:   {filled_open_markets}")
-    lines.append(f"  Filled CLOSED markets: {filled_closed_markets}")
-    lines.append(f"Closed markets with NO trades at this cap: {closed_no_trades}")
-    lines.append(f"Open markets with NO trades at this cap:   {open_no_trades}")
+    lines.append(f"Markets you WOULD HAVE ENTERED at this cap: {filled_markets}")
+    lines.append(f"  Entered OPEN markets:   {filled_open_markets}")
+    lines.append(f"  Entered CLOSED markets: {filled_closed_markets}")
+    lines.append(f"Closed markets with NO liquidity at this cap: {closed_no_trades}")
+    lines.append(f"Open markets with NO liquidity at this cap:   {open_no_trades}")
     lines.append("")
 
     # ---- Money / risk / P&L ----
-    avg_price = (total_premium / total_shares) if total_shares > 0 else 0.0
-    avg_risk_per_filled = (cost_entered_markets / filled_markets) if filled_markets > 0 else 0.0
+    avg_price = (total_cost / total_shares) if total_shares > 0 else 0.0
+    avg_cost_per_entered = (cost_entered_markets / filled_markets) if filled_markets > 0 else 0.0
 
-    # New metrics:
-    # 1) Win-rate (NO vs YES) among filled closed markets
     if filled_closed_markets > 0:
         win_rate_no = closed_no_filled / filled_closed_markets
-    else:
-        win_rate_no = 0.0
-
-    # 2) P/L per filled closed market
-    if filled_closed_markets > 0:
         pl_per_closed_market = realized_pl / filled_closed_markets
     else:
+        win_rate_no = 0.0
         pl_per_closed_market = 0.0
 
-    # 3) Premium efficiency: realized P/L / total risk ever taken
     if cost_entered_markets > 0:
-        premium_efficiency = realized_pl / cost_entered_markets
+        efficiency = realized_pl / cost_entered_markets
     else:
-        premium_efficiency = 0.0
+        efficiency = 0.0
 
-    lines.append("=== MONEY / RISK / P&L (maker NO, this cap) ===")
-    lines.append(f"Total premium collected (all filled mkts): {total_premium:.2f}")
-    lines.append(f"Total shares sold (all filled mkts):       {total_shares:.2f}")
-    lines.append(f"Average effective price:                   {avg_price:.4f}")
+    lines.append("=== MONEY / RISK / P&L (BUY NO, this cap, with bet) ===")
+    lines.append(f"Total cost spent (entered markets):         {total_cost:.2f}")
+    lines.append(f"Total NO-shares bought (entered markets):   {total_shares:.2f}")
+    lines.append(f"Average effective NO price:                 {avg_price:.4f}")
     lines.append("")
-    lines.append(f"Realized P/L (closed filled markets only): {realized_pl:.2f}")
+    lines.append(f"Realized P/L (entered closed markets only): {realized_pl:.2f}")
     lines.append(
-        f"  Profitable closed markets: {profitable_markets}, "
-        f"Losing closed markets: {losing_markets}"
+        f"  Profitable entered closed markets: {profitable_markets}, "
+        f"Losing entered closed markets: {losing_markets}"
     )
     lines.append(
-        f"  Win-rate (NO wins among filled closed mkts): "
+        f"  Win-rate (NO wins among entered closed mkts): "
         f"{win_rate_no*100:.2f}%  "
         f"(NO={closed_no_filled}, YES={closed_yes_filled})"
     )
     lines.append(
-        f"  Avg P/L per filled closed market:       {pl_per_closed_market:.2f}"
+        f"  Avg P/L per entered closed market:       {pl_per_closed_market:.2f}"
     )
     lines.append(
-        f"  Premium efficiency (realized P/L / total risk): "
-        f"{premium_efficiency:.4f}"
+        f"  Efficiency (realized P/L / total cost):  {efficiency:.4f}"
     )
     lines.append("")
     lines.append(
-        "Cost of entered markets (max risk ever taken across all filled markets): "
-        f"{cost_entered_markets:.2f}  (Σ(shares - dollars))"
+        "Total money put at risk in ALL entered markets (sum of actual spend): "
+        f"{cost_entered_markets:.2f}"
     )
     lines.append(
-        "Locked money NOW (open positions only, worst-case if all go YES): "
+        "Locked money NOW (open entered positions only, you lose this if all go YES): "
         f"{locked_money_open:.2f}"
     )
     lines.append(
-        "Average max risk per filled market: "
-        f"{avg_risk_per_filled:.2f}"
+        "Average cost per entered market: "
+        f"{avg_cost_per_entered:.2f}"
     )
     lines.append("")
 
-    lines.append("Note:")
-    lines.append("  • 'Win-rate' here is the fraction of filled closed markets that resolved NO,")
-    lines.append("    i.e. where your maker-NO side was correct.")
-    lines.append("  • 'Premium efficiency' is how many P/L dollars you got per dollar of total")
-    lines.append("    risk (Σ(shares - dollars)). It’s a crude efficiency ratio, not annualized.")
-    lines.append("  • 'Cost of entered markets' is the total historical max loss exposure")
-    lines.append("    for this cap strategy (over all markets where you actually had fills).")
-    lines.append("  • 'Locked money NOW' is current worst-case loss if every open filled")
-    lines.append("    market resolved YES from here.")
+    lines.append("Notes:")
+    lines.append("  • This assumes you BUY NO with a limit price 'cap' and max spend 'bet' per market.")
+    lines.append("  • 'full_cost' is what you'd spend if you bought ALL NO under that cap.")
+    lines.append("  • 'effective_cost' is min(bet, full_cost); you never spend more than bet.")
+    lines.append("  • Per-market debug shows PL_if_NO and PL_if_YES for that effective position.")
     lines.append("")
 
     return "\n".join(lines)
 
 
 def main():
-    #folder = input("Folder name under logs/: ").strip()
-    folder = "gather_markets"
+    folder = input("Folder name under logs/: ").strip()
     if not folder:
         print("Need a folder name.")
         return
 
-    #cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
-    cap_str = "0.4"
+    cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
     try:
         cap = float(cap_str)
     except ValueError:
         print("Invalid cap.")
         return
 
-    report = build_status_report(folder, cap)
+    bet_str = input("Max spend per market (bet), e.g. 30: ").strip()
+    try:
+        bet = float(bet_str)
+    except ValueError:
+        print("Invalid bet.")
+        return
+    if bet <= 0:
+        print("Bet must be > 0.")
+        return
+
+    report = build_status_report(folder, cap, bet)
     print(report)
 
     out_dir = os.path.join(LOGS_DIR, folder)
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"status_report_cap_{cap:.3f}.txt")
+    out_path = os.path.join(out_dir, f"status_report_cap_{cap:.3f}_bet_{bet:.2f}.txt")
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(report)
