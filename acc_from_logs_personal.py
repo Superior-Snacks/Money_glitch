@@ -784,15 +784,10 @@ def main():
                 continue
             cap_spread = collect_cap_spread(trades)
             # Per-market printout UPDATE FYRIR INFO SEM ÉG VIL
-            print(f"    lowest NO px = {stats['lowest_no_px']}  "
-                  f"under_cap$: {stats['under_cap_dollars']}  shares: {stats['under_cap_shares']}  "
-                  f"trades<=cap: {stats['under_cap_trades']}  trades>cap: {stats['over_cap_trades']}")
-            print(f"    SUCCESS FILL @ ${bet_size}: {'YES' if stats['success_fill'] else 'NO'}"
-                  + (f"  avg_px={stats['avg_px']}  fill_time={datetime.fromtimestamp(stats['fill_time'], tz=timezone.utc).isoformat()}" if stats['success_fill'] else ""))
-
+            #TODO SANITY PRINT FOR AFTER CAP SPREAD COLLECTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
             # Compute realized P/L if resolved and we had a filled position
             pl = None
-            if stats["success_fill"] and status in ("YES","NO"):
+            if  and status in ("YES","NO"):
                 cost   = float(stats["cost"])
                 shares = float(stats["shares"])
                 # NO pays 1 on NO; 0 on YES
@@ -806,8 +801,7 @@ def main():
                     "conditionId": cid,
                     "question": q,
                     "time_found": meta["time_found"],
-                    "cap_spread": cap_spread,
-                    "cap_ts":cap_ts
+                    "cap_spread": cap_spread
                 }
                 open_markets.append(open_rows)
 
@@ -819,8 +813,7 @@ def main():
                     "conditionId": cid,
                     "question": q,
                     "time_found": meta["time_found"],
-                    "cap_spread": cap_spread,
-                    "cap_ts":cap_ts
+                    "cap_spread": cap_spread
                 }
                 closed_markets.append(closed_row)
 
