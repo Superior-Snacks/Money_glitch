@@ -132,9 +132,22 @@ def _parse_iso_to_epoch(s: Optional[str]) -> Optional[int]:
 def _to_epoch_any(x):
     try:
         f = float(x)
+        # if ms
         return int(f/1000) if f > 1e12 else int(f)
     except Exception:
-        return None
+        pass
+    if isinstance(x, str):
+        s = x.strip().replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            else:
+                dt = dt.astimezone(timezone.utc)
+            return int(dt.timestamp())
+        except Exception:
+            return None
+    return None
 
 # ----------------- FS helpers -----------------
 def ensure_dir(p):
@@ -436,8 +449,91 @@ def fetch_all_trades_since(
     return uniq
 
 #------------------ collect shares at price -----------------
-def collect_price_shares(trades):
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+def collect_price_shares(
+    trades: List[dict],
+    caps: List[float],
+    since_epoch: int = 0,
+    prev_spread: Optional[dict] = None,
+) -> dict:
+    """
+    Build (or update) a maker-style cap spread for a single market.
+
+    Logic:
+      - Only considers NO-side trades
+      - Only trades with ts >= since_epoch
+      - For each trade (price p, size s), it adds liquidity to all caps c where c >= p
+        because a maker posting NO at any cap <= c would have been hit.
+    """
+    # Normalize caps and ensure sorted ascending
+    caps = sorted({round(c, 3) for c in caps})
+
+    # Initialize spread
+    if prev_spread is None:
+        spread = {
+            "last_trade_ts": since_epoch,
+            "caps": {
+                c: {"shares": 0.0, "dollars": 0.0, "trades": 0}
+                for c in caps
+            },
+        }
+    else:
+        # Shallow copy to avoid mutating caller's dict accidentally
+        spread = {
+            "last_trade_ts": prev_spread.get("last_trade_ts", since_epoch),
+            "caps": {}
+        }
+        # Ensure all caps exist (old spread might have fewer or differently rounded caps)
+        prev_caps = prev_spread.get("caps", {})
+        for c in caps:
+            state = prev_caps.get(c, {})
+            spread["caps"][c] = {
+                "shares": float(state.get("shares", 0.0)),
+                "dollars": float(state.get("dollars", 0.0)),
+                "trades": int(state.get("trades", 0)),
+            }
+
+    # Process trades in ascending time order
+    trades_sorted = sorted(trades, key=trade_ts)
+
+    last_ts = spread["last_trade_ts"] or since_epoch
+
+    for t in trades_sorted:
+        ts = trade_ts(t)
+        if ts < since_epoch:
+            continue
+        # If you only want strictly new trades on rerun, also do:
+        if ts <= last_ts:
+            continue
+
+        # Only NO-side trades
+        outcome = (t.get("outcome") or "").strip().lower()
+        if outcome != "no":
+            continue
+
+        # Price / size
+        try:
+            p = float(t.get("price") or 0.0)
+            s = float(t.get("size")  or 0.0)
+        except Exception:
+            continue
+        if p <= 0 or s <= 0:
+            continue
+
+        notional = p * s
+
+        # Add to all caps >= price (because maker cap <= cap would have been filled)
+        for c in caps:
+            if c + 1e-12 >= p:  # cap >= trade price
+                st = spread["caps"][c]
+                st["shares"]  += s
+                st["dollars"] += notional
+                st["trades"]  += 1
+
+        # track newest trade time
+        if ts > spread["last_trade_ts"]:
+            spread["last_trade_ts"] = ts
+
+    return spread
 # ----------------- NO-only fill + stats -----------------
 def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
     """
