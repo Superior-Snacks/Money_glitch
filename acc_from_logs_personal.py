@@ -195,6 +195,19 @@ def read_unique_markets(folder_name: str) -> Dict[str, dict]:
     print(f"[READ] files={len(paths)} rows≈{total} unique_by_cid={len(uniq)} bad_lines={bad}")
     return uniq
 
+def open_logs(file_path):
+    bucket = []
+    with open(file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    total += 1
+                    try:
+                        rec = json.loads(line)
+                    except Exception:
+                        bad += 1
+                        continue
+                    bucket.append(rec)
+    return bucket
+
 # ----------------- Market meta / status -----------------
 MARKET_META_CACHE: Dict[str, dict] = {}
 
