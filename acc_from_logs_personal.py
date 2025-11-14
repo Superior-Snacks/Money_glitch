@@ -6,7 +6,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ----------------- Constants -----------------
+# ======================= Config / Constants =======================
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
 DATA_TRADES  = "https://data-api.polymarket.com/trades"
 LOGS_DIR     = "logs"
@@ -14,16 +14,20 @@ LOGS_DIR     = "logs"
 TRADES_PAGE_LIMIT = 250
 LOOP_DEFAULT_SEC  = 3600  # 0 = single pass
 
-HINT_SPREAD = 0.98                 # how close to 0/1 we require for decisive winner
-FINAL_GRACE = timedelta(days=2)    # wait this long after close before trusting price-only finals
+# For determining closed winners when explicit winner not present
+HINT_SPREAD = 0.98
+FINAL_GRACE = timedelta(days=2)
 
-# Rate limiting with adaptive scale
-RPS_TARGET            = 1.0   # average allowed requests per second for THIS script
-_RPS_SCALE            = 1.0
-_RPS_MIN              = 0.2   # if we get hammered with 429s, we can drop to 0.2 rps
-_RPS_RECOVER_PER_SEC  = 0.01  # slow recovery so we don't bounce back too fast
+# Adaptive rate limit
+RPS_TARGET           = 3.0   # slightly conservative
+_RPS_SCALE           = 1.0
+_RPS_MIN             = 0.3
+_RPS_RECOVER_PER_SEC = 0.03
 
-# ----------------- Session + pacing -----------------
+# Caps for maker-style spread
+CAPS = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
+
+# ======================= HTTP session / pacing ====================
 def make_session():
     s = requests.Session()
     retry = Retry(
@@ -36,16 +40,13 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=40, pool_maxsize=40)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "pm-no-bet-scan/cap-spread-cache-1.0"})
+    s.headers.update({"User-Agent": "pm-maker-cap-spread/1.0"})
     return s
 
 SESSION = make_session()
 _last_tokens_ts = time.monotonic()
 _bucket = RPS_TARGET
-
-_HTTP_CALLS = 0
-_HTTP_429S  = 0
-_LAST_HEARTBEAT = time.monotonic()
+_num_429 = 0   # for heartbeat
 
 def _rate_limit():
     global _last_tokens_ts, _bucket, _RPS_SCALE
@@ -62,7 +63,8 @@ def _rate_limit():
     _bucket -= 1.0
 
 def _rps_on_429():
-    global _RPS_SCALE
+    global _RPS_SCALE, _num_429
+    _num_429 += 1
     _RPS_SCALE = max(_RPS_MIN, _RPS_SCALE * 0.7)
 
 def _rps_recover(dt_sec: float):
@@ -79,90 +81,56 @@ def _retry_after_seconds(resp) -> float:
 
 def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
     """
-    Very conservative HTTP GET with:
-      - token-bucket rate limiting (RPS_TARGET)
-      - exponential backoff on errors
-      - special handling + logging for 429s
-      - heartbeat logging every ~60s
+    Very conservative HTTP GET with backoff + token-bucket RPS limiting,
+    and prints when we hit 429.
     """
-    global _HTTP_CALLS, _HTTP_429S, _LAST_HEARTBEAT
-
     back = 0.5
     tries = 0
     last_t = time.monotonic()
 
     while True:
-        _HTTP_CALLS += 1
-
-        # Heartbeat every ~60 seconds
-        now_hb = time.monotonic()
-        if now_hb - _LAST_HEARTBEAT > 60:
-            print(
-                f"[HEARTBEAT] http_calls={_HTTP_CALLS} 429s={_HTTP_429S} "
-                f"rps_target={RPS_TARGET:.2f} rps_scale={_RPS_SCALE:.3f}"
-            )
-            _LAST_HEARTBEAT = now_hb
-
-        # Global rate limiter
         _rate_limit()
-
         try:
             r = SESSION.get(url, params=params or {}, timeout=timeout)
         except requests.RequestException as e:
-            tries += 1
-            print(f"[HTTP ERROR] {type(e).__name__} on {url} try={tries}/{max_tries} back={back:.2f}s")
+            print(f"      [HTTP EXC] {e} → sleeping {back:.1f}s")
             time.sleep(back + random.random()*0.4)
-            back = min(back * 1.7, 20.0)
+            back = min(back*1.7, 20.0)
+            tries += 1
             if tries >= max_tries:
                 raise
             continue
 
-        status = r.status_code
-
-        # SUCCESS
-        if status < 400:
+        if r.status_code < 400:
             now = time.monotonic()
             _rps_recover(now - last_t)
             return r
 
-        # 429: Too Many Requests
-        if status == 429:
-            _HTTP_429S += 1
+        if r.status_code == 429:
             _rps_on_429()
             ra = _retry_after_seconds(r)
             sleep_s = max(ra, back) + random.random()*0.3
-            print(
-                f"[HTTP 429] url={url} try={tries+1}/{max_tries} "
-                f"Retry-After={ra:.2f}s sleep={sleep_s:.2f}s "
-                f"rps_scale→{_RPS_SCALE:.3f}"
-            )
+            print(f"      [429] rate limited → sleeping {sleep_s:.1f}s (tries={tries+1})")
             time.sleep(sleep_s)
-            back = min(back * 1.8, 30.0)
+            back = min(back*1.8, 30.0)
             tries += 1
             if tries >= max_tries:
-                print("[HTTP 429] max_tries reached, raising.")
                 r.raise_for_status()
             continue
 
-        # 5xx: server errors (we backoff, but log)
-        if 500 <= status < 600:
-            tries += 1
-            print(
-                f"[HTTP {status}] server error on {url} try={tries}/{max_tries} "
-                f"back={back:.2f}s"
-            )
+        if 500 <= r.status_code < 600:
+            print(f"      [5xx] status={r.status_code} → sleeping {back:.1f}s")
             time.sleep(back + random.random()*0.2)
-            back = min(back * 1.7, 20.0)
+            back = min(back*1.7, 20.0)
+            tries += 1
             if tries >= max_tries:
-                print(f"[HTTP {status}] max_tries reached, raising.")
                 r.raise_for_status()
             continue
 
-        # Other 4xx: log once and bail
-        print(f"[HTTP {status}] fatal for {url}, params={params}")
+        print(f"      [HTTP {r.status_code}] giving up")
         r.raise_for_status()
 
-# ----------------- Time utils -----------------
+# ======================= Time / FS helpers ========================
 def dt_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -176,7 +144,6 @@ def _parse_iso_to_epoch(s: Optional[str]) -> Optional[int]:
 def _to_epoch_any(x):
     try:
         f = float(x)
-        # if ms
         return int(f/1000) if f > 1e12 else int(f)
     except Exception:
         pass
@@ -193,26 +160,6 @@ def _to_epoch_any(x):
             return None
     return None
 
-def _parse_dt_any(v):
-    """Best-effort parse of ISO or epoch-like to aware UTC datetime."""
-    if not v:
-        return None
-    try:
-        if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().isdigit()):
-            ts = float(v)
-            if ts > 1e12:
-                ts /= 1000.0
-            return datetime.fromtimestamp(ts, tz=timezone.utc)
-    except Exception:
-        pass
-    try:
-        s = str(v).strip().replace("Z", "+00:00")
-        dt = datetime.fromisoformat(s)
-        return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
-
-# ----------------- FS helpers -----------------
 def ensure_dir(p):
     os.makedirs(p, exist_ok=True)
 
@@ -222,40 +169,12 @@ def atomic_write_text(path: str, text: str):
         f.write(text)
     os.replace(tmp, path)
 
-def open_logs(path: str) -> List[dict]:
-    rows = []
-    if not os.path.exists(path):
-        return rows
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-                rows.append(rec)
-            except Exception:
-                continue
-    return rows
-
-def load_log_index(path: str) -> Dict[str, dict]:
-    """
-    Return {conditionId: last_row} for a given JSONL log file.
-    If multiple rows exist, the last one in the file wins.
-    """
-    idx: Dict[str, dict] = {}
-    for rec in open_logs(path):
-        cid = rec.get("conditionId")
-        if cid:
-            idx[cid] = rec
-    return idx
-
-# ----------------- Read rolling market logs -----------------
+# ======================= Load markets from logs ===================
 def read_unique_markets(folder_name: str) -> Dict[str, dict]:
     """
-    Reads all logs/<folder_name>/markets_*.jsonl files,
-    returns {conditionId: {"question":..., "time_found":..., "conditionId":...}}
-    keeping the EARLIEST time_found per cid.
+    Reads logs/<folder>/markets_*.jsonl with:
+      {"time_found": ISO, "conditionId": str, "question": str}
+    Keeps earliest time_found per conditionId.
     """
     out_dir = os.path.join(LOGS_DIR, folder_name)
     paths = sorted(glob.glob(os.path.join(out_dir, "markets_*.jsonl")))
@@ -286,11 +205,34 @@ def read_unique_markets(folder_name: str) -> Dict[str, dict]:
     print(f"[READ] files={len(paths)} rows≈{total} unique_by_cid={len(uniq)} bad_lines={bad}")
     return uniq
 
-# ----------------- Market meta / status -----------------
+def read_spread_index(path: str) -> Dict[str, dict]:
+    """
+    Reads a JSONL file of rows that contain at least:
+      { "conditionId": ..., "status": ..., "cap_spread": {...} }
+    Returns {cid: row}.
+    """
+    idx = {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                cid = row.get("conditionId")
+                if cid:
+                    idx[cid] = row
+    except FileNotFoundError:
+        pass
+    return idx
+
+# ======================= Market meta / status =====================
 MARKET_META_CACHE: Dict[str, dict] = {}
 
 def fetch_market_full_by_cid(cid: str) -> dict:
-    """Fetch a single market row by conditionId, with correct param name and safety."""
     if not cid:
         return {}
     if cid in MARKET_META_CACHE and MARKET_META_CACHE[cid]:
@@ -308,6 +250,24 @@ def fetch_market_full_by_cid(cid: str) -> dict:
         print(f"[ERROR fetch_market_full_by_cid] {cid}: {e}")
         MARKET_META_CACHE[cid] = {}
         return {}
+
+def _parse_dt_any(v):
+    if not v:
+        return None
+    try:
+        if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().isdigit()):
+            ts = float(v)
+            if ts > 1e12:
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+    except Exception:
+        pass
+    try:
+        s = str(v).strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
 
 def resolve_status(m: dict):
     """
@@ -362,58 +322,14 @@ def current_status(m: dict) -> str:
         return winner
     return "TBD"
 
-# ----------------- Trades pulling -----------------
-def _epoch_from_trade(t) -> Optional[int]:
-    """
-    Prefer Polymarket 'match_time' (unix seconds string), then 'last_update',
-    then any legacy 'timestamp'/'time'/'ts'. Accepts seconds or ms.
-    """
-    cand = (
-        t.get("match_time") or
-        t.get("last_update") or
-        t.get("timestamp") or
-        t.get("time") or
-        t.get("ts")
-    )
-    if cand is None:
-        return None
-    try:
-        x = float(cand)
-        if x > 1e12:  # ms -> s
-            x /= 1000.0
-        return int(x)
-    except Exception:
-        # last resort: try ISO 8601
-        try:
-            return int(datetime.fromisoformat(str(cand).replace("Z","+00:00"))
-                       .astimezone(timezone.utc).timestamp())
-        except Exception:
-            return None
-
+# ======================= Trades paging ============================
 def trade_ts(trade: dict) -> int:
-    """
-    Get best-effort epoch seconds from a Polymarket trade object.
-    Prefers match_time (spec), then falls back to other fields.
-    """
-    for key in ("match_time", "timestamp", "time", "ts"):
+    for key in ("match_time", "timestamp", "time", "ts", "last_update"):
         v = trade.get(key)
         ts = _to_epoch_any(v) if v is not None else None
         if ts is not None:
             return ts
     return 0
-
-def _fmt_eta(seconds: float) -> str:
-    """Format seconds as h/m/s for logs."""
-    if seconds is None or seconds <= 0:
-        return "?"
-    s = int(seconds)
-    m, s = divmod(s, 60)
-    h, m = divmod(m, 60)
-    if h > 0:
-        return f"{h}h{m:02d}m{s:02d}s"
-    if m > 0:
-        return f"{m}m{s:02d}s"
-    return f"{s}s"
 
 def fetch_trades_page_ms(
     cid: str,
@@ -425,11 +341,8 @@ def fetch_trades_page_ms(
     One page of trades using the Polymarket trades API:
 
       - market: conditionId
-      - after:  unix timestamp (sec); only trades strictly after this time returned
+      - after:  unix timestamp (sec); only trades strictly after this time
       - limit:  page size
-
-    Order isn't documented, so we don't assume ASC/DESC in logic; we only
-    use timestamps from the payload itself.
     """
     params = {"market": cid, "limit": int(limit)}
     if after is not None:
@@ -442,124 +355,83 @@ def fetch_all_trades_since(
     cid: str,
     since_epoch_s: int,
     page_limit: int = TRADES_PAGE_LIMIT,
-    hard_cap_pages: int = 5000
+    hard_cap_pages: int = 5000,
 ) -> List[dict]:
     """
-    Forward-paginates with 'after' from 'since_epoch_s', with:
-      - per-market progress bar
-      - elapsed time & rough ETA
-      - detailed page logging
+    Incremental trade fetch:
 
-    ETA is conservative: it assumes we might go all the way to hard_cap_pages,
-    so in most cases you'll finish sooner than the ETA.
+      - Only returns trades with ts >= since_epoch_s.
+      - Uses `after=<cursor>` where cursor starts at since_epoch_s and
+        moves forward to the newest timestamp we've actually *seen*.
+      - De-dups by trade id.
+      - Stops when:
+          * a page is empty, OR
+          * page adds 0 new trades, OR
+          * page < page_limit, OR
+          * hard_cap_pages is reached.
     """
-
-    start_t = time.monotonic()
-    print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
-
     cursor = int(since_epoch_s)
     seen_ids: set = set()
     uniq: List[dict] = []
 
-    last_total = 0
-    stagnant_pages = 0
+    start_time = time.monotonic()
+    print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
 
-    bar_width = 20  # characters for the little ASCII bar
+    for page_no in range(1, hard_cap_pages + 1):
+        elapsed = time.monotonic() - start_time
+        bar_len = min(20, page_no)
+        bar = "[" + "#" * bar_len + "-" * (20 - bar_len) + "]"
+        print(f"      [PAGE {page_no:4d}/{hard_cap_pages}] {bar} after={cursor} elapsed={elapsed:5.1f}s")
 
-    for page_i in range(1, hard_cap_pages + 1):
-
-        # ---- progress bar + ETA before requesting the page ----
-        elapsed = time.monotonic() - start_t
-        frac = min(1.0, page_i / hard_cap_pages)
-        filled = int(bar_width * frac)
-        bar = "#" * filled + "-" * (bar_width - filled)
-
-        if elapsed > 0 and page_i > 0:
-            pages_per_sec = page_i / elapsed
-            remaining_pages = max(0, hard_cap_pages - page_i)
-            eta = remaining_pages / pages_per_sec if pages_per_sec > 0 else None
-        else:
-            eta = None
-
-        print(
-            f"      [PAGE {page_i:4d}/{hard_cap_pages}] [{bar}] "
-            f"after={cursor} elapsed={elapsed:5.1f}s eta≈{_fmt_eta(eta)}"
-        )
-
-        # ---- actual page fetch ----
         page = fetch_trades_page_ms(cid, limit=page_limit, after=cursor)
-
-        if page is None:
-            print("        [WARN] page=None (network/API issue)")
-            break
-
         if not page:
-            print("        [END] empty page (no more trades)")
+            print("        → empty page, stopping")
             break
 
-        print(f"        → got {len(page)} trades")
-
-        added_this_page = 0
-        max_ts_on_page: Optional[int] = None
+        added = 0
+        max_ts_on_page = cursor
 
         for t in page:
-            tid = t.get("id") or (
-                f"{t.get('taker_order_id')}-"
-                f"{t.get('market')}-"
-                f"{t.get('price')}-"
-                f"{t.get('size')}-"
-                f"{t.get('side')}-"
-                f"{t.get('outcome')}-"
-                f"{t.get('bucket_index')}"
-            )
+            tid = t.get("id")
+            if not tid:
+                tid = f"{t.get('taker_order_id')}-{t.get('market')}-{t.get('price')}-{t.get('size')}-{t.get('side')}-{t.get('outcome')}-{t.get('bucket_index')}"
+
             if tid in seen_ids:
                 continue
 
-            ts = _epoch_from_trade(t)
-            if ts is None:
-                continue
+            ts = trade_ts(t)
             if ts < since_epoch_s:
-                # below baseline → ignore
                 continue
 
             seen_ids.add(tid)
             uniq.append(t)
-            added_this_page += 1
-
-            if (max_ts_on_page is None) or (ts > max_ts_on_page):
+            added += 1
+            if ts > max_ts_on_page:
                 max_ts_on_page = ts
 
-        print(f"        → added {added_this_page}, total_unique={len(uniq)}")
+        print(f"        → got {len(page)} trades")
+        print(f"        → added {added}, total_unique={len(uniq)}")
 
-        # ---- advance cursor ----
-        if max_ts_on_page is None:
-            cursor += 1
-        else:
-            cursor = max_ts_on_page + 1  # strictly after last trade time
-
-        # ---- stagnation detection ----
-        if len(uniq) == last_total:
-            stagnant_pages += 1
-            print(f"        → stagnant page ({stagnant_pages}/3)")
-            if stagnant_pages >= 3:
-                print("        [STOP] stagnation threshold reached")
-                break
-        else:
-            stagnant_pages = 0
-            last_total = len(uniq)
-
-        # ---- soft stop when server gives a short page ----
-        if len(page) < page_limit:
-            print("        [STOP] short page (likely frontier reached)")
+        if added == 0:
+            print("        [STOP] no new trades beyond current cursor; stopping")
             break
 
-    total_elapsed = time.monotonic() - start_t
-    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s")
+        if max_ts_on_page <= cursor:
+            print("        [STOP] max_ts_on_page <= cursor (API likely repeating pages); stopping")
+            break
+
+        cursor = max_ts_on_page
+
+        if len(page) < page_limit:
+            print("        [STOP] short page (likely end of history)")
+            break
 
     uniq.sort(key=trade_ts)
+    total_elapsed = time.monotonic() - start_time
+    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s since={since_epoch_s}")
     return uniq
 
-# ------------------ collect shares at price (maker-style) -----------------
+# ======================= Maker-style cap spread ===================
 def collect_cap_spread(
     trades: List[dict],
     caps: List[float],
@@ -573,7 +445,6 @@ def collect_cap_spread(
       - Only considers NO-side trades
       - Only trades with ts >= since_epoch
       - For each trade (price p, size s), it adds liquidity to all caps c where c >= p
-        because a maker posting NO at any cap <= c would have been hit.
     """
     caps = sorted({round(c, 3) for c in caps})
 
@@ -587,12 +458,12 @@ def collect_cap_spread(
         }
     else:
         spread = {
-            "last_trade_ts": prev_spread.get("last_trade_ts", since_epoch),
+            "last_trade_ts": int(prev_spread.get("last_trade_ts", since_epoch)),
             "caps": {}
         }
         prev_caps = prev_spread.get("caps", {})
         for c in caps:
-            state = prev_caps.get(c, {})
+            state = prev_caps.get(str(c)) or prev_caps.get(c) or {}
             spread["caps"][c] = {
                 "shares": float(state.get("shares", 0.0)),
                 "dollars": float(state.get("dollars", 0.0)),
@@ -624,7 +495,7 @@ def collect_cap_spread(
         notional = p * s
 
         for c in caps:
-            if c + 1e-12 >= p:
+            if c + 1e-12 >= p:  # cap >= trade price
                 st = spread["caps"][c]
                 st["shares"]  += s
                 st["dollars"] += notional
@@ -633,10 +504,32 @@ def collect_cap_spread(
         if ts > spread["last_trade_ts"]:
             spread["last_trade_ts"] = ts
 
-    return spread
+    # Make JSON-friendly (stringify caps)
+    json_caps = {}
+    for c, st in spread["caps"].items():
+        json_caps[f"{c:.3f}"] = {
+            "shares":  round(st["shares"], 6),
+            "dollars": round(st["dollars"], 2),
+            "trades":  int(st["trades"]),
+        }
 
-# ----------------- Main -----------------
+    return {
+        "last_trade_ts": spread["last_trade_ts"],
+        "caps": json_caps,
+    }
+
+# ======================= Overview / heartbeat =====================
+def print_overview(open_rows, closed_rows, skipped, errors):
+    print("\n===== PASS OVERVIEW (cap spread builder) =====")
+    print(f"Open markets saved:   {len(open_rows)}")
+    print(f"Closed markets saved: {len(closed_rows)}")
+    print(f"Skipped (filters):    {skipped}")
+    print(f"Errors (fetch/etc):   {errors}")
+
+# ======================= Main ====================================
 def main():
+    global _num_429
+
     folder = input("Folder name under logs/: ").strip()
     try:
         loop_s = int(input("Loop seconds (0=single pass) [3600]: ").strip() or "3600")
@@ -648,115 +541,103 @@ def main():
 
     out_dir = os.path.join(LOGS_DIR, folder)
     ensure_dir(out_dir)
+    open_path   = os.path.join(out_dir, "log_open_markets_cap_spread.jsonl")
+    closed_path = os.path.join(out_dir, "log_closed_markets_cap_spread.jsonl")
 
-    open_fname   = "log_open_markets.jsonl"
-    closed_fname = "log_closed_markets.jsonl"
-
-    open_path   = os.path.join(out_dir, open_fname)
-    closed_path = os.path.join(out_dir, closed_fname)
-
-    caps = [0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,
-            0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90,0.95]
-
-    print(f"{dt_iso()} Starting cap-spread scan…")
+    print(f"{dt_iso()} Starting cap-spread scan… caps={CAPS}")
 
     while True:
-        markets_from_folders = read_unique_markets(folder)
+        run_start = time.monotonic()
+        _num_429 = 0
+        global_trades_fetched = 0
 
-        # load previous open/closed state
-        prev_open_idx   = load_log_index(open_path)
-        prev_closed_idx = load_log_index(closed_path)
+        # Load previous spreads
+        prev_open_idx   = read_spread_index(open_path)
+        prev_closed_idx = read_spread_index(closed_path)
 
-        print(f"[STATE] prev_open={len(prev_open_idx)} prev_closed={len(prev_closed_idx)}")
+        markets = read_unique_markets(folder)
+        total_markets = len(markets)
+        print(f"\n=== MAKER cap spread (folder={folder}) | markets={total_markets} ===")
 
         open_rows: List[dict] = []
         closed_rows: List[dict] = []
         skipped = 0
-        errors = 0
+        errors  = 0
 
-        print(f"\n=== CAP SPREAD (folder={folder}) | markets={len(markets_from_folders)} ===")
-
-        for i, (cid, meta) in enumerate(markets_from_folders.items(), 1):
+        for i, (cid, meta) in enumerate(markets.items(), 1):
             q = meta["question"]
-            time_found_iso = meta["time_found"]
-            tf_epoch = _parse_iso_to_epoch(time_found_iso) or 0
+            baseline = _parse_iso_to_epoch(meta["time_found"]) or 0
+
+            # Skip already-final closed markets (we assume spread won't change)
+            if cid in prev_closed_idx:
+                if i % 50 == 0 or total_markets <= 50:
+                    print(f"[{i}/{total_markets}] SKIP (already closed final) → {q}")
+                continue
 
             if excluded and any(tok in q.lower() for tok in excluded):
                 skipped += 1
-                if i % 50 == 0 or len(markets_from_folders) <= 50:
-                    print(f"[{i}/{len(markets_from_folders)}] SKIP → {q}")
+                if i % 50 == 0 or total_markets <= 50:
+                    print(f"[{i}/{total_markets}] SKIP (filter) → {q}")
                 continue
 
-            print(f"[{i}/{len(markets_from_folders)}] {q}  (cid={cid[:10]}…)  time_found={time_found_iso}")
+            print(f"\n[{i}/{total_markets}] {q}  (cid={cid[:10]}…)  time_found={meta['time_found']}")
 
-            # previous state (either open or closed)
-            prev_state = prev_open_idx.get(cid) or prev_closed_idx.get(cid)
-            prev_status = prev_state.get("status") if prev_state else None
-            prev_spread = prev_state.get("cap_spread") if prev_state else None
+            prev_row    = prev_open_idx.get(cid) or prev_closed_idx.get(cid)
+            prev_status = (prev_row or {}).get("status")
+            prev_spread = (prev_row or {}).get("cap_spread")
 
+            # Fetch meta & status
             try:
                 m = fetch_market_full_by_cid(cid)
-                status = current_status(m)  # 'YES', 'NO', 'TBD'
+                status = current_status(m)   # 'YES','NO','TBD'
             except Exception as e:
                 errors += 1
                 print(f"  [WARN meta] {e}")
                 status = "TBD"
 
-            # If already closed and we have a closed row from before, we assume final and skip
-            if status in ("YES","NO") and prev_state and prev_status in ("YES","NO"):
-                print("    → already closed with cached spread, skipping.")
-                if prev_status in ("YES","NO"):
-                    closed_rows.append(prev_state)
-                else:
-                    open_rows.append(prev_state)
-                continue
-
-            # Decide baseline + prev_spread usage
-            if status in ("YES","NO") and prev_state and prev_status != status:
-                # Transition from open->closed: do a full backfill from time_found
-                print("    → status changed to CLOSED, doing full backfill from time_found.")
-                since_epoch = tf_epoch
-                prev_spread_for_calc = None
+            # Decide baseline for this run
+            if prev_spread is None:
+                since_epoch = baseline
+                print(f"    → first run for this market (no prev spread).")
             else:
-                if prev_spread:
-                    since_epoch = prev_spread.get("last_trade_ts", tf_epoch)
-                    prev_spread_for_calc = prev_spread
-                    print(f"    → incremental update since last_trade_ts={prev_spread.get('last_trade_ts')}")
-                else:
-                    since_epoch = tf_epoch
-                    prev_spread_for_calc = None
-                    print("    → first run for this market (no prev spread).")
+                since_epoch = int(prev_spread.get("last_trade_ts", baseline))
+                since_epoch = max(since_epoch, baseline)
+                print(f"    → incremental from last_trade_ts={since_epoch} (prev_status={prev_status})")
 
-            # Fetch trades since baseline
+            # Fetch only new trades >= since_epoch
             try:
                 trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
-                print(f"    trades_fetched={len(trades)} since={since_epoch}")
             except Exception as e:
                 errors += 1
                 print(f"  [WARN trades] {e}")
                 continue
 
-            # Build / update cap_spread
+            global_trades_fetched += len(trades)
+
+            # Update / build cap spread
             cap_spread = collect_cap_spread(
-                trades=trades,
-                caps=caps,
+                trades,
+                caps=CAPS,
                 since_epoch=since_epoch,
-                prev_spread=prev_spread_for_calc,
+                prev_spread=prev_spread,
             )
 
-            # Per-market debug line
-            line_parts = []
-            for c in [0.30,0.35,0.40,0.45,0.50,0.55,0.60,0.65,0.70]:
-                st = cap_spread["caps"].get(round(c,3), {"shares":0.0,"dollars":0.0})
-                line_parts.append(f"{c:0.2f}: ${st['dollars']:.0f}/{st['shares']:.0f}")
-            print("    [CAP SPREAD] " + " | ".join(line_parts))
+            # Debug print cap spread summary
+            parts = []
+            for c in CAPS:
+                st = cap_spread["caps"].get(f"{c:.3f}", {})
+                dollars = int(st.get("dollars", 0))
+                shares  = int(st.get("shares", 0))
+                trades_n = st.get("trades", 0)
+                parts.append(f"{c:0.2f}: ${dollars}/{shares} ({trades_n}t)")
+            print("    [CAP SPREAD] " + " | ".join(parts))
 
             row = {
                 "ts": dt_iso(),
-                "status": status,
+                "status": status,                     # 'YES' | 'NO' | 'TBD'
                 "conditionId": cid,
                 "question": q,
-                "time_found": time_found_iso,
+                "time_found": meta["time_found"],
                 "cap_spread": cap_spread,
             }
 
@@ -765,7 +646,16 @@ def main():
             else:
                 open_rows.append(row)
 
-        # ---------- Rewrite open/closed atomically ----------
+            # -------- Global heartbeat every 25 markets --------
+            if i % 25 == 0 or i == total_markets:
+                elapsed = time.monotonic() - run_start
+                print(
+                    f"\n[HEARTBEAT] markets_done={i}/{total_markets} | "
+                    f"new_trades_this_pass={global_trades_fetched} | "
+                    f"429_hits={_num_429} | elapsed={elapsed/60:.1f}m"
+                )
+
+        # ---------- Rewrite open / closed spreads ----------
         open_text = "\n".join(json.dumps(s, ensure_ascii=False) for s in open_rows)
         atomic_write_text(open_path, open_text + ("\n" if open_rows else ""))
         print(f"\n[WRITE] {len(open_rows)} open rows → {open_path} (rewritten this pass)")
@@ -774,11 +664,13 @@ def main():
         atomic_write_text(closed_path, closed_text + ("\n" if closed_rows else ""))
         print(f"[WRITE] {len(closed_rows)} closed rows → {closed_path} (rewritten this pass)")
 
-        print(f"\n[SUMMARY] skipped={skipped} errors={errors} open={len(open_rows)} closed={len(closed_rows)}")
+        # ---------- Overview ----------
+        print_overview(open_rows, closed_rows, skipped=skipped, errors=errors)
 
         if loop_s <= 0:
             break
-        print(f"\nSleeping {loop_s}s… (Ctrl+C to stop)")
+        elapsed_run = time.monotonic() - run_start
+        print(f"\n[LOOP] pass finished in {elapsed_run/60:.1f}m, sleeping {loop_s}s… (Ctrl+C to stop)")
         try:
             time.sleep(loop_s)
         except KeyboardInterrupt:

@@ -644,6 +644,22 @@ Lowest(ever) NO px:        min=0.0010  mean=0.6575  max=0.9990
 [SWEEP] wrote 9 rows → logs\gather_markets\cap_bet_sweep_20251111T172018Z.csv
 [WRITE] pass summary → logs\gather_markets\pass_summary.json
 
+===== PASS OVERVIEW =====
+Markets scanned:      1316
+Skipped (filters):    0
+Errors (fetch/etc):   0
+non active markets:   231
+Open markets:         845
+Closed markets:   all:471 no:326 yes:145
+closed filled:    all:197 no:71 yes:126
+Cap:                  0.4   Bet size: $5.00
+Total realized P/L:   +188.65
+Success fills:        307  (23.33% if n else 0)
+No trades on NO side: 265
+Avg under-cap $:      $614.36
+Avg under-cap shares: 4927.6846
+Lowest(ever) NO px:   min=0.0010  mean=0.6057  max=0.9990
+
 
 add multi line cap n bet to see coverage, start a "collect all markets from here on, w/get all opne for begining, tmspt when, got/created,
 make run in background when comp off get markets from the last gotten market allow to be really slow inc trade volume or smthn to see if active market" 
