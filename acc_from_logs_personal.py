@@ -18,10 +18,10 @@ HINT_SPREAD = 0.98                 # how close to 0/1 we require for decisive wi
 FINAL_GRACE = timedelta(days=2)    # wait this long after close before trusting price-only finals
 
 # Rate limiting with adaptive scale
-RPS_TARGET            = 3.5
+RPS_TARGET            = 1.0   # average allowed requests per second for THIS script
 _RPS_SCALE            = 1.0
-_RPS_MIN              = 0.3
-_RPS_RECOVER_PER_SEC  = 0.03
+_RPS_MIN              = 0.2   # if we get hammered with 429s, we can drop to 0.2 rps
+_RPS_RECOVER_PER_SEC  = 0.01  # slow recovery so we don't bounce back too fast
 
 # ----------------- Session + pacing -----------------
 def make_session():
@@ -42,6 +42,10 @@ def make_session():
 SESSION = make_session()
 _last_tokens_ts = time.monotonic()
 _bucket = RPS_TARGET
+
+_HTTP_CALLS = 0
+_HTTP_429S  = 0
+_LAST_HEARTBEAT = time.monotonic()
 
 def _rate_limit():
     global _last_tokens_ts, _bucket, _RPS_SCALE
@@ -74,45 +78,88 @@ def _retry_after_seconds(resp) -> float:
         return 0.0
 
 def http_get_with_backoff(url, *, params=None, timeout=20, max_tries=8):
+    """
+    Very conservative HTTP GET with:
+      - token-bucket rate limiting (RPS_TARGET)
+      - exponential backoff on errors
+      - special handling + logging for 429s
+      - heartbeat logging every ~60s
+    """
+    global _HTTP_CALLS, _HTTP_429S, _LAST_HEARTBEAT
+
     back = 0.5
     tries = 0
     last_t = time.monotonic()
+
     while True:
+        _HTTP_CALLS += 1
+
+        # Heartbeat every ~60 seconds
+        now_hb = time.monotonic()
+        if now_hb - _LAST_HEARTBEAT > 60:
+            print(
+                f"[HEARTBEAT] http_calls={_HTTP_CALLS} 429s={_HTTP_429S} "
+                f"rps_target={RPS_TARGET:.2f} rps_scale={_RPS_SCALE:.3f}"
+            )
+            _LAST_HEARTBEAT = now_hb
+
+        # Global rate limiter
         _rate_limit()
+
         try:
             r = SESSION.get(url, params=params or {}, timeout=timeout)
-        except requests.RequestException:
-            time.sleep(back + random.random()*0.4)
-            back = min(back*1.7, 20.0)
+        except requests.RequestException as e:
             tries += 1
+            print(f"[HTTP ERROR] {type(e).__name__} on {url} try={tries}/{max_tries} back={back:.2f}s")
+            time.sleep(back + random.random()*0.4)
+            back = min(back * 1.7, 20.0)
             if tries >= max_tries:
                 raise
             continue
 
-        if r.status_code < 400:
+        status = r.status_code
+
+        # SUCCESS
+        if status < 400:
             now = time.monotonic()
             _rps_recover(now - last_t)
             return r
 
-        if r.status_code == 429:
+        # 429: Too Many Requests
+        if status == 429:
+            _HTTP_429S += 1
             _rps_on_429()
             ra = _retry_after_seconds(r)
             sleep_s = max(ra, back) + random.random()*0.3
+            print(
+                f"[HTTP 429] url={url} try={tries+1}/{max_tries} "
+                f"Retry-After={ra:.2f}s sleep={sleep_s:.2f}s "
+                f"rps_scale→{_RPS_SCALE:.3f}"
+            )
             time.sleep(sleep_s)
-            back = min(back*1.8, 30.0)
+            back = min(back * 1.8, 30.0)
             tries += 1
             if tries >= max_tries:
+                print("[HTTP 429] max_tries reached, raising.")
                 r.raise_for_status()
             continue
 
-        if 500 <= r.status_code < 600:
+        # 5xx: server errors (we backoff, but log)
+        if 500 <= status < 600:
+            tries += 1
+            print(
+                f"[HTTP {status}] server error on {url} try={tries}/{max_tries} "
+                f"back={back:.2f}s"
+            )
             time.sleep(back + random.random()*0.2)
-            back = min(back*1.7, 20.0)
-            tries += 1
+            back = min(back * 1.7, 20.0)
             if tries >= max_tries:
+                print(f"[HTTP {status}] max_tries reached, raising.")
                 r.raise_for_status()
             continue
 
+        # Other 4xx: log once and bail
+        print(f"[HTTP {status}] fatal for {url}, params={params}")
         r.raise_for_status()
 
 # ----------------- Time utils -----------------
@@ -377,28 +424,40 @@ def fetch_all_trades_since(
     hard_cap_pages: int = 5000
 ) -> List[dict]:
     """
-    Forward-paginates with 'after' from 'since_epoch_s'.
-    Handles same-timestamp pages by bumping cursor by +1s.
-    De-dups by trade id. Returns ASC by epoch.
+    Forward paginates Polymarket trades with verbose logging so you always
+    know whether it's progressing, slow, rate-limited, or stuck.
     """
+
+    print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
     cursor = int(since_epoch_s)
-    seen_ids: set = set()
-    uniq: List[dict] = []
+    seen_ids = set()
+    uniq = []
+
     last_total = 0
     stagnant_pages = 0
 
-    for _ in range(hard_cap_pages):
+    for page_i in range(1, hard_cap_pages+1):
+
+        print(f"      [PAGE {page_i}] after={cursor} limit={page_limit}")
         page = fetch_trades_page_ms(cid, limit=page_limit, after=cursor)
-        if not page:
+
+        if page is None:
+            print("      [WARN] page=None (network or API issue)")
             break
 
-        added = 0
-        max_ts_on_page: Optional[int] = None
+        if not page:
+            print("      [END] empty page (no more trades)")
+            break
+
+        print(f"         → got {len(page)} trades")
+
+        added_this_page = 0
+        max_ts = None
 
         for t in page:
-            tid = t.get("id")
-            if not tid:
-                tid = f"{t.get('taker_order_id')}-{t.get('market')}-{t.get('price')}-{t.get('size')}-{t.get('side')}-{t.get('outcome')}-{t.get('bucket_index')}"
+            tid = t.get("id") or (
+                f"{t.get('taker_order_id')}-{t.get('price')}-{t.get('size')}"
+            )
             if tid in seen_ids:
                 continue
 
@@ -408,30 +467,38 @@ def fetch_all_trades_since(
             if ts < since_epoch_s:
                 continue
 
-            seen_ids.add(tid)
             uniq.append(t)
-            added += 1
-            if (max_ts_on_page is None) or (ts > max_ts_on_page):
-                max_ts_on_page = ts
+            seen_ids.add(tid)
+            added_this_page += 1
+            if max_ts is None or ts > max_ts:
+                max_ts = ts
 
-        if max_ts_on_page is None:
+        print(f"         → added {added_this_page}, total={len(uniq)}")
+
+        # Advance cursor
+        if max_ts is None:
             cursor += 1
         else:
-            cursor = max(cursor, max_ts_on_page)
-            cursor += 1
+            cursor = max_ts + 1
 
+        # Stagnation detection
         if len(uniq) == last_total:
             stagnant_pages += 1
+            print(f"         → stagnant page ({stagnant_pages}/3)")
             if stagnant_pages >= 3:
+                print("      [STOP] stagnation threshold reached")
                 break
         else:
             stagnant_pages = 0
             last_total = len(uniq)
 
+        # Soft stop
         if len(page) < page_limit:
+            print("      [STOP] short page (last page)")
             break
 
-    uniq.sort(key=lambda t: _epoch_from_trade(t) or 0)
+    print(f"    [DONE] total trades fetched={len(uniq)}")
+    uniq.sort(key=trade_ts)
     return uniq
 
 # ------------------ collect shares at price (maker-style) -----------------
