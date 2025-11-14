@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import List, Tuple
 
 LOGS_DIR = "logs"
 
@@ -11,9 +11,6 @@ def dt_iso() -> str:
 
 
 def load_rows(path: str) -> List[dict]:
-    """
-    Load JSONL rows from a file. Ignores blank / malformed lines.
-    """
     rows = []
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -30,23 +27,36 @@ def load_rows(path: str) -> List[dict]:
     return rows
 
 
-def build_caps_union(rows: List[dict]) -> List[float]:
+def get_cap_entry(row: dict, cap: float) -> Tuple[float, float, int]:
     """
-    Collect all unique caps present across all rows.
+    For a given market row and cap, return (shares, dollars, trades)
+    for that cap. All values default to 0 if missing.
     """
-    caps = set()
-    for row in rows:
-        spread = row.get("cap_spread") or {}
-        caps_dict = spread.get("caps") or {}
-        for k in caps_dict.keys():
-            try:
-                caps.add(float(k))
-            except ValueError:
-                continue
-    return sorted(caps)
+    spread = row.get("cap_spread") or {}
+    caps_dict = spread.get("caps") or {}
+
+    key = f"{cap:.3f}"
+    st = caps_dict.get(key) or caps_dict.get(str(cap))
+    if not st:
+        return 0.0, 0.0, 0
+
+    try:
+        shares = float(st.get("shares", 0.0))
+    except Exception:
+        shares = 0.0
+    try:
+        dollars = float(st.get("dollars", 0.0))
+    except Exception:
+        dollars = 0.0
+    try:
+        trades = int(st.get("trades", 0))
+    except Exception:
+        trades = 0
+
+    return shares, dollars, trades
 
 
-def build_status_report(folder: str) -> str:
+def build_status_report(folder: str, cap: float) -> str:
     out_dir = os.path.join(LOGS_DIR, folder)
     open_path = os.path.join(out_dir, "log_open_markets_cap_spread.jsonl")
     closed_path = os.path.join(out_dir, "log_closed_markets_cap_spread.jsonl")
@@ -56,8 +66,9 @@ def build_status_report(folder: str) -> str:
     all_rows = open_rows + closed_rows
 
     lines: List[str] = []
-    lines.append("=== CAP SPREAD STATUS REPORT (MAKER NO) ===")
+    lines.append("=== PROJECT STATUS REPORT (MAKER NO) ===")
     lines.append(f"Folder: {folder}")
+    lines.append(f"Cap under analysis: {cap:.3f}")
     lines.append(f"Generated at: {dt_iso()}")
     lines.append("")
 
@@ -65,223 +76,202 @@ def build_status_report(folder: str) -> str:
         lines.append("No data found yet (run the main cap-spread script first).")
         return "\n".join(lines)
 
-    # ---------- Global market counts ----------
+    # ---- Global market counts (independent of cap) ----
     total_markets = len(all_rows)
-    open_count = sum(1 for r in all_rows if r.get("status") == "TBD")
-    yes_count = sum(1 for r in all_rows if r.get("status") == "YES")
-    no_count = sum(1 for r in all_rows if r.get("status") == "NO")
+    closed_markets = 0
+    open_markets = 0
 
-    lines.append("=== OVERALL MARKETS ===")
-    lines.append(f"Total markets in spread index: {total_markets}")
-    lines.append(f"  Open (TBD): {open_count}")
-    lines.append(f"  Closed YES: {yes_count}")
-    lines.append(f"  Closed NO : {no_count}")
-    lines.append("")
-    lines.append("Note: Per-cap stats below are separate hypothetical strategies.")
-    lines.append("      Do NOT sum P/L across caps.")
-    lines.append("")
+    for r in all_rows:
+        status = r.get("status")
+        if status in ("YES", "NO"):
+            closed_markets += 1
+        else:
+            open_markets += 1
 
-    # ---------- Caps union ----------
-    caps = build_caps_union(all_rows)
-    if not caps:
-        lines.append("No caps found in data.")
-        return "\n".join(lines)
-
-    lines.append("Caps detected in data:")
-    lines.append("  " + ", ".join(f"{c:.3f}" for c in caps))
+    lines.append("=== GLOBAL COUNTS (all markets) ===")
+    lines.append(f"Total markets in index: {total_markets}")
+    lines.append(f"  Open (TBD/other): {open_markets}")
+    lines.append(f"  Closed (YES/NO):  {closed_markets}")
     lines.append("")
 
-    # ---------- Per-cap aggregates ----------
-    # For each cap c, we track:
-    #
-    # stats[c] = {
-    #   "closed_yes": {dollars, shares, markets, trades},
-    #   "closed_no":  {dollars, shares, markets, trades},
-    #   "open":       {dollars, shares, markets, trades},
-    #   "pl":         {realized, markets_yes, markets_no, profitable_mkts, losing_mkts},
-    #   "exposure":   {worst_case, markets},
-    # }
-    #
-    # Maker NO economics:
-    #   premium (dollars)  = Σ(p * s) over NO trades with price <= cap
-    #   shares             = Σ(s)
-    #
-    # Closed NO:
-    #   P/L = + premium     (keep what you sold)
-    #
-    # Closed YES:
-    #   Pay (1 - p)*s per share
-    #   Total payout  = shares - dollars
-    #   P/L           = dollars - shares   (typically negative)
-    #
-    # Open (TBD):
-    #   Worst-case exposure if market resolves YES:
-    #       exposure = shares - dollars   (max potential payout minus premium)
-    #
-    stats: Dict[float, dict] = {
-        c: {
-            "closed_yes": {"dollars": 0.0, "shares": 0.0, "markets": 0, "trades": 0},
-            "closed_no": {"dollars": 0.0, "shares": 0.0, "markets": 0, "trades": 0},
-            "open": {"dollars": 0.0, "shares": 0.0, "markets": 0, "trades": 0},
-            "pl": {
-                "realized": 0.0,
-                "markets_yes": 0,
-                "markets_no": 0,
-                "profitable_mkts": 0,
-                "losing_mkts": 0,
-            },
-            "exposure": {"worst_case": 0.0, "markets": 0},
-        }
-        for c in caps
-    }
+    # ---- Cap-specific stats ----
+    filled_markets = 0
+    filled_open_markets = 0
+    filled_closed_markets = 0
 
-    def accumulate_for_row(row: dict):
-        status = row.get("status")
-        spread = row.get("cap_spread") or {}
-        caps_dict = spread.get("caps") or {}
-        # Track which caps this market actually has liq at
-        has_liq_per_cap = {c: False for c in caps}
+    closed_no_trades = 0
+    open_no_trades = 0
 
-        # First pass: aggregate raw sums
-        for cap_str, st in caps_dict.items():
-            try:
-                cap = float(cap_str)
-            except ValueError:
-                continue
-            if cap not in stats:
-                continue
+    realized_pl = 0.0          # maker-NO realized P/L (closed markets only)
+    total_premium = 0.0        # Σ dollars over all filled markets
+    total_shares = 0.0         # Σ shares over all filled markets
 
-            dollars = float(st.get("dollars", 0.0))
-            shares = float(st.get("shares", 0.0))
-            trades = int(st.get("trades", 0))
-            if dollars == 0.0 and shares == 0.0 and trades == 0:
-                continue
+    cost_entered_markets = 0.0  # Σ (shares - dollars) over all filled markets (max risk ever taken)
+    locked_money_open = 0.0     # Σ (shares - dollars) over OPEN filled markets
 
-            has_liq_per_cap[cap] = True
+    profitable_markets = 0      # closed filled markets with pl >= 0
+    losing_markets = 0          # closed filled markets with pl < 0
 
-            if status == "YES":
-                bucket = stats[cap]["closed_yes"]
-            elif status == "NO":
-                bucket = stats[cap]["closed_no"]
-            else:  # "TBD" or anything else treated as open
-                bucket = stats[cap]["open"]
+    # For win-rate as “NO wins vs YES wins” among filled closed markets
+    closed_no_filled = 0        # closed markets (with fills) that resolved NO
+    closed_yes_filled = 0       # closed markets (with fills) that resolved YES
 
-            bucket["dollars"] += dollars
-            bucket["shares"] += shares
-            bucket["trades"] += trades
+    for r in all_rows:
+        status = r.get("status")
+        is_closed = status in ("YES", "NO")
+        is_open = not is_closed
 
-        # Second pass: per-market P/L and exposure, cap by cap
-        for cap in caps:
-            if not has_liq_per_cap.get(cap):
-                continue
+        shares, dollars, trades = get_cap_entry(r, cap)
 
-            cap_key_exact = f"{cap:.3f}"
-            st = caps_dict.get(cap_key_exact) or caps_dict.get(str(cap))
-            if not st:
-                continue
+        has_trades = (trades > 0) or (shares > 0) or (dollars > 0)
 
-            dollars = float(st.get("dollars", 0.0))
-            shares = float(st.get("shares", 0.0))
+        if is_closed and not has_trades:
+            closed_no_trades += 1
+        if is_open and not has_trades:
+            open_no_trades += 1
 
-            if status in ("YES", "NO"):
-                # Hypothetical realized P/L for maker-NO strategy at this cap
-                if status == "NO":
-                    pl = dollars  # keep premium
-                    stats[cap]["pl"]["markets_no"] += 1
-                else:  # YES
-                    pl = dollars - shares  # premium minus payout
-                    stats[cap]["pl"]["markets_yes"] += 1
+        if not has_trades:
+            continue  # nothing happened at this cap in this market
 
-                stats[cap]["pl"]["realized"] += pl
+        # This market had fills at this cap
+        filled_markets += 1
+        total_premium += dollars
+        total_shares += shares
 
-                if pl >= 0:
-                    stats[cap]["pl"]["profitable_mkts"] += 1
-                else:
-                    stats[cap]["pl"]["losing_mkts"] += 1
+        # Max risk for maker NO at this cap for this market
+        max_risk = shares - dollars  # (1 - p)*s summed across trades
+
+        cost_entered_markets += max_risk
+
+        if is_open:
+            filled_open_markets += 1
+            locked_money_open += max_risk
+        else:
+            filled_closed_markets += 1
+
+            # Track resolution side for win-rate among filled closed markets
+            if status == "NO":
+                closed_no_filled += 1
+            else:  # YES
+                closed_yes_filled += 1
+
+            # Realized P/L for maker NO:
+            #   Closed NO:   P/L = +premium
+            #   Closed YES:  P/L = premium - shares
+            if status == "NO":
+                pl_mkt = dollars
+            else:  # YES
+                pl_mkt = dollars - shares
+
+            realized_pl += pl_mkt
+            if pl_mkt >= 0:
+                profitable_markets += 1
             else:
-                # Open: worst-case exposure if YES wins from here
-                # Exposure = payout - premium = shares - dollars
-                exposure = shares - dollars
-                stats[cap]["exposure"]["worst_case"] += exposure
+                losing_markets += 1
 
-        # Third pass: count markets with any liq per cap
-        for cap, had_liq in has_liq_per_cap.items():
-            if not had_liq:
-                continue
-            if status == "YES":
-                stats[cap]["closed_yes"]["markets"] += 1
-            elif status == "NO":
-                stats[cap]["closed_no"]["markets"] += 1
-            else:
-                stats[cap]["open"]["markets"] += 1
-                stats[cap]["exposure"]["markets"] += 1
-
-    for row in all_rows:
-        accumulate_for_row(row)
-
-    # ---------- Per-cap summary ----------
-    lines.append("=== PER-CAP SUMMARY (MAKER NO VIEW) ===")
-    lines.append("Each cap is a separate 'place maker-NO at this price cap' strategy.")
-    lines.append("All numbers are aggregated across markets that had NO-liquidity under that cap.")
+    # ---- Summary section: cap-specific counts ----
+    lines.append("=== CAP-SPECIFIC COUNTS (at this cap) ===")
+    lines.append(f"Cap: {cap:.3f}")
+    lines.append(f"Markets with ANY fills at this cap: {filled_markets}")
+    lines.append(f"  Filled OPEN markets:   {filled_open_markets}")
+    lines.append(f"  Filled CLOSED markets: {filled_closed_markets}")
+    lines.append(f"Closed markets with NO trades at this cap: {closed_no_trades}")
+    lines.append(f"Open markets with NO trades at this cap:   {open_no_trades}")
     lines.append("")
 
-    for cap in caps:
-        s = stats[cap]
-        cy = s["closed_yes"]
-        cn = s["closed_no"]
-        op = s["open"]
-        pl = s["pl"]
-        ex = s["exposure"]
+    # ---- Money / risk / P&L ----
+    avg_price = (total_premium / total_shares) if total_shares > 0 else 0.0
+    avg_risk_per_filled = (cost_entered_markets / filled_markets) if filled_markets > 0 else 0.0
 
-        markets_with_liq = cy["markets"] + cn["markets"] + op["markets"]
-        markets_closed = cy["markets"] + cn["markets"]
-        realized_pl = pl["realized"]
+    # New metrics:
+    # 1) Win-rate (NO vs YES) among filled closed markets
+    if filled_closed_markets > 0:
+        win_rate_no = closed_no_filled / filled_closed_markets
+    else:
+        win_rate_no = 0.0
 
-        lines.append(f"Cap {cap:.3f}:")
-        lines.append(
-            f"  Markets with liq at this cap: {markets_with_liq} "
-            f"(closed={markets_closed}, open={op['markets']})"
-        )
-        lines.append(
-            f"    Closed NO: markets={cn['markets']}, "
-            f"premium={cn['dollars']:.2f}, shares_sold={cn['shares']:.2f}, trades={cn['trades']}"
-        )
-        lines.append(
-            f"    Closed YES: markets={cy['markets']}, "
-            f"premium={cy['dollars']:.2f}, shares_sold={cy['shares']:.2f}, trades={cy['trades']}"
-        )
-        lines.append(
-            f"    Open (TBD): markets={op['markets']}, "
-            f"premium={op['dollars']:.2f}, shares_sold={op['shares']:.2f}, trades={op['trades']}"
-        )
-        lines.append(
-            "  Realized P/L (maker-NO, hypothetical if used on all these markets): "
-            f"{realized_pl:.2f} "
-            f"(markets_NO={pl['markets_no']}, markets_YES={pl['markets_yes']}, "
-            f"profitable_markets={pl['profitable_mkts']}, losing_markets={pl['losing_mkts']})"
-        )
-        lines.append(
-            f"  Worst-case open exposure (if all open resolve YES): "
-            f"{ex['worst_case']:.2f} across {ex['markets']} open markets"
-        )
-        lines.append("")
+    # 2) P/L per filled closed market
+    if filled_closed_markets > 0:
+        pl_per_closed_market = realized_pl / filled_closed_markets
+    else:
+        pl_per_closed_market = 0.0
+
+    # 3) Premium efficiency: realized P/L / total risk ever taken
+    if cost_entered_markets > 0:
+        premium_efficiency = realized_pl / cost_entered_markets
+    else:
+        premium_efficiency = 0.0
+
+    lines.append("=== MONEY / RISK / P&L (maker NO, this cap) ===")
+    lines.append(f"Total premium collected (all filled mkts): {total_premium:.2f}")
+    lines.append(f"Total shares sold (all filled mkts):       {total_shares:.2f}")
+    lines.append(f"Average effective price:                   {avg_price:.4f}")
+    lines.append("")
+    lines.append(f"Realized P/L (closed filled markets only): {realized_pl:.2f}")
+    lines.append(
+        f"  Profitable closed markets: {profitable_markets}, "
+        f"Losing closed markets: {losing_markets}"
+    )
+    lines.append(
+        f"  Win-rate (NO wins among filled closed mkts): "
+        f"{win_rate_no*100:.2f}%  "
+        f"(NO={closed_no_filled}, YES={closed_yes_filled})"
+    )
+    lines.append(
+        f"  Avg P/L per filled closed market:       {pl_per_closed_market:.2f}"
+    )
+    lines.append(
+        f"  Premium efficiency (realized P/L / total risk): "
+        f"{premium_efficiency:.4f}"
+    )
+    lines.append("")
+    lines.append(
+        "Cost of entered markets (max risk ever taken across all filled markets): "
+        f"{cost_entered_markets:.2f}  (Σ(shares - dollars))"
+    )
+    lines.append(
+        "Locked money NOW (open positions only, worst-case if all go YES): "
+        f"{locked_money_open:.2f}"
+    )
+    lines.append(
+        "Average max risk per filled market: "
+        f"{avg_risk_per_filled:.2f}"
+    )
+    lines.append("")
+
+    lines.append("Note:")
+    lines.append("  • 'Win-rate' here is the fraction of filled closed markets that resolved NO,")
+    lines.append("    i.e. where your maker-NO side was correct.")
+    lines.append("  • 'Premium efficiency' is how many P/L dollars you got per dollar of total")
+    lines.append("    risk (Σ(shares - dollars)). It’s a crude efficiency ratio, not annualized.")
+    lines.append("  • 'Cost of entered markets' is the total historical max loss exposure")
+    lines.append("    for this cap strategy (over all markets where you actually had fills).")
+    lines.append("  • 'Locked money NOW' is current worst-case loss if every open filled")
+    lines.append("    market resolved YES from here.")
+    lines.append("")
 
     return "\n".join(lines)
 
 
 def main():
-    #folder = input("Folder name under logs/: ").strip()
-    folder = "gather_markets"
+    folder = input("Folder name under logs/: ").strip()
     if not folder:
         print("Need a folder name.")
         return
 
-    report = build_status_report(folder)
+    cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
+    try:
+        cap = float(cap_str)
+    except ValueError:
+        print("Invalid cap.")
+        return
+
+    report = build_status_report(folder, cap)
     print(report)
 
     out_dir = os.path.join(LOGS_DIR, folder)
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "status_report.txt")
+    out_path = os.path.join(out_dir, f"status_report_cap_{cap:.3f}.txt")
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(report)
