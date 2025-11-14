@@ -270,7 +270,8 @@ def build_status_report(folder: str) -> str:
 
 
 def main():
-    folder = input("Folder name under logs/: ").strip()
+    #folder = input("Folder name under logs/: ").strip()
+    folder = "gather_markets"
     if not folder:
         print("Need a folder name.")
         return
