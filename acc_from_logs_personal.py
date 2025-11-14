@@ -324,6 +324,18 @@ def _epoch_from_trade(t) -> Optional[int]:
                        .astimezone(timezone.utc).timestamp())
         except Exception:
             return None
+        
+def trade_ts(trade: dict) -> int:
+    """
+    Get best-effort epoch seconds from a Polymarket trade object.
+    Prefers match_time (spec), then falls back to other fields.
+    """
+    for key in ("match_time", "timestamp", "time", "ts"):
+        v = trade.get(key)
+        ts = _to_epoch_any(v) if v is not None else None
+        if ts is not None:
+            return ts
+    return 0
 
 
 # ---------- One page using 'after'/'before' ----------
