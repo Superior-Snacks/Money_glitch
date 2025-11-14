@@ -254,12 +254,14 @@ def build_status_report(folder: str, cap: float) -> str:
 
 
 def main():
-    folder = input("Folder name under logs/: ").strip()
+    #folder = input("Folder name under logs/: ").strip()
+    folder = "gather_markets"
     if not folder:
         print("Need a folder name.")
         return
 
-    cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
+    #cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
+    cap_str = "0.4"
     try:
         cap = float(cap_str)
     except ValueError:
