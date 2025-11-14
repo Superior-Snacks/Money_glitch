@@ -402,6 +402,19 @@ def trade_ts(trade: dict) -> int:
             return ts
     return 0
 
+def _fmt_eta(seconds: float) -> str:
+    """Format seconds as h/m/s for logs."""
+    if seconds is None or seconds <= 0:
+        return "?"
+    s = int(seconds)
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h}h{m:02d}m{s:02d}s"
+    if m > 0:
+        return f"{m}m{s:02d}s"
+    return f"{s}s"
+
 def fetch_trades_page_ms(
     cid: str,
     *,
@@ -424,39 +437,72 @@ def fetch_all_trades_since(
     hard_cap_pages: int = 5000
 ) -> List[dict]:
     """
-    Forward paginates Polymarket trades with verbose logging so you always
-    know whether it's progressing, slow, rate-limited, or stuck.
+    Forward-paginates with 'after' from 'since_epoch_s', with:
+      - per-market progress bar
+      - elapsed time & rough ETA
+      - detailed page logging
+
+    ETA is conservative: it assumes we might go all the way to hard_cap_pages,
+    so in most cases you'll finish sooner than the ETA.
     """
 
+    start_t = time.monotonic()
     print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
+
     cursor = int(since_epoch_s)
-    seen_ids = set()
-    uniq = []
+    seen_ids: set = set()
+    uniq: List[dict] = []
 
     last_total = 0
     stagnant_pages = 0
 
-    for page_i in range(1, hard_cap_pages+1):
+    bar_width = 20  # characters for the little ASCII bar
 
-        print(f"      [PAGE {page_i}] after={cursor} limit={page_limit}")
+    for page_i in range(1, hard_cap_pages + 1):
+
+        # ---- progress bar + ETA before requesting the page ----
+        elapsed = time.monotonic() - start_t
+        frac = min(1.0, page_i / hard_cap_pages)
+        filled = int(bar_width * frac)
+        bar = "#" * filled + "-" * (bar_width - filled)
+
+        if elapsed > 0 and page_i > 0:
+            pages_per_sec = page_i / elapsed
+            remaining_pages = max(0, hard_cap_pages - page_i)
+            eta = remaining_pages / pages_per_sec if pages_per_sec > 0 else None
+        else:
+            eta = None
+
+        print(
+            f"      [PAGE {page_i:4d}/{hard_cap_pages}] [{bar}] "
+            f"after={cursor} elapsed={elapsed:5.1f}s eta≈{_fmt_eta(eta)}"
+        )
+
+        # ---- actual page fetch ----
         page = fetch_trades_page_ms(cid, limit=page_limit, after=cursor)
 
         if page is None:
-            print("      [WARN] page=None (network or API issue)")
+            print("        [WARN] page=None (network/API issue)")
             break
 
         if not page:
-            print("      [END] empty page (no more trades)")
+            print("        [END] empty page (no more trades)")
             break
 
-        print(f"         → got {len(page)} trades")
+        print(f"        → got {len(page)} trades")
 
         added_this_page = 0
-        max_ts = None
+        max_ts_on_page: Optional[int] = None
 
         for t in page:
             tid = t.get("id") or (
-                f"{t.get('taker_order_id')}-{t.get('price')}-{t.get('size')}"
+                f"{t.get('taker_order_id')}-"
+                f"{t.get('market')}-"
+                f"{t.get('price')}-"
+                f"{t.get('size')}-"
+                f"{t.get('side')}-"
+                f"{t.get('outcome')}-"
+                f"{t.get('bucket_index')}"
             )
             if tid in seen_ids:
                 continue
@@ -465,39 +511,43 @@ def fetch_all_trades_since(
             if ts is None:
                 continue
             if ts < since_epoch_s:
+                # below baseline → ignore
                 continue
 
-            uniq.append(t)
             seen_ids.add(tid)
+            uniq.append(t)
             added_this_page += 1
-            if max_ts is None or ts > max_ts:
-                max_ts = ts
 
-        print(f"         → added {added_this_page}, total={len(uniq)}")
+            if (max_ts_on_page is None) or (ts > max_ts_on_page):
+                max_ts_on_page = ts
 
-        # Advance cursor
-        if max_ts is None:
+        print(f"        → added {added_this_page}, total_unique={len(uniq)}")
+
+        # ---- advance cursor ----
+        if max_ts_on_page is None:
             cursor += 1
         else:
-            cursor = max_ts + 1
+            cursor = max_ts_on_page + 1  # strictly after last trade time
 
-        # Stagnation detection
+        # ---- stagnation detection ----
         if len(uniq) == last_total:
             stagnant_pages += 1
-            print(f"         → stagnant page ({stagnant_pages}/3)")
+            print(f"        → stagnant page ({stagnant_pages}/3)")
             if stagnant_pages >= 3:
-                print("      [STOP] stagnation threshold reached")
+                print("        [STOP] stagnation threshold reached")
                 break
         else:
             stagnant_pages = 0
             last_total = len(uniq)
 
-        # Soft stop
+        # ---- soft stop when server gives a short page ----
         if len(page) < page_limit:
-            print("      [STOP] short page (last page)")
+            print("        [STOP] short page (likely frontier reached)")
             break
 
-    print(f"    [DONE] total trades fetched={len(uniq)}")
+    total_elapsed = time.monotonic() - start_t
+    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s")
+
     uniq.sort(key=trade_ts)
     return uniq
 
