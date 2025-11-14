@@ -782,17 +782,14 @@ def main():
                 errors += 1
                 print(f"  [WARN trades] {e}")
                 continue
-            cap_spread = collect_cap_spread(trades)
+            caps = [0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+            try:
+                if meta["cap_spread"]:
+                    cap_spread = collect_cap_spread(trades,caps=caps, prev_spread=meta["cap_spread"])
+            except:
+                cap_spread = collect_cap_spread(trades,caps=caps)
             # Per-market printout UPDATE FYRIR INFO SEM ÉG VIL
             #TODO SANITY PRINT FOR AFTER CAP SPREAD COLLECTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-            # Compute realized P/L if resolved and we had a filled position
-            pl = None
-            if  and status in ("YES","NO"):
-                cost   = float(stats["cost"])
-                shares = float(stats["shares"])
-                # NO pays 1 on NO; 0 on YES
-                payout = shares * (1.0 if status == "NO" else 0.0)
-                pl = round(payout - cost, 2)
             #UPDATE FYRIR CAP SPREAD OG SPREAD TIME OG OPEN FILE OG CLOSED FILE
             if status not in ("YES","NO"):
                 open_rows = {
