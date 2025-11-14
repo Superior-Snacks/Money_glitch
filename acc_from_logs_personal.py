@@ -25,7 +25,7 @@ _RPS_MIN             = 0.3
 _RPS_RECOVER_PER_SEC = 0.03
 
 # Caps for maker-style spread
-CAPS = [0.001, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95 1] #full
+CAPS = [0.001, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1] #full
 #CAPS = [0.05, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.95] #for better visibility during tests
 
 # ======================= HTTP session / pacing ====================
@@ -680,11 +680,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-"""
-breyta logic fyrir fill I fill á dict, refeer í það til að calck allt
-imoprta decision logic fra sw2-3
-hafa cap_spread reference log með timestamp fyrir seinasta trade checked, checka trades síðan þá ef of mörg trades, pull back come back later
-3 logs open, closed, cap_spread
-foundtmsp,conid,spread,spreadtmsp,tradecount,flags:status,list:trades till fill cap
-cap_spread={0.3:0.0,0.35:0.0,0.4:0.0,0.45:0.0,0.5:0.0,0.55:0.0,0.6:0.0,0.65:0.0,0.7:0.0}
-"""
