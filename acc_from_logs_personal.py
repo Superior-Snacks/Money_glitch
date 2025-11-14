@@ -19,7 +19,7 @@ HINT_SPREAD = 0.98
 FINAL_GRACE = timedelta(days=2)
 
 # Adaptive rate limit
-RPS_TARGET           = 3.0   # slightly conservative
+RPS_TARGET           = 1.0   # slightly conservative
 _RPS_SCALE           = 1.0
 _RPS_MIN             = 0.3
 _RPS_RECOVER_PER_SEC = 0.03
