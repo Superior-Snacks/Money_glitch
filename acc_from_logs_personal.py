@@ -462,7 +462,7 @@ def fetch_all_trades_since(
     return uniq
 
 #------------------ collect shares at price -----------------
-def collect_price_shares(
+def collect_cap_spread(
     trades: List[dict],
     caps: List[float],
     since_epoch: int = 0,
@@ -777,16 +777,12 @@ def main():
                 continue
 
             try:
-                trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)#ef of mikið af trades taka break bæta I break list og bæta við rerun
-                                                                                            #fjarlæga early end og hægja á + randomizea fech
-                                                                                            #MUNA AÐ BÆTA VIÐ CAP SREAD TIME END
+                trades = fetch_all_trades_since(cid, since_epoch, page_limit=TRADES_PAGE_LIMIT)
             except Exception as e:
                 errors += 1
                 print(f"  [WARN trades] {e}")
                 continue
-
-            stats = try_fill_no_from_trades(trades, cap=cap, bet_size_dollars=bet_size)#update-a til að skila cap spread fjarlægja early end
-
+            cap_spread = collect_cap_spread(trades)
             # Per-market printout UPDATE FYRIR INFO SEM ÉG VIL
             print(f"    lowest NO px = {stats['lowest_no_px']}  "
                   f"under_cap$: {stats['under_cap_dollars']}  shares: {stats['under_cap_shares']}  "
