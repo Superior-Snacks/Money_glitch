@@ -442,92 +442,121 @@ def fetch_all_trades_since(
     cid: str,
     since_epoch_s: int,
     page_limit: int = TRADES_PAGE_LIMIT,
-    hard_cap_pages: int = 5000,
+    hard_cap_pages: int = 5000
 ) -> List[dict]:
     """
-    Incremental trade fetch:
+    Forward-paginates with 'after' from 'since_epoch_s', with:
+      - per-market progress bar
+      - elapsed time & rough ETA
+      - detailed page logging
 
-      - Only returns trades with ts >= since_epoch_s.
-      - Uses `after=<cursor>` where cursor starts at since_epoch_s and
-        moves forward to the newest timestamp we've actually *seen*.
-      - De-dups by trade id.
-      - Stops when:
-          * a page is empty, OR
-          * no trade on the page has ts > cursor, OR
-          * page < page_limit (natural end), OR
-          * hard_cap_pages is reached.
-
-    This way, on re-runs you only download trades that happened after
-    the last one you processed (assuming the API respects `after`).
+    ETA is conservative: it assumes we might go all the way to hard_cap_pages,
+    so in most cases you'll finish sooner than the ETA.
     """
+
+    start_t = time.monotonic()
+    print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
+
     cursor = int(since_epoch_s)
     seen_ids: set = set()
     uniq: List[dict] = []
 
-    start_time = time.monotonic()
+    last_total = 0
+    stagnant_pages = 0
 
-    print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
+    bar_width = 20  # characters for the little ASCII bar
 
-    for page_no in range(1, hard_cap_pages + 1):
-        elapsed = time.monotonic() - start_time
-        # simple “progress bar” placeholder: real max pages unknown, so we just show page number
-        bar = "[" + ("#" * min(20, page_no)) + "]"
-        print(f"      [PAGE {page_no:4d}/{hard_cap_pages}] {bar} after={cursor} elapsed={elapsed:5.1f}s")
+    for page_i in range(1, hard_cap_pages + 1):
 
+        # ---- progress bar + ETA before requesting the page ----
+        elapsed = time.monotonic() - start_t
+        frac = min(1.0, page_i / hard_cap_pages)
+        filled = int(bar_width * frac)
+        bar = "#" * filled + "-" * (bar_width - filled)
+
+        if elapsed > 0 and page_i > 0:
+            pages_per_sec = page_i / elapsed
+            remaining_pages = max(0, hard_cap_pages - page_i)
+            eta = remaining_pages / pages_per_sec if pages_per_sec > 0 else None
+        else:
+            eta = None
+
+        print(
+            f"      [PAGE {page_i:4d}/{hard_cap_pages}] [{bar}] "
+            f"after={cursor} elapsed={elapsed:5.1f}s eta≈{_fmt_eta(eta)}"
+        )
+
+        # ---- actual page fetch ----
         page = fetch_trades_page_ms(cid, limit=page_limit, after=cursor)
-        if not page:
-            print("        → empty page, stopping")
+
+        if page is None:
+            print("        [WARN] page=None (network/API issue)")
             break
 
-        added = 0
-        max_ts_on_page = cursor  # track the newest trade we see on this page
+        if not page:
+            print("        [END] empty page (no more trades)")
+            break
+
+        print(f"        → got {len(page)} trades")
+
+        added_this_page = 0
+        max_ts_on_page: Optional[int] = None
 
         for t in page:
-            tid = t.get("id")
-            if not tid:
-                # fallback key if id is missing
-                tid = f"{t.get('taker_order_id')}-{t.get('market')}-{t.get('price')}-{t.get('size')}-{t.get('side')}-{t.get('outcome')}-{t.get('bucket_index')}"
-
+            tid = t.get("id") or (
+                f"{t.get('taker_order_id')}-"
+                f"{t.get('market')}-"
+                f"{t.get('price')}-"
+                f"{t.get('size')}-"
+                f"{t.get('side')}-"
+                f"{t.get('outcome')}-"
+                f"{t.get('bucket_index')}"
+            )
             if tid in seen_ids:
                 continue
 
-            ts = trade_ts(t)  # uses match_time / timestamp / time / ts
+            ts = _epoch_from_trade(t)
             if ts is None:
                 continue
-
-            # don't bother with trades *before* our logical baseline
             if ts < since_epoch_s:
+                # below baseline → ignore
                 continue
 
             seen_ids.add(tid)
             uniq.append(t)
-            added += 1
-            if ts > max_ts_on_page:
+            added_this_page += 1
+
+            if (max_ts_on_page is None) or (ts > max_ts_on_page):
                 max_ts_on_page = ts
 
-        print(f"        → got {len(page)} trades")
-        print(f"        → added {added}, total_unique={len(uniq)}")
+        print(f"        → added {added_this_page}, total_unique={len(uniq)}")
 
-        # no new trades with ts > cursor → if we keep paging we just refetch the same stuff
-        if added == 0:
-            print("        [STOP] no new trades beyond current cursor; stopping")
-            break
+        # ---- advance cursor ----
+        if max_ts_on_page is None:
+            cursor += 1
+        else:
+            cursor = max_ts_on_page + 1  # strictly after last trade time
 
-        if max_ts_on_page <= cursor:
-            # defensive; shouldn't happen if `after` works as spec says
-            print("        [STOP] max_ts_on_page <= cursor (API probably repeating pages); stopping")
-            break
+        # ---- stagnation detection ----
+        if len(uniq) == last_total:
+            stagnant_pages += 1
+            print(f"        → stagnant page ({stagnant_pages}/3)")
+            if stagnant_pages >= 3:
+                print("        [STOP] stagnation threshold reached")
+                break
+        else:
+            stagnant_pages = 0
+            last_total = len(uniq)
 
-        cursor = max_ts_on_page  # next `after` is strictly newer
-
+        # ---- soft stop when server gives a short page ----
         if len(page) < page_limit:
-            print("        [STOP] short page (likely end of history)")
+            print("        [STOP] short page (likely frontier reached)")
             break
 
-    # sort ASC by time for downstream processing
+    total_elapsed = time.monotonic() - start_t
+    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s")
+
     uniq.sort(key=trade_ts)
-    total_elapsed = time.monotonic() - start_time
-    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s since={since_epoch_s}")
     return uniq
 
 # ------------------ collect shares at price (maker-style) -----------------
