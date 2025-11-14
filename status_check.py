@@ -329,19 +329,22 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
 
 
 def main():
-    folder = input("Folder name under logs/: ").strip()
+    #folder = input("Folder name under logs/: ").strip()
+    folder = "gather_markets"
     if not folder:
         print("Need a folder name.")
         return
 
-    cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
+    #cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
+    cap_str = "0.4"
     try:
         cap = float(cap_str)
     except ValueError:
         print("Invalid cap.")
         return
 
-    bet_str = input("Max spend per market (bet), e.g. 30: ").strip()
+    #bet_str = input("Max spend per market (bet), e.g. 30: ").strip()
+    bet_str = "5"
     try:
         bet = float(bet_str)
     except ValueError:
