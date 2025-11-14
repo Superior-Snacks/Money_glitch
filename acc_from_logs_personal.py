@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import subprocess
 
 # ======================= Config / Constants =======================
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
@@ -680,3 +681,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    subprocess.call(["python", "status_check.py"])
