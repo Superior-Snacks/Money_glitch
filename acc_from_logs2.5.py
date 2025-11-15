@@ -328,16 +328,19 @@ def fetch_trades_page_ms(cid: str, limit=TRADES_PAGE_LIMIT, starting_before_s=No
 
 def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_LIMIT) -> List[dict]:
     """
-    Original logic, but with debug prints and a couple of safety guards.
+    Timestamp-paging first, then offset fallback if needed.
+    - Prints detailed debug.
+    - Guards against truly stuck paging (no progress in oldest_ts),
+      but does NOT stop just because the page length is the same.
     """
     print(f"    [FETCH] cid={cid[:12]}… since={since_epoch_s}")
-    out = []
-    starting_before = None
-    last_len = None
-
+    out: List[dict] = []
+    starting_before: Optional[int] = None
     start_time = time.monotonic()
 
-    # timestamp paging first
+    # ---------- 1) Timestamp-based paging ----------
+    last_oldest_ts_ts_mode: Optional[int] = None
+
     for page_no in range(1, 10001):
         elapsed = time.monotonic() - start_time
         bar_len = min(20, page_no)
@@ -351,31 +354,42 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
             break
 
         out.extend(data)
-        oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
-
+        oldest_ts = min(_trade_epoch(t) for t in data)
         print(f"        → got {len(data)} trades (ts-mode), oldest_ts={oldest_ts}")
 
+        # If we've reached or gone past the baseline, we can stop.
         if oldest_ts <= since_epoch_s:
             print(f"        [STOP] reached baseline ts (oldest_ts={oldest_ts} <= since={since_epoch_s})")
             break
 
+        # Stagnation guard: if oldest_ts stops moving backwards, we are stuck in a loop.
+        if last_oldest_ts_ts_mode is not None and oldest_ts >= last_oldest_ts_ts_mode:
+            print(
+                f"        [STOP] no progress in ts paging "
+                f"(oldest_ts={oldest_ts} >= prev_oldest_ts={last_oldest_ts_ts_mode}), stopping"
+            )
+            break
+        last_oldest_ts_ts_mode = oldest_ts
+
         starting_before = oldest_ts
 
-        # stagnation guard: same page length repeatedly
-        if last_len == len(data):
-            print("        [STOP] stagnation in ts paging (same page len), stopping")
+        # Conservative guard: short page → likely end of history for ts-mode.
+        if len(data) < page_limit:
+            print("        [STOP] short page (ts-mode), stopping")
             break
-        last_len = len(data)
 
-    # offset fallback
-    need_offset = (not out) or (
-        min((_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0) for t in out)
-        > since_epoch_s
+    # Decide if we need offset fallback
+    need_offset = (
+        not out
+        or min((_trade_epoch(t) for t in out), default=0) > since_epoch_s
     )
+
+    # ---------- 2) Offset-based fallback ----------
     if need_offset:
         print("    [FALLBACK] switching to OFFSET-based paging…")
         offset = 0
-        last_len = None
+        last_oldest_ts_off: Optional[int] = None
+
         for page_no in range(1, 2001):
             elapsed = time.monotonic() - start_time
             bar_len = min(20, page_no)
@@ -388,45 +402,60 @@ def fetch_all_trades_since(cid: str, since_epoch_s: int, page_limit=TRADES_PAGE_
                 break
 
             out.extend(data)
-            oldest_ts = min(_to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0 for t in data)
+            oldest_ts = min(_trade_epoch(t) for t in data)
             print(f"        → got {len(data)} trades (offset-mode), oldest_ts={oldest_ts}")
 
+            # If we've reached the baseline, we're done
             if oldest_ts <= since_epoch_s:
-                print(f"        [STOP] reached baseline ts in offset-mode (oldest_ts={oldest_ts} <= since={since_epoch_s})")
+                print(
+                    f"        [STOP] reached baseline ts in offset-mode "
+                    f"(oldest_ts={oldest_ts} <= since={since_epoch_s})"
+                )
                 break
+
+            # Stagnation guard in offset mode: if oldest_ts stops moving backwards,
+            # we're probably looping over the same region.
+            if last_oldest_ts_off is not None and oldest_ts >= last_oldest_ts_off:
+                print(
+                    f"        [STOP] no progress in offset paging "
+                    f"(oldest_ts={oldest_ts} >= prev_oldest_ts={last_oldest_ts_off}), stopping"
+                )
+                break
+            last_oldest_ts_off = oldest_ts
 
             offset += len(data)
 
-            # conservative guard: short page → likely end of history
+            # Conservative: short page → likely end of history
             if len(data) < page_limit:
                 print("        [STOP] short page (offset-mode), stopping")
                 break
 
-            # stagnation guard: same len repeatedly
-            if last_len == len(data):
-                print("        [STOP] stagnation in offset paging (same page len), stopping")
-                break
-            last_len = len(data)
-
-    # de-dup and cut since; then sort ASC by timestamp
-    seen, uniq = set(), []
+    # ---------- 3) De-dup, cut by since, sort ----------
+    seen = set()
+    uniq: List[dict] = []
     for t in out:
-        key = t.get("id") or (t.get("timestamp"), t.get("price"), t.get("size"), t.get("side"), t.get("outcome"))
+        key = t.get("id") or (
+            t.get("timestamp"),
+            t.get("price"),
+            t.get("size"),
+            t.get("side"),
+            t.get("outcome"),
+        )
         if key in seen:
             continue
-        seen.add(key); uniq.append(t)
+        seen.add(key)
+        uniq.append(t)
 
-    cut = []
+    cut: List[dict] = []
     for t in uniq:
-        ts = _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0
+        ts = _trade_epoch(t)
         if ts >= since_epoch_s:
             cut.append(t)
-    cut.sort(key=lambda t: _to_epoch_any(t.get("timestamp") or t.get("time") or t.get("ts") or 0) or 0)
+    cut.sort(key=_trade_epoch)
 
     total_elapsed = time.monotonic() - start_time
     print(f"    [DONE] trades_fetched={len(cut)} in {total_elapsed:.1f}s since={since_epoch_s}")
     return cut
-
 # ----------------- NO-only fill + stats -----------------
 def try_fill_no_from_trades(trades: List[dict], cap: float, bet_size_dollars: float) -> dict:
     """
