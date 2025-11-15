@@ -281,7 +281,7 @@ def resolve_status(m: dict):
     if uma in {"yes","no"}:
         return True, uma.upper(), "umaResolutionStatus"
     if uma.startswith("resolved_"):
-        w = m.split("_",1)[1].upper()
+        w = uma.split("_", 1)[1].upper()
         if w in {"YES","NO"}:
             return True, w, "umaResolutionStatus"
 
