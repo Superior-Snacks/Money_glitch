@@ -809,3 +809,30 @@ Realized P/L (entered closed markets only): -630.71
   Win-rate (NO wins among entered closed mkts): 33.59%  (NO=132, YES=261)
   Avg P/L per entered closed market:       -1.60
   Efficiency (realized P/L / total cost):  -0.1412
+
+
+  full trades history from got 3 min
+  [344/5421] NEW market → Nothing Ever Happens: November  (cid=0x954aeeb0…)  time_found=2025-11-04T16:02:56.475821+00:00
+    → FULL history fetch (all trades, offset paging) (prev_status=None)
+    [FETCH] cid=0x954aeeb021… (offset-based full history)
+      [PAGE    1/5000] [#-------------------] offset=0 elapsed=  0.0s
+        → got 250 trades
+        → added 224, total_unique=224
+      [PAGE    2/5000] [##------------------] offset=250 elapsed=  1.1s
+        → got 250 trades
+        → added 216, total_unique=440
+      [PAGE    3/5000] [###-----------------] offset=500 elapsed=  2.1s
+        → got 250 trades
+        → added 224, total_unique=664
+      [PAGE    4/5000] [####----------------] offset=750 elapsed=  3.1s
+        → got 250 trades
+        → added 212, total_unique=876
+      [PAGE    5/5000] [#####---------------] offset=1000 elapsed=  4.1s
+        → got 250 trades
+        → added 208, total_unique=1084
+      [PAGE    6/5000] [######--------------] offset=1250 elapsed=  5.1s
+        → got 250 trades
+        → added 0, total_unique=1084
+        [STOP] page contained no new trades (all IDs seen); stopping
+    [DONE] trades_fetched=1084 in 6.1s (full history)
+    [CAP SPREAD] 0.00: $0/0 (0t) | 0.05: $0/0 (0t) | 0.10: $1006/10788 (32t) | 0.15: $4390/37073 (149t) | 0.20: $8258/58021 (247t) | 0.25: $9544/63764 (298t) | 0.30: $10137/65863 (322t) | 0.35: $18104/89724 (417t) | 0.40: $20039/94891 (449t) | 0.45: $20968/97171 (455t) | 0.50: $21344/97957 (460t) | 0.55: $21344/97957 (460t) | 0.60: $21344/97957 (460t) | 0.65: $21544/98286 (461t) | 0.70: $21544/98286 (461t) | 0.75: $21544/98286 (461t) | 0.80: $21544/98286 (461t) | 0.85: $21544/98286 (461t) | 0.90: $21544/98286 (461t) | 0.95: $21544/98286 (461t) | 1.00: $21544/98286 (461t)s

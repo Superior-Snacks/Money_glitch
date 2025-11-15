@@ -366,9 +366,10 @@ def fetch_all_trades(
     Fetch FULL trade history for a market using simple offset-based paging.
 
       - Walks pages: offset = 0, limit = page_limit, offset += page_limit ...
-      - De-dups by trade id (in case API returns overlapping pages).
+      - De-dups by trade id (in case API returns overlapping or repeating pages).
       - Stops when:
           * a page is empty, OR
+          * page adds 0 new trades (all IDs already seen), OR
           * len(page) < page_limit, OR
           * hard_cap_pages is reached.
     """
@@ -417,8 +418,13 @@ def fetch_all_trades(
         print(f"        → got {len(page)} trades")
         print(f"        → added {added}, total_unique={len(uniq)}")
 
-        # We *don't* early-stop on added == 0, to avoid missing anything
-        # if the API happens to return duplicates across pages.
+        # 🔴 IMPORTANT: page has no new trades → the API is repeating history.
+        # We already have every unique trade it will give us, so stop.
+        if added == 0:
+            print("        [STOP] page contained no new trades (all IDs seen); stopping")
+            break
+
+        # Short page also means "end of history" in normal APIs
         if len(page) < page_limit:
             print("        [STOP] short page (likely end of history)")
             break

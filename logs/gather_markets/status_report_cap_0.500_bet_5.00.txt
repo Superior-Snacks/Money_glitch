@@ -2,35 +2,35 @@
 Folder: gather_markets
 Cap under analysis: 0.500
 Max spend per market (bet): 5.00
-Generated at: 2025-11-15T18:15:16.408191+00:00
+Generated at: 2025-11-15T18:59:30.201418+00:00
 
 === GLOBAL COUNTS (all markets) ===
-Total markets in index: 5038
-  Open (TBD/other): 4163
-  Closed (YES/NO):  875
+Total markets in index: 4450
+  Open (TBD/other): 4285
+  Closed (YES/NO):  165
 
 === CAP-SPECIFIC COUNTS (at this cap, with bet) ===
 Cap: 0.500
-Markets you WOULD HAVE ENTERED at this cap: 970
-  Entered OPEN markets:   577
-  Entered CLOSED markets: 393
-Closed markets with NO liquidity at this cap: 482
-Open markets with NO liquidity at this cap:   3586
+Markets you WOULD HAVE ENTERED at this cap: 339
+  Entered OPEN markets:   321
+  Entered CLOSED markets: 18
+Closed markets with NO liquidity at this cap: 147
+Open markets with NO liquidity at this cap:   3964
 
 === MONEY / RISK / P&L (BUY NO, this cap, with bet) ===
-Total cost spent (entered markets):         4465.47
-Total NO-shares bought (entered markets):   183597.68
-Average effective NO price:                 0.0243
+Total cost spent (entered markets):         1410.81
+Total NO-shares bought (entered markets):   38145.34
+Average effective NO price:                 0.0370
 
-Realized P/L (entered closed markets only): 520.73
-  Profitable entered closed markets: 132, Losing entered closed markets: 261
-  Win-rate (NO wins among entered closed mkts): 33.59%  (NO=132, YES=261)
-  Avg P/L per entered closed market:       1.33
-  Efficiency (realized P/L / total cost):  0.1166
+Realized P/L (entered closed markets only): -53.48
+  Profitable entered closed markets: 0, Losing entered closed markets: 18
+  Win-rate (NO wins among entered closed mkts): 0.00%  (NO=0, YES=18)
+  Avg P/L per entered closed market:       -2.97
+  Efficiency (realized P/L / total cost):  -0.0379
 
-Total money put at risk in ALL entered markets (sum of actual spend): 4465.47
-Locked money NOW (open entered positions only, you lose this if all go YES): 2574.86
-Average cost per entered market: 4.60
+Total money put at risk in ALL entered markets (sum of actual spend): 1410.81
+Locked money NOW (open entered positions only, you lose this if all go YES): 1357.33
+Average cost per entered market: 4.16
 
 Notes:
   • This assumes you BUY NO with a limit price 'cap' and max spend 'bet' per market.
