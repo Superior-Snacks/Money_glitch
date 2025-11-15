@@ -207,9 +207,18 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
 
         scale = effective_cost / full_cost
         eff_shares = full_shares * scale
+        shares_bought = effective_cost / cap
+        propper_pl_no = shares_bought - effective_cost
+
+        print("----------------------------------")
+        print(f"cap: {cap}")
+        print(f"shares: {eff_shares}")
+        print(f"effective_cost: {effective_cost}")
+        print(f"proper_pl?: {propper_pl_no}")
 
         # P/L if NO and if YES for this hypothetical position
         pl_if_NO = eff_shares - effective_cost
+        #pl_if_NO = shares_bought - effective_cost
         pl_if_YES = -effective_cost
 
         debug_info.update(
@@ -336,7 +345,7 @@ def main():
         return
 
     #cap_str = input("Cap to analyze (e.g. 0.30): ").strip()
-    cap_str = "0.4"
+    cap_str = "0.5"
     try:
         cap = float(cap_str)
     except ValueError:

@@ -1,0 +1,40 @@
+=== PROJECT STATUS REPORT (BUY NO, LIMIT MAKER, FIXED BET) ===
+Folder: gather_markets
+Cap under analysis: 0.300
+Max spend per market (bet): 5.00
+Generated at: 2025-11-15T17:56:16.170927+00:00
+
+=== GLOBAL COUNTS (all markets) ===
+Total markets in index: 5038
+  Open (TBD/other): 4163
+  Closed (YES/NO):  875
+
+=== CAP-SPECIFIC COUNTS (at this cap, with bet) ===
+Cap: 0.300
+Markets you WOULD HAVE ENTERED at this cap: 691
+  Entered OPEN markets:   365
+  Entered CLOSED markets: 326
+Closed markets with NO liquidity at this cap: 549
+Open markets with NO liquidity at this cap:   3798
+
+=== MONEY / RISK / P&L (BUY NO, this cap, with bet) ===
+Total cost spent (entered markets):         3065.42
+Total NO-shares bought (entered markets):   208261.89
+Average effective NO price:                 0.0147
+
+Realized P/L (entered closed markets only): -533.07
+  Profitable entered closed markets: 68, Losing entered closed markets: 258
+  Win-rate (NO wins among entered closed mkts): 20.86%  (NO=68, YES=258)
+  Avg P/L per entered closed market:       -1.64
+  Efficiency (realized P/L / total cost):  -0.1739
+
+Total money put at risk in ALL entered markets (sum of actual spend): 3065.42
+Locked money NOW (open entered positions only, you lose this if all go YES): 1575.18
+Average cost per entered market: 4.44
+
+Notes:
+  • This assumes you BUY NO with a limit price 'cap' and max spend 'bet' per market.
+  • 'full_cost' is what you'd spend if you bought ALL NO under that cap.
+  • 'effective_cost' is min(bet, full_cost); you never spend more than bet.
+  • Per-market debug shows PL_if_NO and PL_if_YES for that effective position.
+

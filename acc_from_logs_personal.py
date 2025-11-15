@@ -521,12 +521,14 @@ def collect_cap_spread(
     }
 
 # ======================= Overview / heartbeat =====================
-def print_overview(open_rows, closed_rows, skipped, errors):
+def print_overview(open_rows, closed_rows, skipped, errors, skipped_closed_final, new_markets):
     print("\n===== PASS OVERVIEW (cap spread builder) =====")
-    print(f"Open markets saved:   {len(open_rows)}")
-    print(f"Closed markets saved: {len(closed_rows)}")
-    print(f"Skipped (filters):    {skipped}")
-    print(f"Errors (fetch/etc):   {errors}")
+    print(f"Open markets saved:         {len(open_rows)}")
+    print(f"Closed markets saved:       {len(closed_rows)}")
+    print(f"Skipped (filters):          {skipped}")
+    print(f"Skipped (already closed):   {skipped_closed_final}")
+    print(f"New markets this pass:      {new_markets}")
+    print(f"Errors (fetch/etc):         {errors}")
 
 # ======================= Main ====================================
 def main():
@@ -557,6 +559,9 @@ def main():
         prev_open_idx   = read_spread_index(open_path)
         prev_closed_idx = read_spread_index(closed_path)
 
+        # Set of all markets we've seen before in open/closed logs
+        prev_any_idx = set(prev_open_idx.keys()) | set(prev_closed_idx.keys())
+
         markets = read_unique_markets(folder)
         total_markets = len(markets)
         print(f"\n=== MAKER cap spread (folder={folder}) | markets={total_markets} ===")
@@ -565,6 +570,8 @@ def main():
         closed_rows: List[dict] = []
         skipped = 0
         errors  = 0
+        skipped_closed_final = 0
+        new_markets = 0
 
         for i, (cid, meta) in enumerate(markets.items(), 1):
             q = meta["question"]
@@ -572,17 +579,23 @@ def main():
 
             # Skip already-final closed markets (we assume spread won't change)
             if cid in prev_closed_idx:
-                if i % 50 == 0 or total_markets <= 50:
-                    print(f"[{i}/{total_markets}] SKIP (already closed final) → {q}")
+                skipped_closed_final += 1
+                print(f"[{i}/{total_markets}] SKIP (already closed final) → {q}")
                 continue
 
+            # Skip by filter
             if excluded and any(tok in q.lower() for tok in excluded):
                 skipped += 1
                 if i % 50 == 0 or total_markets <= 50:
                     print(f"[{i}/{total_markets}] SKIP (filter) → {q}")
                 continue
 
-            print(f"\n[{i}/{total_markets}] {q}  (cid={cid[:10]}…)  time_found={meta['time_found']}")
+            # Detect new markets
+            if cid not in prev_any_idx:
+                new_markets += 1
+                print(f"\n[{i}/{total_markets}] NEW market → {q}  (cid={cid[:10]}…)  time_found={meta['time_found']}")
+            else:
+                print(f"\n[{i}/{total_markets}] {q}  (cid={cid[:10]}…)  time_found={meta['time_found']}")
 
             prev_row    = prev_open_idx.get(cid) or prev_closed_idx.get(cid)
             prev_status = (prev_row or {}).get("status")
@@ -667,7 +680,14 @@ def main():
         print(f"[WRITE] {len(closed_rows)} closed rows → {closed_path} (rewritten this pass)")
 
         # ---------- Overview ----------
-        print_overview(open_rows, closed_rows, skipped=skipped, errors=errors)
+        print_overview(
+            open_rows,
+            closed_rows,
+            skipped=skipped,
+            errors=errors,
+            skipped_closed_final=skipped_closed_final,
+            new_markets=new_markets,
+        )
 
         if loop_s <= 0:
             break

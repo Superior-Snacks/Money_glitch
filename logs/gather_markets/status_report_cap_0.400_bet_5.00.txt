@@ -2,7 +2,7 @@
 Folder: gather_markets
 Cap under analysis: 0.400
 Max spend per market (bet): 5.00
-Generated at: 2025-11-14T22:00:46.107290+00:00
+Generated at: 2025-11-15T17:55:16.561788+00:00
 
 === GLOBAL COUNTS (all markets) ===
 Total markets in index: 5038
@@ -22,11 +22,11 @@ Total cost spent (entered markets):         3797.16
 Total NO-shares bought (entered markets):   192222.79
 Average effective NO price:                 0.0198
 
-Realized P/L (entered closed markets only): 557.93
+Realized P/L (entered closed markets only): -505.72
   Profitable entered closed markets: 107, Losing entered closed markets: 259
   Win-rate (NO wins among entered closed mkts): 29.23%  (NO=107, YES=259)
-  Avg P/L per entered closed market:       1.52
-  Efficiency (realized P/L / total cost):  0.1469
+  Avg P/L per entered closed market:       -1.38
+  Efficiency (realized P/L / total cost):  -0.1332
 
 Total money put at risk in ALL entered markets (sum of actual spend): 3797.16
 Locked money NOW (open entered positions only, you lose this if all go YES): 2073.76
