@@ -324,7 +324,7 @@ def current_status(m: dict) -> str:
         return winner
     return "TBD"
 
-# ======================= Trades paging ============================
+# ======================= Trades paging (offset-based) ============================
 def trade_ts(trade: dict) -> int:
     for key in ("match_time", "timestamp", "time", "ts", "last_update"):
         v = trade.get(key)
@@ -333,104 +333,101 @@ def trade_ts(trade: dict) -> int:
             return ts
     return 0
 
+
 def fetch_trades_page_ms(
     cid: str,
     *,
     limit: int = TRADES_PAGE_LIMIT,
-    after: Optional[int] = None,
+    offset: int = 0,
 ) -> List[dict]:
     """
-    One page of trades using the Polymarket trades API:
+    One page of trades using the Polymarket trades API, with OFFSET-based pagination:
 
       - market: conditionId
-      - after:  unix timestamp (sec); only trades strictly after this time
+      - offset: integer row offset
       - limit:  page size
     """
-    params = {"market": cid, "limit": int(limit)}
-    if after is not None:
-        params["after"] = int(after)
-
+    params = {
+        "market": cid,
+        "limit": int(limit),
+        "offset": int(offset),
+        "sort": "asc",  # keep order stable
+    }
     r = http_get_with_backoff(DATA_TRADES, params=params, timeout=20)
     return r.json() or []
 
-def fetch_all_trades_since(
+
+def fetch_all_trades(
     cid: str,
-    since_epoch_s: int,
     page_limit: int = TRADES_PAGE_LIMIT,
     hard_cap_pages: int = 5000,
 ) -> List[dict]:
     """
-    Incremental trade fetch:
+    Fetch FULL trade history for a market using simple offset-based paging.
 
-      - Only returns trades with ts >= since_epoch_s.
-      - Uses `after=<cursor>` where cursor starts at since_epoch_s and
-        moves forward to the newest timestamp we've actually *seen*.
-      - De-dups by trade id.
+      - Walks pages: offset = 0, limit = page_limit, offset += page_limit ...
+      - De-dups by trade id (in case API returns overlapping pages).
       - Stops when:
           * a page is empty, OR
-          * page adds 0 new trades, OR
-          * page < page_limit, OR
+          * len(page) < page_limit, OR
           * hard_cap_pages is reached.
     """
-    cursor = int(since_epoch_s)
+    offset = 0
     seen_ids: set = set()
     uniq: List[dict] = []
 
     start_time = time.monotonic()
-    print(f"    [FETCH] cid={cid[:12]}… baseline={since_epoch_s}")
+    print(f"    [FETCH] cid={cid[:12]}… (offset-based full history)")
 
     for page_no in range(1, hard_cap_pages + 1):
         elapsed = time.monotonic() - start_time
         bar_len = min(20, page_no)
         bar = "[" + "#" * bar_len + "-" * (20 - bar_len) + "]"
-        print(f"      [PAGE {page_no:4d}/{hard_cap_pages}] {bar} after={cursor} elapsed={elapsed:5.1f}s")
+        print(
+            f"      [PAGE {page_no:4d}/{hard_cap_pages}] {bar} "
+            f"offset={offset} elapsed={elapsed:5.1f}s"
+        )
 
-        page = fetch_trades_page_ms(cid, limit=page_limit, after=cursor)
+        page = fetch_trades_page_ms(cid, limit=page_limit, offset=offset)
         if not page:
             print("        → empty page, stopping")
             break
 
         added = 0
-        max_ts_on_page = cursor
-
         for t in page:
             tid = t.get("id")
             if not tid:
-                tid = f"{t.get('taker_order_id')}-{t.get('market')}-{t.get('price')}-{t.get('size')}-{t.get('side')}-{t.get('outcome')}-{t.get('bucket_index')}"
+                tid = (
+                    f"{t.get('taker_order_id')}-"
+                    f"{t.get('market')}-"
+                    f"{t.get('price')}-"
+                    f"{t.get('size')}-"
+                    f"{t.get('side')}-"
+                    f"{t.get('outcome')}-"
+                    f"{t.get('bucket_index')}"
+                )
 
             if tid in seen_ids:
-                continue
-
-            ts = trade_ts(t)
-            if ts < since_epoch_s:
                 continue
 
             seen_ids.add(tid)
             uniq.append(t)
             added += 1
-            if ts > max_ts_on_page:
-                max_ts_on_page = ts
 
         print(f"        → got {len(page)} trades")
         print(f"        → added {added}, total_unique={len(uniq)}")
 
-        if added == 0:
-            print("        [STOP] no new trades beyond current cursor; stopping")
-            break
-
-        if max_ts_on_page <= cursor:
-            print("        [STOP] max_ts_on_page <= cursor (API likely repeating pages); stopping")
-            break
-
-        cursor = max_ts_on_page
-
+        # We *don't* early-stop on added == 0, to avoid missing anything
+        # if the API happens to return duplicates across pages.
         if len(page) < page_limit:
             print("        [STOP] short page (likely end of history)")
             break
 
+        offset += page_limit
+
     uniq.sort(key=trade_ts)
     total_elapsed = time.monotonic() - start_time
-    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s since={since_epoch_s}")
+    print(f"    [DONE] trades_fetched={len(uniq)} in {total_elapsed:.1f}s (full history)")
     return uniq
 
 # ======================= Maker-style cap spread ===================
@@ -620,15 +617,13 @@ def main():
 
             else:
                 # For non-final markets (or closed without prev_spread edge-cases),
-                # fetch ALL trades every time. Ignore time_found as a cutoff.
-                since_epoch = 0
-                print(f"    → FULL history fetch (all trades, since=0) (prev_status={prev_status})")
+                # fetch ALL trades every time using offset-based paging.
+                print(f"    → FULL history fetch (all trades, offset paging) (prev_status={prev_status})")
 
                 try:
-                    trades = fetch_all_trades_since(
+                    trades = fetch_all_trades(
                         cid,
-                        since_epoch,
-                        page_limit=TRADES_PAGE_LIMIT
+                        page_limit=TRADES_PAGE_LIMIT,
                     )
                 except Exception as e:
                     errors += 1
@@ -641,7 +636,7 @@ def main():
                 cap_spread = collect_cap_spread(
                     trades,
                     caps=CAPS,
-                    since_epoch=since_epoch,
+                    since_epoch=0,
                     prev_spread=None,
                 )
 
