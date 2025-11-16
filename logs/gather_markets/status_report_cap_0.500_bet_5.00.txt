@@ -2,7 +2,7 @@
 Folder: gather_markets
 Cap under analysis: 0.500
 Max spend per market (bet): 5.00
-Generated at: 2025-11-15T18:59:30.201418+00:00
+Generated at: 2025-11-15T23:26:46.748009+00:00
 
 === GLOBAL COUNTS (all markets) ===
 Total markets in index: 4450
