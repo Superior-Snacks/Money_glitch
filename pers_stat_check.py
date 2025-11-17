@@ -207,11 +207,10 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
             #p/l calk
             if status == "NO":
                 profitable_markets += 1
-                pl += 
-            if pl_mkt >= 0:
-                profitable_markets += 1
-            else:
+                pl += single_market_potential
+            elif status == "YES":
                 losing_markets += 1
+                pl -= single_market_cost
 
     # ---- Summary section: cap-specific counts ----
     lines.append("=== CAP-SPECIFIC COUNTS (at this cap, with bet) ===")
