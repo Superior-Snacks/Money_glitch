@@ -174,7 +174,10 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
             continue  # degenerate case
 
         # You don't spend more than bet
-        effective_cost = min(bet, full_cost)
+        if (full_shares * cap) >= bet:
+            effective_cost = bet
+        else:
+            effective_cost = None
         if effective_cost <= 0:
             debug_info["reason"] = "effective_cost<=0"
             if DEBUG:
