@@ -177,7 +177,7 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
         if (full_shares * cap) >= bet:
             effective_cost = bet
         else:
-            effective_cost = None
+            effective_cost = full_shares * cap
         if effective_cost <= 0:
             debug_info["reason"] = "effective_cost<=0"
             if DEBUG:
@@ -191,12 +191,13 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
         filled_markets += 1
         total_cost += effective_cost
         cost_entered_markets += effective_cost
+
         if effective_cost == bet:
             single_market_potential = bet // cap
             single_market_cost = bet
         else:
             single_market_potential = full_shares
-            single_market_cost = full_shares * cap
+            single_market_cost = effective_cost
 
 
         if is_open:
@@ -223,63 +224,16 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
     lines.append("")
 
     # ---- Money / risk / P&L ----
-    avg_price = (total_cost / total_shares) if total_shares > 0 else 0.0
-    avg_cost_per_entered = (cost_entered_markets / filled_markets) if filled_markets > 0 else 0.0
-
-    if filled_closed_markets > 0:
-        win_rate_no = closed_no_filled / filled_closed_markets
-        pl_per_closed_market = realized_pl / filled_closed_markets
-    else:
-        win_rate_no = 0.0
-        pl_per_closed_market = 0.0
-
-    if cost_entered_markets > 0:
-        efficiency = realized_pl / cost_entered_markets
-    else:
-        efficiency = 0.0
 
     lines.append("=== MONEY / RISK / P&L (BUY NO, this cap, with bet) ===")
     lines.append(f"Total cost spent (entered markets):         {total_cost:.2f}")
     lines.append(f"Total NO-shares bought (entered markets):   {total_shares:.2f}")
-    lines.append(f"Average effective NO price:                 {avg_price:.4f}")
-    lines.append("")
-    lines.append(f"Realized P/L (entered closed markets only): {realized_pl:.2f}")
-    lines.append(
-        f"  Profitable entered closed markets: {profitable_markets}, "
-        f"Losing entered closed markets: {losing_markets}"
-    )
-    lines.append(
-        f"  Win-rate (NO wins among entered closed mkts): "
-        f"{win_rate_no*100:.2f}%  "
-        f"(NO={closed_no_filled}, YES={closed_yes_filled})"
-    )
-    lines.append(
-        f"  Avg P/L per entered closed market:       {pl_per_closed_market:.2f}"
-    )
-    lines.append(
-        f"  Efficiency (realized P/L / total cost):  {efficiency:.4f}"
-    )
-    lines.append("")
-    lines.append(
-        "Total money put at risk in ALL entered markets (sum of actual spend): "
-        f"{cost_entered_markets:.2f}"
-    )
-    lines.append(
-        "Locked money NOW (open entered positions only, you lose this if all go YES): "
-        f"{locked_money_open:.2f}"
-    )
-    lines.append(
-        "Average cost per entered market: "
-        f"{avg_cost_per_entered:.2f}"
-    )
-    lines.append("")
+    if pl <= 0:
+        lines.append(f"p/l {pl:+.2f}")
+    else:
+        lines.append(f"p/l {pl:-.2f}")
 
-    lines.append("Notes:")
-    lines.append("  • This assumes you BUY NO with a limit price 'cap' and max spend 'bet' per market.")
-    lines.append("  • 'full_cost' is what you'd spend if you bought ALL NO under that cap.")
-    lines.append("  • 'effective_cost' is min(bet, full_cost); you never spend more than bet.")
-    lines.append("  • Per-market debug shows PL_if_NO and PL_if_YES for that effective position.")
-    lines.append("")
+
 
     return "\n".join(lines)
 
