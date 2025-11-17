@@ -61,27 +61,6 @@ def get_cap_entry(row: dict, cap: float) -> Tuple[float, float, int]:
 
 
 def build_status_report(folder: str, cap: float, bet: float) -> str:
-    """
-    BUY-NO strategy with fixed bet:
-
-      • You place a limit BUY order for NO at price 'cap'.
-      • You are willing to spend at most 'bet' dollars in that market.
-      • From the trade history, cap_spread gives us:
-            full_shares, full_cost (dollars)
-        = "what if you bought ALL NO under this cap".
-
-      • We then compute:
-            effective_cost = min(bet, full_cost)
-            scale         = effective_cost / full_cost
-            eff_shares    = full_shares * scale
-
-      • P/L per market:
-            If market resolves NO:  P/L = eff_shares - effective_cost
-            If market resolves YES: P/L = -effective_cost
-
-      • Max loss per market = effective_cost <= bet
-      • If full_cost < bet: you are only partially filled (couldn't spend full bet).
-    """
     out_dir = os.path.join(LOGS_DIR, folder)
     open_path = os.path.join(out_dir, "log_open_markets_cap_spread.jsonl")
     closed_path = os.path.join(out_dir, "log_closed_markets_cap_spread.jsonl")
@@ -205,61 +184,28 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
                 )
             continue  # should not happen given bet > 0
 
-        scale = effective_cost / full_cost
-        eff_shares = full_shares * scale
-        shares_bought = effective_cost / cap
-        propper_pl_no = shares_bought - effective_cost
-
-        print("----------------------------------")
-        print(f"cap: {cap}")
-        print(f"shares: {eff_shares}")
-        print(f"effective_cost: {effective_cost}")
-        print(f"proper_pl?: {propper_pl_no}")
-
-        # P/L if NO and if YES for this hypothetical position
-        pl_if_NO = eff_shares - effective_cost
-        #pl_if_NO = shares_bought - effective_cost
-        pl_if_YES = -effective_cost
-
-        debug_info.update(
-            {
-                "entered": True,
-                "effective_cost": effective_cost,
-                "scale": scale,
-                "eff_shares": eff_shares,
-                "pl_if_NO": pl_if_NO,
-                "pl_if_YES": pl_if_YES,
-            }
-        )
-
-        if DEBUG:
-            print(
-                f"[DEBUG] cid={cid[:10]} status={status:3} "
-                f"liq=True full_shares={full_shares:.4f} full_cost={full_cost:.4f} trades={trades} | "
-                f"eff_cost={effective_cost:.4f} scale={scale:.4f} eff_shares={eff_shares:.4f} | "
-                f"PL_if_NO={pl_if_NO:.4f} PL_if_YES={pl_if_YES:.4f}"
-            )
-
         # Aggregate stats now use eff_shares and effective_cost
         filled_markets += 1
         total_cost += effective_cost
         total_shares += eff_shares
         cost_entered_markets += effective_cost
+        if effective_cost == bet:
+            single_market_potential = bet // cap
+            single_market_cost = bet
+        else:
+            single_market_potential = curr_sharess
+            single_market_cost = curr_shares * cap
+
 
         if is_open:
             filled_open_markets += 1
             locked_money_open += effective_cost  # max loss if YES
         else:
             filled_closed_markets += 1
-
+            #p/l calk
             if status == "NO":
-                closed_no_filled += 1
-                pl_mkt = pl_if_NO
-            else:  # YES
-                closed_yes_filled += 1
-                pl_mkt = pl_if_YES
-
-            realized_pl += pl_mkt
+                profitable_markets += 1
+                pl += 
             if pl_mkt >= 0:
                 profitable_markets += 1
             else:
