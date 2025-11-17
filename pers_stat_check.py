@@ -187,14 +187,13 @@ def build_status_report(folder: str, cap: float, bet: float) -> str:
         # Aggregate stats now use eff_shares and effective_cost
         filled_markets += 1
         total_cost += effective_cost
-        total_shares += eff_shares
         cost_entered_markets += effective_cost
         if effective_cost == bet:
             single_market_potential = bet // cap
             single_market_cost = bet
         else:
-            single_market_potential = curr_sharess
-            single_market_cost = curr_shares * cap
+            single_market_potential = full_shares
+            single_market_cost = full_shares * cap
 
 
         if is_open:
