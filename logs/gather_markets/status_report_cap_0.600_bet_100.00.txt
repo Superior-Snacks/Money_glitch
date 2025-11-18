@@ -1,0 +1,69 @@
+=== PROJECT STATUS REPORT (BUY NO, LIMIT MAKER, FIXED BET) ===
+Folder: gather_markets
+Cap under analysis: 0.600
+Max spend per market (bet): 100.00
+Generated at: 2025-11-18T17:42:24.004071+00:00
+
+=== GLOBAL COUNTS (all markets) ===
+Total markets in index: 5804
+  Open (TBD/other): 4191
+  Closed (YES/NO):  1613
+    Closed YES:     450
+    Closed NO:      1163
+
+=== CAP-SPECIFIC COUNTS (MAKER-at-cap FULL-FILL) ===
+Cap: 0.600
+Markets with ANY liquidity at this cap:         1568
+Markets you WOULD HAVE ENTERED (full bet fill): 1139
+  Entered OPEN markets:                         494
+  Entered CLOSED markets:                       645
+
+Closed markets with NO liquidity at this cap:       841
+Open markets with NO liquidity at this cap:         3395
+Closed markets with INSUFFICIENT liq (< bet):       127
+Open markets with INSUFFICIENT liq (< bet):         302
+
+=== MONEY / RISK / P&L (BUY NO as MAKER at cap; FULL FILL) ===
+Total cost spent (entered markets):              113900.00
+Locked money in OPEN entered markets (max loss): 49400.00
+Closed profitable markets (NO, full fill):       253
+Closed losing markets (YES, full fill):          392
+Per winning NO market P/L (cap=0.600, bet=100.00): 66.67
+Net realized P/L on CLOSED entered markets:      -22333.33
+
+=== MONEY / RISK / P&L (BUY NO as MAKER at cap; PARTIAL FILL) ===
+Markets you WOULD HAVE ENTERED (partial):        1568
+  Entered OPEN markets (partial):                796
+  Entered CLOSED markets (partial):              772
+Locked money in OPEN entered markets (partial):  57072.51
+Closed profitable markets (partial):             354
+Closed losing markets (partial):                 418
+Net realized P/L on CLOSED (partial):            -21588.03
+
+=== BET-SPREAD COUNTS (FULL-FILL MAKER at spread caps) ===
+Spread caps: 0.600, 0.500, 0.400, 0.300, 0.200
+Markets with ANY liquidity at these caps:        1568
+Markets you WOULD HAVE ENTERED (full bet fill):  664
+  Entered OPEN markets:                          222
+  Entered CLOSED markets:                        442
+
+Closed markets with NO liquidity at spread caps: 841
+Open markets with NO liquidity at spread caps:   3395
+Closed markets with INSUFFICIENT liq (< bet):    330
+Open markets with INSUFFICIENT liq (< bet):      574
+
+=== MONEY / RISK / P&L (BET-SPREAD, FULL-FILL) ===
+Total cost spent (entered markets):              66400.00
+Locked money in OPEN entered markets:            22200.00
+Closed profitable markets (NO, full fill):       62
+Closed losing markets (YES, full fill):          380
+Net realized P/L on CLOSED entered markets:      -26220.00
+
+=== MONEY / RISK / P&L (BET-SPREAD, PARTIAL-FILL) ===
+Markets you WOULD HAVE ENTERED (partial):        1568
+  Entered OPEN markets (partial):                796
+  Entered CLOSED markets (partial):              772
+Locked money in OPEN entered markets (partial):  45360.51
+Closed profitable markets (partial):             354
+Closed losing markets (partial):                 418
+Net realized P/L on CLOSED (partial):            -14102.74

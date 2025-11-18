@@ -1,0 +1,30 @@
+=== PROJECT STATUS REPORT (BUY NO, LIMIT MAKER AT CAP) ===
+Folder: gather_markets
+Cap under analysis: 0.200
+Max spend per market (bet): 5.00
+Generated at: 2025-11-18T17:20:59.852539+00:00
+
+=== GLOBAL COUNTS (all markets) ===
+Total markets in index: 5804
+  Open (TBD/other): 4191
+  Closed (YES/NO):  1613
+
+=== CAP-SPECIFIC COUNTS (MAKER-at-cap semantics) ===
+Cap: 0.200
+Markets with ANY liquidity at this cap:         803
+Markets you WOULD HAVE ENTERED (full bet fill): 634
+  Entered OPEN markets:                         246
+  Entered CLOSED markets:                       388
+
+Closed markets with NO liquidity at this cap:       1118
+Open markets with NO liquidity at this cap:         3883
+Closed markets with INSUFFICIENT liq (< bet):       107
+Open markets with INSUFFICIENT liq (< bet):         62
+
+=== MONEY / RISK / P&L (BUY NO as MAKER at cap) ===
+Total cost spent (entered markets):              3170.00
+Locked money in OPEN entered markets (max loss): 1230.00
+Closed profitable markets (NO, full fill):       74
+Closed losing markets (YES, full fill):          314
+Per winning NO market P/L (cap=0.200, bet=5.00): 20.00
+Net realized P/L on CLOSED entered markets:      -90.00
