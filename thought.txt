@@ -892,3 +892,51 @@ hybrid
         [STOP] no new trades beyond baseline; stopping
     [DONE] trades_fetched=1083 in 5.7s since=1762272176
     [CAP SPREAD] 0.00: $0/0 (0t) | 0.05: $0/0 (0t) | 0.10: $1006/10788 (32t) | 0.15: $4390/37073 (149t) | 0.20: $8185/57643 (245t) | 0.25: $9471/63385 (296t) | 0.30: $10064/65485 (320t) | 0.35: $18065/89446 (416t) | 0.40: $20000/94613 (448t) | 0.45: $20928/96893 (454t) | 0.50: $21305/97679 (459t) | 0.55: $21305/97679 (459t) | 0.60: $21305/97679 (459t) | 0.65: $21504/98008 (460t) | 0.70: $21504/98008 (460t) | 0.75: $21504/98008 (460t) | 0.80: $21504/98008 (460t) | 0.85: $21504/98008 (460t) | 0.90: $21504/98008 (460t) | 0.95: $21504/98008 (460t) | 1.00: $21504/98008 (460t)
+
+    ===== PASS OVERVIEW =====
+Markets scanned:      5794
+Skipped (filters):    0
+Errors (fetch/etc):   0
+non active markets:   1220
+Open markets:         4204
+Closed markets:   all:1590 no:1142 yes:448
+closed filled:    all:446 no:178 yes:268
+Cap:                  0.5   Bet size: $100.00
+Total realized P/L:   +14769.51
+Success fills:        802  (13.84% if n else 0)
+No trades on NO side: 1450
+Avg under-cap $:      $552.63
+Avg under-cap shares: 3623.9055
+Lowest(ever) NO px:   min=0.0010  mean=0.6426  max=0.9990
+
+===== PASS OVERVIEW =====
+Markets scanned:      5794
+Skipped (filters):    0
+Errors (fetch/etc):   0
+non active markets:   1222
+Open markets:         4204
+Closed markets:   all:1590 no:1142 yes:448
+closed filled:    all:584 no:238 yes:346
+Cap:                  0.5   Bet size: $10.00
+Total realized P/L:   +2688.29
+Success fills:        1105  (19.07% if n else 0)
+No trades on NO side: 1450
+Avg under-cap $:      $551.27
+Avg under-cap shares: 3614.7124
+Lowest(ever) NO px:   min=0.0010  mean=0.6429  max=0.9990
+
+===== PASS OVERVIEW =====
+Markets scanned:      5794
+Skipped (filters):    0
+Errors (fetch/etc):   0
+non active markets:   1222
+Open markets:         4204
+Closed markets:   all:1590 no:1142 yes:448
+closed filled:    all:502 no:169 yes:333
+Cap:                  0.4   Bet size: $10.00
+Total realized P/L:   +2477.48
+Success fills:        903  (15.59% if n else 0)
+No trades on NO side: 1450
+Avg under-cap $:      $410.19
+Avg under-cap shares: 3303.9983
+Lowest(ever) NO px:   min=0.0010  mean=0.6429  max=0.9990
