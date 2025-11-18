@@ -431,9 +431,14 @@ def fetch_markets_since(start_epoch: int):
     print(f"{dt_iso()} Fetching markets since {start_epoch}")
 
     while True:
+        # Added print to show progress
+        print(f"   [Market Discovery] Fetching offset {offset}... (Found {len(out)} relevant so far)")
+        
         r = http_get_with_backoff(BASE_GAMMA, params={"limit": limit, "offset": offset}, timeout=30)
         rows = r.json() or []
+        
         if not rows:
+            print("   [Market Discovery] No more markets returned by API.")
             break
 
         for m in rows:
@@ -442,8 +447,11 @@ def fetch_markets_since(start_epoch: int):
                 continue
             created_raw = m.get("createdAt") or m.get("updatedAt")
             created_ts = _to_epoch_any(created_raw)
+            
+            # Filter: Only keep markets created after start_epoch
             if created_ts is None or created_ts < start_epoch:
                 continue
+                
             out[cid] = {
                 "conditionId": cid,
                 "question": m.get("question"),
@@ -452,6 +460,12 @@ def fetch_markets_since(start_epoch: int):
             }
 
         offset += len(rows)
+        
+        # Optional: Stop if the API returns fewer than limit (end of list), 
+        # though usually empty list catches this.
+        if len(rows) < limit:
+            print("   [Market Discovery] Reached end of market list.")
+            break
 
     return out
 
