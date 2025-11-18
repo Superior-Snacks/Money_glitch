@@ -1,0 +1,7 @@
+=== PROJECT STATUS REPORT (BUY NO, LIMIT MAKER, FIXED BET) ===
+Folder: gather_markets
+Cap under analysis: 0.500
+Max spend per market (bet): 5.00
+Generated at: 2025-11-17T18:31:25.761515+00:00
+
+No data found yet (run the main cap-spread script first).
