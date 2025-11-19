@@ -9,7 +9,7 @@ DEFAULT_BET_SIZE = 100.0  # Max USDC to deploy per market per cap
 
 def load_closed_markets(folder_path: str) -> List[Dict]:
     """Loads only closed markets (YES/NO) from the folder."""
-    path = os.path.join(folder_path, "closed.jsonl")
+    path = os.path.join("logs", folder_path, "closed.jsonl")
     data = []
     if not os.path.exists(path):
         print(f"[ERROR] Could not find {path}")
