@@ -1,0 +1,1389 @@
+bets_total:29 | total spent 164.00 | batch P/L: 161.00 | total P/L: 161.00 | bank: 5161.00 | next offset: 70029 | timestamp 2025-08-01T19:59:47.530647Z
+
+bets_total:41 | total spent 274.00 | batch P/L: 90.00 | total P/L: 251.00 | bank: 5251.00 | next offset: 70041 | timestamp 2025-08-02T12:23:44.087723Z
+
+bets_total:64 | total spent 474.00 | batch P/L: 175.00 | total P/L: 426.00 | bank: 5426.00 | next offset: 70064 | timestamp 2025-08-02T12:23:44.087723Z
+
+bets_total:85 | total spent 664.00 | batch P/L: 160.00 | total P/L: 586.00 | bank: 5586.00 | next offset: 70085 | timestamp 2025-08-03T04:00:02.849712Z
+
+bets_total:122 | total spent 874.00 | batch P/L: 190.00 | total P/L: 776.00 | bank: 5776.00 | next offset: 70122 | timestamp 2025-08-03T04:00:02.849712Z
+
+bets_total:172 | total spent 894.00 | batch P/L: 30.00 | total P/L: 806.00 | bank: 5806.00 | next offset: 70172 | timestamp 2025-08-03T16:20:47.129498Z
+
+bets_total:218 | total spent 1034.00 | batch P/L: 160.00 | total P/L: 966.00 | bank: 5966.00 | next offset: 70218 | timestamp 2025-08-03T16:21:27.654922Z
+
+bets_total:268 | total spent 1064.00 | batch P/L: 20.00 | total P/L: 986.00 | bank: 5986.00 | next offset: 70268 | timestamp 2025-08-03T22:05:28.755229Z
+
+bets_total:318 | total spent 1064.00 | batch P/L: 0.00 | total P/L: 986.00 | bank: 5986.00 | next offset: 70318 | timestamp 2025-08-03T22:20:41.418182Z
+
+bets_total:345 | total spent 1164.00 | batch P/L: 75.00 | total P/L: 1061.00 | bank: 6061.00 | next offset: 70345 | timestamp 2025-08-04T04:00:18.27872Z
+
+bets_total:360 | total spent 1254.00 | batch P/L: 60.00 | total P/L: 1121.00 | bank: 6121.00 | next offset: 70360 | timestamp 2025-08-04T04:02:52.193578Z
+
+bets_total:374 | total spent 1334.00 | batch P/L: 70.00 | total P/L: 1191.00 | bank: 6191.00 | next offset: 70374 | timestamp 2025-08-04T08:29:12.417068Z
+
+bets_total:379 | total spent 1354.00 | batch P/L: 30.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 70379 | timestamp 2025-08-04T08:29:16.842076Z
+
+bets_total:379 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 70379 | timestamp None
+
+batch:1 | bets_total:29 | total spent 164.00 | batch P/L: 161.00 | total P/L: 161.00 | bank: 5161.00 | next offset: 70029 | timestamp 2025-08-01T19:59:47.530647Z
+
+batch:2 | bets_total:41 | total spent 274.00 | batch P/L: 90.00 | total P/L: 251.00 | bank: 5251.00 | next offset: 70041 | timestamp 2025-08-02T12:23:44.087723Z
+
+batch:3 | bets_total:64 | total spent 474.00 | batch P/L: 175.00 | total P/L: 426.00 | bank: 5426.00 | next offset: 70064 | timestamp 2025-08-02T12:23:44.087723Z
+
+batch:4 | bets_total:85 | total spent 664.00 | batch P/L: 160.00 | total P/L: 586.00 | bank: 5586.00 | next offset: 70085 | timestamp 2025-08-03T04:00:02.849712Z
+
+batch:5 | bets_total:122 | total spent 874.00 | batch P/L: 190.00 | total P/L: 776.00 | bank: 5776.00 | next offset: 70122 | timestamp 2025-08-03T04:00:02.849712Z
+
+batch:6 | bets_total:172 | total spent 894.00 | batch P/L: 30.00 | total P/L: 806.00 | bank: 5806.00 | next offset: 70172 | timestamp 2025-08-03T16:20:47.129498Z
+
+batch:7 | bets_total:218 | total spent 1034.00 | batch P/L: 160.00 | total P/L: 966.00 | bank: 5966.00 | next offset: 70218 | timestamp 2025-08-03T16:21:27.654922Z
+
+batch:8 | bets_total:268 | total spent 1064.00 | batch P/L: 20.00 | total P/L: 986.00 | bank: 5986.00 | next offset: 70268 | timestamp 2025-08-03T22:05:28.755229Z
+
+batch:9 | bets_total:318 | total spent 1064.00 | batch P/L: 0.00 | total P/L: 986.00 | bank: 5986.00 | next offset: 70318 | timestamp 2025-08-03T22:20:41.418182Z
+
+batch:10 | bets_total:345 | total spent 1164.00 | batch P/L: 75.00 | total P/L: 1061.00 | bank: 6061.00 | next offset: 70345 | timestamp 2025-08-04T04:00:18.27872Z
+
+batch:11 | bets_total:360 | total spent 1254.00 | batch P/L: 60.00 | total P/L: 1121.00 | bank: 6121.00 | next offset: 70360 | timestamp 2025-08-04T04:02:52.193578Z
+
+batch:12 | bets_total:374 | total spent 1334.00 | batch P/L: 70.00 | total P/L: 1191.00 | bank: 6191.00 | next offset: 70374 | timestamp 2025-08-04T08:29:12.417068Z
+
+batch:13 | bets_total:379 | total spent 1354.00 | batch P/L: 30.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 70379 | timestamp 2025-08-04T08:29:16.842076Z
+
+batch:14 | bets_total:379 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 70379 | timestamp None
+
+batch:15 | bets_total:380 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:16 | bets_total:381 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:17 | bets_total:382 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:18 | bets_total:383 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:19 | bets_total:383 | total spent 1354.00 | batch P/L: 0.00 | total P/L: 1221.00 | bank: 6221.00 | next offset: 4 | timestamp None
+
+batch:1 | bets_total:37 | total spent 200.00 | batch P/L: 150.00 | total P/L: 150.00 | bank: 5150.00 | next offset: 50037 | timestamp 2025-05-21T11:21:33.611354Z
+
+batch:2 | bets_total:87 | total spent 586.38 | batch P/L: 204.58 | total P/L: 354.58 | bank: 5354.58 | next offset: 50087 | timestamp 2025-05-21T15:26:24.185399Z
+
+batch:1 | bets_total:37 | total spent 220.00 | batch P/L: -32.50 | total P/L: -32.50 | bank: 4967.50 | next offset: 50037 | timestamp 2025-05-21T11:21:33.611354Z
+
+batch:1 | bets_total:37 | total spent 11494.02 | batch P/L: 3977.02 | total P/L: 3977.02 | bank: 8977.02 | next offset: 50037 | timestamp 2025-05-21T11:21:33.611354Z
+
+batch:1 | bets_total:6 | total spent 8.77 | batch P/L: 8.77 | total P/L: 8.77 | bank: 5008.77 | next offset: 170006 | timestamp 2025-11-15T06:00:06.758752Z
+
+batch:2 | bets_total:10 | total spent 17.54 | batch P/L: 8.77 | total P/L: 17.54 | bank: 5017.54 | next offset: 170010 | timestamp 2025-11-15T07:00:02.667985Z
+
+batch:3 | bets_total:14 | total spent 26.32 | batch P/L: 8.77 | total P/L: 26.32 | bank: 5026.32 | next offset: 170014 | timestamp 2025-11-15T07:00:02.667985Z
+
+batch:1 | bets_total:14 | total spent 66.00 | batch P/L: 99.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160014 | timestamp 2025-11-09T07:00:02.662313Z
+
+batch:2 | bets_total:18 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160018 | timestamp 2025-11-09T08:00:02.596235Z
+
+batch:3 | bets_total:22 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160022 | timestamp 2025-11-09T08:00:02.596235Z
+
+batch:4 | bets_total:26 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160026 | timestamp 2025-11-09T08:00:02.596235Z
+
+batch:5 | bets_total:30 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160030 | timestamp 2025-11-09T08:00:02.596235Z
+
+batch:6 | bets_total:34 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160034 | timestamp 2025-11-09T08:00:02.596235Z
+
+batch:7 | bets_total:38 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160038 | timestamp 2025-11-09T08:00:02.596235Z
+
+batch:8 | bets_total:41 | total spent 66.00 | batch P/L: 0.00 | total P/L: 99.00 | bank: 5099.00 | next offset: 160041 | timestamp 2025-11-09T08:00:03.689569Z
+
+batch:1 | bets_total:0 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 180000 | timestamp None
+
+batch:2 | bets_total:1 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:3 | bets_total:2 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:4 | bets_total:3 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:5 | bets_total:4 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:6 | bets_total:4 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 4 | timestamp None
+
+batch:1 | bets_total:0 | total spent 0.00 | batch P/L: 0.00 | total P/L: 0.00 | bank: 5000.00 | next offset: 180000 | timestamp None
+
+batch:1 | bets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100033 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | bets_total:81 | total spent 70.00 | batch P/L: 45.00 | total P/L: 55.00 | bank: 5055.00 | next offset: 100081 | timestamp 2025-09-19T14:00:01.334131Z
+
+batch:3 | bets_total:109 | total spent 120.00 | batch P/L: 75.00 | total P/L: 130.00 | bank: 5130.00 | next offset: 100109 | timestamp 2025-09-19T14:00:02.872217Z
+
+batch:4 | bets_total:136 | total spent 340.00 | batch P/L: 255.00 | total P/L: 385.00 | bank: 5385.00 | next offset: 100136 | timestamp 2025-09-19T16:00:00.766502Z
+
+batch:5 | bets_total:180 | total spent 649.20 | batch P/L: 338.80 | total P/L: 723.80 | bank: 5723.80 | next offset: 100180 | timestamp 2025-09-19T16:00:00.790924Z
+
+batch:6 | bets_total:225 | total spent 889.20 | batch P/L: 260.00 | total P/L: 983.80 | bank: 5983.80 | next offset: 100225 | timestamp 2025-09-19T16:00:02.36949Z
+
+batch:7 | bets_total:255 | total spent 969.20 | batch P/L: 70.00 | total P/L: 1053.80 | bank: 6053.80 | next offset: 100255 | timestamp 2025-09-19T16:32:06.049121Z
+
+batch:8 | bets_total:302 | total spent 999.20 | batch P/L: 20.00 | total P/L: 1073.80 | bank: 6073.80 | next offset: 100302 | timestamp 2025-09-19T18:00:00.627576Z
+
+batch:9 | bets_total:344 | total spent 1019.20 | batch P/L: 30.00 | total P/L: 1103.80 | bank: 6103.80 | next offset: 100344 | timestamp 2025-09-19T18:00:02.60119Z
+
+batch:10 | bets_total:367 | total spent 1199.20 | batch P/L: 70.00 | total P/L: 1173.80 | bank: 6173.80 | next offset: 100367 | timestamp 2025-09-19T18:51:06.489045Z
+
+batch:11 | bets_total:394 | total spent 1409.20 | batch P/L: 140.00 | total P/L: 1313.80 | bank: 6313.80 | next offset: 100394 | timestamp 2025-09-19T19:50:26.251797Z
+
+batch:12 | bets_total:425 | total spent 1499.20 | batch P/L: 85.00 | total P/L: 1398.80 | bank: 6398.80 | next offset: 100425 | timestamp 2025-09-19T20:26:07.728927Z
+
+batch:13 | bets_total:462 | total spent 1499.20 | batch P/L: 0.00 | total P/L: 1398.80 | bank: 6398.80 | next offset: 100462 | timestamp 2025-09-19T22:00:00.849296Z
+
+batch:14 | bets_total:500 | total spent 1509.20 | batch P/L: 15.00 | total P/L: 1413.80 | bank: 6413.80 | next offset: 100500 | timestamp 2025-09-19T22:00:01.756121Z
+
+batch:15 | bets_total:534 | total spent 1509.20 | batch P/L: 0.00 | total P/L: 1413.80 | bank: 6413.80 | next offset: 100534 | timestamp 2025-09-19T22:00:02.510482Z
+
+batch:16 | bets_total:539 | total spent 1549.20 | batch P/L: 60.00 | total P/L: 1473.80 | bank: 6473.80 | next offset: 100539 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:17 | bets_total:549 | total spent 1589.20 | batch P/L: 60.00 | total P/L: 1533.80 | bank: 6533.80 | next offset: 100549 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:18 | bets_total:569 | total spent 1665.20 | batch P/L: 114.00 | total P/L: 1647.80 | bank: 6647.80 | next offset: 100569 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:19 | bets_total:603 | total spent 1701.20 | batch P/L: 54.00 | total P/L: 1701.80 | bank: 6701.80 | next offset: 100603 | timestamp 2025-09-20T02:00:00.647359Z
+
+batch:20 | bets_total:650 | total spent 1721.20 | batch P/L: 30.00 | total P/L: 1731.80 | bank: 6731.80 | next offset: 100650 | timestamp 2025-09-20T02:00:00.731876Z
+
+batch:21 | bets_total:675 | total spent 1721.20 | batch P/L: 0.00 | total P/L: 1731.80 | bank: 6731.80 | next offset: 100675 | timestamp 2025-09-20T02:00:02.186513Z
+
+batch:22 | bets_total:690 | total spent 1771.20 | batch P/L: 25.00 | total P/L: 1756.80 | bank: 6756.80 | next offset: 100690 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:23 | bets_total:718 | total spent 1821.20 | batch P/L: 25.00 | total P/L: 1781.80 | bank: 6781.80 | next offset: 100718 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:24 | bets_total:751 | total spent 1851.20 | batch P/L: 20.00 | total P/L: 1801.80 | bank: 6801.80 | next offset: 100751 | timestamp 2025-09-20T04:00:01.693942Z
+
+batch:25 | bets_total:774 | total spent 2001.20 | batch P/L: 100.00 | total P/L: 1901.80 | bank: 6901.80 | next offset: 100774 | timestamp 2025-09-20T04:00:02.119227Z
+
+batch:26 | bets_total:798 | total spent 2151.20 | batch P/L: 100.00 | total P/L: 2001.80 | bank: 7001.80 | next offset: 100798 | timestamp 2025-09-20T04:00:18.807069Z
+
+batch:27 | bets_total:830 | total spent 2181.20 | batch P/L: 45.00 | total P/L: 2046.80 | bank: 7046.80 | next offset: 100830 | timestamp 2025-09-20T06:00:00.625469Z
+
+batch:28 | bets_total:877 | total spent 2211.20 | batch P/L: 20.00 | total P/L: 2066.80 | bank: 7066.80 | next offset: 100877 | timestamp 2025-09-20T06:00:00.700163Z
+
+batch:29 | bets_total:905 | total spent 2231.20 | batch P/L: 30.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 100905 | timestamp 2025-09-20T06:00:02.795726Z
+
+batch:30 | bets_total:905 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 100905 | timestamp None
+
+batch:31 | bets_total:906 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:32 | bets_total:907 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:33 | bets_total:908 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:34 | bets_total:909 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:35 | bets_total:909 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:36 | bets_total:910 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:37 | bets_total:911 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:38 | bets_total:912 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:39 | bets_total:913 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:40 | bets_total:913 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:41 | bets_total:914 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:42 | bets_total:915 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:43 | bets_total:916 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:44 | bets_total:917 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:45 | bets_total:917 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:46 | bets_total:918 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:47 | bets_total:919 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:48 | bets_total:920 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:49 | bets_total:921 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:50 | bets_total:921 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:51 | bets_total:922 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:52 | bets_total:923 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:53 | bets_total:924 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:54 | bets_total:925 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:55 | bets_total:925 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:56 | bets_total:926 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:57 | bets_total:927 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:58 | bets_total:928 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:59 | bets_total:929 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:60 | bets_total:929 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:61 | bets_total:930 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:62 | bets_total:931 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:63 | bets_total:932 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:64 | bets_total:933 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:65 | bets_total:933 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:66 | bets_total:934 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:67 | bets_total:935 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:68 | bets_total:936 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:69 | bets_total:937 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:70 | bets_total:937 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:71 | bets_total:938 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:72 | bets_total:939 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:73 | bets_total:940 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:74 | bets_total:941 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:75 | bets_total:941 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:76 | bets_total:942 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:77 | bets_total:943 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:78 | bets_total:944 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:79 | bets_total:945 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:80 | bets_total:945 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:81 | bets_total:946 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:82 | bets_total:947 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:83 | bets_total:948 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:84 | bets_total:949 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:85 | bets_total:949 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:86 | bets_total:950 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 1 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:87 | bets_total:951 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 2 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:88 | bets_total:952 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 3 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:89 | bets_total:953 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:90 | bets_total:953 | total spent 2231.20 | batch P/L: 0.00 | total P/L: 2096.80 | bank: 7096.80 | next offset: 4 | timestamp None
+
+batch:1 | markets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100050 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | markets_total:82 | total spent 100.00 | batch P/L: 90.00 | total P/L: 100.00 | bank: 5100.00 | next offset: 100100 | timestamp 2025-09-19T14:00:02.04331Z
+
+batch:3 | markets_total:108 | total spent 280.00 | batch P/L: 245.00 | total P/L: 345.00 | bank: 5345.00 | next offset: 100150 | timestamp 2025-09-19T14:00:03.109891Z
+
+batch:4 | markets_total:154 | total spent 549.20 | batch P/L: 278.80 | total P/L: 623.80 | bank: 5623.80 | next offset: 100200 | timestamp 2025-09-19T16:00:01.441582Z
+
+batch:5 | markets_total:184 | total spent 729.20 | batch P/L: 170.00 | total P/L: 793.80 | bank: 5793.80 | next offset: 100250 | timestamp 2025-09-19T16:00:03.225547Z
+
+batch:6 | markets_total:229 | total spent 759.20 | batch P/L: 20.00 | total P/L: 813.80 | bank: 5813.80 | next offset: 100300 | timestamp 2025-09-19T18:00:00.627576Z
+
+batch:7 | markets_total:273 | total spent 779.20 | batch P/L: 30.00 | total P/L: 843.80 | bank: 5843.80 | next offset: 100350 | timestamp 2025-09-19T18:00:02.60119Z
+
+batch:8 | markets_total:301 | total spent 999.20 | batch P/L: 105.00 | total P/L: 948.80 | bank: 5948.80 | next offset: 100400 | timestamp 2025-09-19T18:51:06.489045Z
+
+batch:9 | markets_total:328 | total spent 1039.20 | batch P/L: 35.00 | total P/L: 983.80 | bank: 5983.80 | next offset: 100450 | timestamp 2025-09-19T20:26:12.797125Z
+
+batch:10 | markets_total:360 | total spent 1049.20 | batch P/L: 15.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100500 | timestamp 2025-09-19T22:00:01.756121Z
+
+batch:11 | markets_total:394 | total spent 1049.20 | batch P/L: 0.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100550 | timestamp 2025-09-19T22:00:02.510482Z
+
+batch:12 | markets_total:415 | total spent 1125.20 | batch P/L: 114.00 | total P/L: 1112.80 | bank: 6112.80 | next offset: 100600 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:13 | markets_total:462 | total spent 1145.20 | batch P/L: 30.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100650 | timestamp 2025-09-20T02:00:00.731876Z
+
+batch:14 | markets_total:487 | total spent 1145.20 | batch P/L: 0.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100700 | timestamp 2025-09-20T02:00:02.186513Z
+
+batch:15 | markets_total:522 | total spent 1195.20 | batch P/L: 25.00 | total P/L: 1167.80 | bank: 6167.80 | next offset: 100750 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:16 | markets_total:546 | total spent 1345.20 | batch P/L: 100.00 | total P/L: 1267.80 | bank: 6267.80 | next offset: 100800 | timestamp 2025-09-20T04:00:02.119227Z
+
+batch:17 | markets_total:579 | total spent 1375.20 | batch P/L: 45.00 | total P/L: 1312.80 | bank: 6312.80 | next offset: 100850 | timestamp 2025-09-20T06:00:00.625469Z
+
+batch:18 | markets_total:629 | total spent 1415.20 | batch P/L: 35.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100900 | timestamp 2025-09-20T06:00:01.815988Z
+
+batch:19 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100950 | timestamp 2025-09-20T06:00:03.718724Z
+
+batch:20 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101000 | timestamp None
+
+batch:21 | markets_total:635 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:22 | markets_total:636 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:23 | markets_total:636 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:24 | markets_total:637 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:25 | markets_total:638 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:26 | markets_total:638 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:27 | markets_total:639 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:28 | markets_total:640 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:29 | markets_total:640 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:30 | markets_total:641 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:31 | markets_total:642 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:32 | markets_total:642 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:33 | markets_total:643 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:34 | markets_total:644 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:35 | markets_total:644 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:36 | markets_total:645 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:37 | markets_total:646 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:38 | markets_total:646 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:39 | markets_total:647 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:40 | markets_total:648 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:41 | markets_total:648 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:42 | markets_total:649 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:43 | markets_total:650 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:44 | markets_total:650 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:45 | markets_total:651 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:46 | markets_total:652 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:47 | markets_total:652 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:48 | markets_total:653 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:49 | markets_total:654 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:50 | markets_total:654 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:51 | markets_total:655 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:52 | markets_total:656 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:53 | markets_total:656 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:54 | markets_total:657 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:55 | markets_total:658 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:56 | markets_total:658 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:57 | markets_total:659 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:58 | markets_total:660 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:59 | markets_total:660 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:60 | markets_total:661 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:61 | markets_total:662 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:62 | markets_total:662 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:63 | markets_total:663 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:64 | markets_total:664 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:65 | markets_total:664 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:66 | markets_total:665 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:67 | markets_total:666 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:68 | markets_total:666 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:69 | markets_total:667 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:70 | markets_total:668 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:71 | markets_total:668 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:72 | markets_total:669 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:73 | markets_total:670 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:74 | markets_total:670 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:75 | markets_total:671 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:76 | markets_total:672 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:77 | markets_total:672 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:78 | markets_total:673 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:79 | markets_total:674 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:80 | markets_total:674 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:81 | markets_total:675 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 50 | timestamp 2020-10-02T19:20:04.234Z
+
+batch:82 | markets_total:676 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100 | timestamp 2021-01-25T18:10:03.551Z
+
+batch:83 | markets_total:676 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 150 | timestamp None
+
+batch:1 | markets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100050 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | markets_total:82 | total spent 100.00 | batch P/L: 90.00 | total P/L: 100.00 | bank: 5100.00 | next offset: 100100 | timestamp 2025-09-19T14:00:02.04331Z
+
+batch:3 | markets_total:108 | total spent 280.00 | batch P/L: 245.00 | total P/L: 345.00 | bank: 5345.00 | next offset: 100150 | timestamp 2025-09-19T14:00:03.109891Z
+
+batch:4 | markets_total:154 | total spent 549.20 | batch P/L: 278.80 | total P/L: 623.80 | bank: 5623.80 | next offset: 100200 | timestamp 2025-09-19T16:00:01.441582Z
+
+batch:5 | markets_total:184 | total spent 729.20 | batch P/L: 170.00 | total P/L: 793.80 | bank: 5793.80 | next offset: 100250 | timestamp 2025-09-19T16:00:03.225547Z
+
+batch:6 | markets_total:229 | total spent 759.20 | batch P/L: 20.00 | total P/L: 813.80 | bank: 5813.80 | next offset: 100300 | timestamp 2025-09-19T18:00:00.627576Z
+
+batch:7 | markets_total:273 | total spent 779.20 | batch P/L: 30.00 | total P/L: 843.80 | bank: 5843.80 | next offset: 100350 | timestamp 2025-09-19T18:00:02.60119Z
+
+batch:8 | markets_total:301 | total spent 999.20 | batch P/L: 105.00 | total P/L: 948.80 | bank: 5948.80 | next offset: 100400 | timestamp 2025-09-19T18:51:06.489045Z
+
+batch:9 | markets_total:328 | total spent 1039.20 | batch P/L: 35.00 | total P/L: 983.80 | bank: 5983.80 | next offset: 100450 | timestamp 2025-09-19T20:26:12.797125Z
+
+batch:10 | markets_total:360 | total spent 1049.20 | batch P/L: 15.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100500 | timestamp 2025-09-19T22:00:01.756121Z
+
+batch:11 | markets_total:394 | total spent 1049.20 | batch P/L: 0.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100550 | timestamp 2025-09-19T22:00:02.510482Z
+
+batch:12 | markets_total:415 | total spent 1125.20 | batch P/L: 114.00 | total P/L: 1112.80 | bank: 6112.80 | next offset: 100600 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:13 | markets_total:462 | total spent 1145.20 | batch P/L: 30.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100650 | timestamp 2025-09-20T02:00:00.731876Z
+
+batch:14 | markets_total:487 | total spent 1145.20 | batch P/L: 0.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100700 | timestamp 2025-09-20T02:00:02.186513Z
+
+batch:15 | markets_total:522 | total spent 1195.20 | batch P/L: 25.00 | total P/L: 1167.80 | bank: 6167.80 | next offset: 100750 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:16 | markets_total:546 | total spent 1345.20 | batch P/L: 100.00 | total P/L: 1267.80 | bank: 6267.80 | next offset: 100800 | timestamp 2025-09-20T04:00:02.119227Z
+
+batch:17 | markets_total:579 | total spent 1375.20 | batch P/L: 45.00 | total P/L: 1312.80 | bank: 6312.80 | next offset: 100850 | timestamp 2025-09-20T06:00:00.625469Z
+
+batch:18 | markets_total:629 | total spent 1415.20 | batch P/L: 35.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100900 | timestamp 2025-09-20T06:00:01.815988Z
+
+batch:19 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100950 | timestamp 2025-09-20T06:00:03.718724Z
+
+batch:20 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101000 | timestamp None
+
+batch:21 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101050 | timestamp None
+
+batch:22 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101100 | timestamp None
+
+batch:23 | markets_total:664 | total spent 1455.20 | batch P/L: 35.00 | total P/L: 1382.80 | bank: 6382.80 | next offset: 101150 | timestamp 2025-09-20T10:00:00.647431Z
+
+batch:24 | markets_total:713 | total spent 1515.20 | batch P/L: 40.00 | total P/L: 1422.80 | bank: 6422.80 | next offset: 101200 | timestamp 2025-09-20T10:00:01.564756Z
+
+batch:25 | markets_total:722 | total spent 1525.20 | batch P/L: 15.00 | total P/L: 1437.80 | bank: 6437.80 | next offset: 101250 | timestamp 2025-09-20T10:00:03.018508Z
+
+batch:26 | markets_total:766 | total spent 1585.20 | batch P/L: 65.00 | total P/L: 1502.80 | bank: 6502.80 | next offset: 101300 | timestamp 2025-09-20T14:00:00.606091Z
+
+batch:27 | markets_total:810 | total spent 1595.20 | batch P/L: 15.00 | total P/L: 1517.80 | bank: 6517.80 | next offset: 101350 | timestamp 2025-09-20T14:00:02.121082Z
+
+batch:28 | markets_total:835 | total spent 1733.20 | batch P/L: 107.00 | total P/L: 1624.80 | bank: 6624.80 | next offset: 101400 | timestamp 2025-09-20T16:00:00.683218Z
+
+batch:29 | markets_total:883 | total spent 1948.00 | batch P/L: 222.20 | total P/L: 1847.00 | bank: 6847.00 | next offset: 101450 | timestamp 2025-09-20T16:00:01.481006Z
+
+batch:30 | markets_total:912 | total spent 1998.00 | batch P/L: 50.00 | total P/L: 1897.00 | bank: 6897.00 | next offset: 101500 | timestamp 2025-09-20T16:00:03.10806Z
+
+batch:31 | markets_total:959 | total spent 1998.00 | batch P/L: 0.00 | total P/L: 1897.00 | bank: 6897.00 | next offset: 101550 | timestamp 2025-09-20T18:00:02.281568Z
+
+batch:32 | markets_total:987 | total spent 2008.00 | batch P/L: 15.00 | total P/L: 1912.00 | bank: 6912.00 | next offset: 101600 | timestamp 2025-09-20T18:00:02.336851Z
+
+batch:33 | markets_total:1008 | total spent 2018.00 | batch P/L: 15.00 | total P/L: 1927.00 | bank: 6927.00 | next offset: 101650 | timestamp 2025-09-20T20:04:59.123743Z
+
+batch:34 | markets_total:1055 | total spent 2028.00 | batch P/L: 15.00 | total P/L: 1942.00 | bank: 6942.00 | next offset: 101700 | timestamp 2025-09-20T22:00:00.816823Z
+
+batch:35 | markets_total:1099 | total spent 2088.00 | batch P/L: 40.00 | total P/L: 1982.00 | bank: 6982.00 | next offset: 101750 | timestamp 2025-09-20T22:00:02.948558Z
+
+batch:36 | markets_total:1121 | total spent 2268.00 | batch P/L: 120.00 | total P/L: 2102.00 | bank: 7102.00 | next offset: 101800 | timestamp 2025-09-20T22:32:31.604488Z
+
+batch:37 | markets_total:1155 | total spent 2298.00 | batch P/L: 20.00 | total P/L: 2122.00 | bank: 7122.00 | next offset: 101850 | timestamp 2025-09-21T02:00:00.680991Z
+
+batch:38 | markets_total:1205 | total spent 2348.00 | batch P/L: 75.00 | total P/L: 2197.00 | bank: 7197.00 | next offset: 101900 | timestamp 2025-09-21T02:00:01.631413Z
+
+batch:39 | markets_total:1216 | total spent 2358.00 | batch P/L: -10.00 | total P/L: 2187.00 | bank: 7187.00 | next offset: 101950 | timestamp 2025-09-21T02:00:03.571891Z
+
+batch:40 | markets_total:1249 | total spent 2608.00 | batch P/L: 150.00 | total P/L: 2337.00 | bank: 7337.00 | next offset: 102000 | timestamp 2025-09-21T04:00:01.494774Z
+
+batch:41 | markets_total:1284 | total spent 2958.00 | batch P/L: 250.00 | total P/L: 2587.00 | bank: 7587.00 | next offset: 102050 | timestamp 2025-09-21T04:08:12.820091Z
+
+batch:42 | markets_total:1314 | total spent 2958.00 | batch P/L: 0.00 | total P/L: 2587.00 | bank: 7587.00 | next offset: 102100 | timestamp 2025-09-21T06:00:00.640133Z
+
+batch:43 | markets_total:1363 | total spent 2958.00 | batch P/L: 0.00 | total P/L: 2587.00 | bank: 7587.00 | next offset: 102150 | timestamp 2025-09-21T06:00:01.501147Z
+
+batch:44 | markets_total:1372 | total spent 2958.00 | batch P/L: 0.00 | total P/L: 2587.00 | bank: 7587.00 | next offset: 102200 | timestamp 2025-09-21T06:00:06.113629Z
+
+batch:45 | markets_total:1412 | total spent 2968.00 | batch P/L: 15.00 | total P/L: 2602.00 | bank: 7602.00 | next offset: 102250 | timestamp 2025-09-21T10:00:00.657098Z
+
+batch:46 | markets_total:1460 | total spent 2978.00 | batch P/L: -10.00 | total P/L: 2592.00 | bank: 7592.00 | next offset: 102300 | timestamp 2025-09-21T10:00:02.285678Z
+
+batch:47 | markets_total:1478 | total spent 3148.00 | batch P/L: 55.00 | total P/L: 2647.00 | bank: 7647.00 | next offset: 102350 | timestamp 2025-09-21T11:22:17.249328Z
+
+batch:48 | markets_total:1514 | total spent 3178.00 | batch P/L: -5.00 | total P/L: 2642.00 | bank: 7642.00 | next offset: 102400 | timestamp 2025-09-21T14:00:01.023586Z
+
+batch:49 | markets_total:1564 | total spent 3218.00 | batch P/L: 60.00 | total P/L: 2702.00 | bank: 7702.00 | next offset: 102450 | timestamp 2025-09-21T14:00:01.917074Z
+
+batch:50 | markets_total:1585 | total spent 3336.00 | batch P/L: 127.00 | total P/L: 2829.00 | bank: 7829.00 | next offset: 102500 | timestamp 2025-09-21T14:00:04.845822Z
+
+batch:51 | markets_total:1624 | total spent 3516.00 | batch P/L: 145.00 | total P/L: 2974.00 | bank: 7974.00 | next offset: 102550 | timestamp 2025-09-21T16:00:00.895159Z
+
+batch:52 | markets_total:1654 | total spent 3630.80 | batch P/L: 85.20 | total P/L: 3059.20 | bank: 8059.20 | next offset: 102600 | timestamp 2025-09-21T16:00:05.135628Z
+
+batch:53 | markets_total:1700 | total spent 3670.80 | batch P/L: 60.00 | total P/L: 3119.20 | bank: 8119.20 | next offset: 102650 | timestamp 2025-09-21T18:00:00.612943Z
+
+batch:54 | markets_total:1743 | total spent 3700.80 | batch P/L: 45.00 | total P/L: 3164.20 | bank: 8164.20 | next offset: 102700 | timestamp 2025-09-21T18:00:05.853537Z
+
+batch:55 | markets_total:1745 | total spent 3720.80 | batch P/L: 30.00 | total P/L: 3194.20 | bank: 8194.20 | next offset: 102750 | timestamp 2025-09-21T20:05:36.589584Z
+
+batch:56 | markets_total:1776 | total spent 3730.80 | batch P/L: 15.00 | total P/L: 3209.20 | bank: 8209.20 | next offset: 102800 | timestamp 2025-09-21T22:00:00.695316Z
+
+batch:57 | markets_total:1825 | total spent 3754.80 | batch P/L: 26.00 | total P/L: 3235.20 | bank: 8235.20 | next offset: 102850 | timestamp 2025-09-21T22:00:01.545411Z
+
+batch:58 | markets_total:1833 | total spent 3754.80 | batch P/L: 0.00 | total P/L: 3235.20 | bank: 8235.20 | next offset: 102900 | timestamp 2025-09-21T22:00:03.147478Z
+
+batch:59 | markets_total:1877 | total spent 3754.80 | batch P/L: 0.00 | total P/L: 3235.20 | bank: 8235.20 | next offset: 102950 | timestamp 2025-09-22T02:00:01.066785Z
+
+batch:60 | markets_total:1921 | total spent 3764.80 | batch P/L: -10.00 | total P/L: 3225.20 | bank: 8225.20 | next offset: 103000 | timestamp 2025-09-22T02:00:02.908293Z
+
+batch:61 | markets_total:1949 | total spent 3927.15 | batch P/L: 168.52 | total P/L: 3393.72 | bank: 8393.72 | next offset: 103050 | timestamp 2025-09-22T04:00:00.790291Z
+
+batch:62 | markets_total:1995 | total spent 4287.15 | batch P/L: 365.00 | total P/L: 3758.72 | bank: 8758.72 | next offset: 103100 | timestamp 2025-09-22T04:00:05.489494Z
+
+batch:63 | markets_total:2043 | total spent 4747.15 | batch P/L: 290.00 | total P/L: 4048.72 | bank: 9048.72 | next offset: 103150 | timestamp 2025-09-22T04:05:25.467986Z
+
+batch:64 | markets_total:2072 | total spent 4837.15 | batch P/L: 60.00 | total P/L: 4108.72 | bank: 9108.72 | next offset: 103200 | timestamp 2025-09-22T04:20:46.450358Z
+
+batch:65 | markets_total:2121 | total spent 4837.15 | batch P/L: 0.00 | total P/L: 4108.72 | bank: 9108.72 | next offset: 103250 | timestamp 2025-09-22T06:00:01.22401Z
+
+batch:66 | markets_total:2140 | total spent 4837.15 | batch P/L: 0.00 | total P/L: 4108.72 | bank: 9108.72 | next offset: 103300 | timestamp 2025-09-22T06:00:08.672954Z
+
+batch:67 | markets_total:2159 | total spent 4896.35 | batch P/L: 38.80 | total P/L: 4147.52 | bank: 9147.52 | next offset: 103350 | timestamp 2025-09-22T10:00:00.658072Z
+
+batch:68 | markets_total:2192 | total spent 4996.35 | batch P/L: 100.00 | total P/L: 4247.52 | bank: 9247.52 | next offset: 103400 | timestamp 2025-09-22T10:00:02.702262Z
+
+batch:69 | markets_total:2234 | total spent 5051.55 | batch P/L: 44.80 | total P/L: 4292.32 | bank: 9292.32 | next offset: 103450 | timestamp 2025-09-22T10:00:03.597393Z
+
+batch:70 | markets_total:2249 | total spent 5151.55 | batch P/L: 75.00 | total P/L: 4367.32 | bank: 9367.32 | next offset: 103500 | timestamp 2025-09-22T10:57:33.797111Z
+
+batch:71 | markets_total:2294 | total spent 5214.75 | batch P/L: 69.80 | total P/L: 4437.12 | bank: 9437.12 | next offset: 103550 | timestamp 2025-09-22T14:00:00.609681Z
+
+batch:72 | markets_total:2342 | total spent 5264.75 | batch P/L: 50.00 | total P/L: 4487.12 | bank: 9487.12 | next offset: 103600 | timestamp 2025-09-22T14:00:02.624676Z
+
+batch:73 | markets_total:2388 | total spent 5656.97 | batch P/L: 299.32 | total P/L: 4786.45 | bank: 9786.45 | next offset: 103650 | timestamp 2025-09-22T14:30:01.53132Z
+
+batch:74 | markets_total:2418 | total spent 5906.97 | batch P/L: 125.00 | total P/L: 4911.45 | bank: 9911.45 | next offset: 103700 | timestamp 2025-09-22T15:00:02.76788Z
+
+batch:75 | markets_total:2447 | total spent 6106.97 | batch P/L: 100.00 | total P/L: 5011.45 | bank: 10011.45 | next offset: 103750 | timestamp 2025-09-22T16:00:01.59293Z
+
+batch:76 | markets_total:2492 | total spent 6276.97 | batch P/L: 168.00 | total P/L: 5179.45 | bank: 10179.45 | next offset: 103800 | timestamp 2025-09-22T16:00:02.668843Z
+
+batch:77 | markets_total:2526 | total spent 6537.75 | batch P/L: 155.76 | total P/L: 5335.21 | bank: 10335.21 | next offset: 103850 | timestamp 2025-09-22T16:00:03.448328Z
+
+batch:78 | markets_total:2576 | total spent 6984.65 | batch P/L: 245.35 | total P/L: 5580.56 | bank: 10580.56 | next offset: 103900 | timestamp 2025-09-22T16:45:01.54956Z
+
+batch:79 | markets_total:2618 | total spent 7084.65 | batch P/L: 100.00 | total P/L: 5680.56 | bank: 10680.56 | next offset: 103950 | timestamp 2025-09-22T16:45:08.39497Z
+
+batch:80 | markets_total:2668 | total spent 7156.65 | batch P/L: 53.00 | total P/L: 5733.56 | bank: 10733.56 | next offset: 104000 | timestamp 2025-09-22T17:05:05.3784Z
+
+batch:81 | markets_total:2709 | total spent 7281.37 | batch P/L: 37.09 | total P/L: 5770.65 | bank: 10770.65 | next offset: 104050 | timestamp 2025-09-22T17:15:01.501599Z
+
+batch:82 | markets_total:2758 | total spent 7281.37 | batch P/L: 0.00 | total P/L: 5770.65 | bank: 10770.65 | next offset: 104100 | timestamp 2025-09-22T18:00:01.918213Z
+
+batch:83 | markets_total:2794 | total spent 7466.17 | batch P/L: 102.20 | total P/L: 5872.85 | bank: 10872.85 | next offset: 104150 | timestamp 2025-09-22T18:00:08.952031Z
+
+batch:84 | markets_total:2840 | total spent 7823.44 | batch P/L: 377.74 | total P/L: 6250.59 | bank: 11250.59 | next offset: 104200 | timestamp 2025-09-22T19:08:22.498667Z
+
+batch:85 | markets_total:2865 | total spent 8033.44 | batch P/L: 215.00 | total P/L: 6465.59 | bank: 11465.59 | next offset: 104250 | timestamp 2025-09-22T20:13:50.405845Z
+
+batch:86 | markets_total:2903 | total spent 8228.99 | batch P/L: 68.33 | total P/L: 6533.92 | bank: 11533.92 | next offset: 104300 | timestamp 2025-09-22T21:14:14.840145Z
+
+batch:87 | markets_total:2949 | total spent 8468.99 | batch P/L: 210.00 | total P/L: 6743.92 | bank: 11743.92 | next offset: 104350 | timestamp 2025-09-22T21:21:30.325982Z
+
+batch:88 | markets_total:2995 | total spent 8608.99 | batch P/L: 85.00 | total P/L: 6828.92 | bank: 11828.92 | next offset: 104400 | timestamp 2025-09-22T22:00:00.664125Z
+
+batch:89 | markets_total:3039 | total spent 8698.99 | batch P/L: 10.00 | total P/L: 6838.92 | bank: 11838.92 | next offset: 104450 | timestamp 2025-09-22T22:00:02.686692Z
+
+batch:90 | markets_total:3050 | total spent 8766.99 | batch P/L: 52.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104500 | timestamp 2025-09-22T23:12:01.340104Z
+
+batch:91 | markets_total:3050 | total spent 8766.99 | batch P/L: 0.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104550 | timestamp None
+
+batch:92 | markets_total:3050 | total spent 8766.99 | batch P/L: 0.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104600 | timestamp None
+
+batch:93 | markets_total:3058 | total spent 8766.99 | batch P/L: 0.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104650 | timestamp 2025-09-23T02:00:00.795638Z
+
+batch:94 | markets_total:3105 | total spent 8766.99 | batch P/L: 0.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104700 | timestamp 2025-09-23T02:00:00.837645Z
+
+batch:95 | markets_total:3138 | total spent 8766.99 | batch P/L: 0.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104750 | timestamp 2025-09-23T02:00:02.977761Z
+
+batch:96 | markets_total:3138 | total spent 8766.99 | batch P/L: 0.00 | total P/L: 6890.92 | bank: 11890.92 | next offset: 104800 | timestamp None
+
+batch:97 | markets_total:3164 | total spent 8816.99 | batch P/L: 50.00 | total P/L: 6940.92 | bank: 11940.92 | next offset: 104850 | timestamp 2025-09-23T04:00:01.601096Z
+
+batch:98 | markets_total:3192 | total spent 8960.04 | batch P/L: 101.95 | total P/L: 7042.87 | bank: 12042.87 | next offset: 104900 | timestamp 2025-09-23T05:20:48.315922Z
+
+batch:99 | markets_total:3234 | total spent 9020.04 | batch P/L: 65.00 | total P/L: 7107.87 | bank: 12107.87 | next offset: 104950 | timestamp 2025-09-23T06:00:00.583364Z
+
+batch:100 | markets_total:3284 | total spent 9020.04 | batch P/L: 0.00 | total P/L: 7107.87 | bank: 12107.87 | next offset: 105000 | timestamp 2025-09-23T06:00:02.097283Z
+
+batch:101 | markets_total:3288 | total spent 9020.04 | batch P/L: 0.00 | total P/L: 7107.87 | bank: 12107.87 | next offset: 105050 | timestamp 2025-09-23T06:00:09.44882Z
+
+batch:102 | markets_total:3310 | total spent 9059.64 | batch P/L: 9.40 | total P/L: 7117.27 | bank: 12117.27 | next offset: 105100 | timestamp 2025-09-23T10:00:01.129451Z
+
+batch:103 | markets_total:3353 | total spent 9157.64 | batch P/L: 22.00 | total P/L: 7139.27 | bank: 12139.27 | next offset: 105150 | timestamp 2025-09-23T10:00:02.265255Z
+
+batch:104 | markets_total:3376 | total spent 9177.64 | batch P/L: 5.00 | total P/L: 7144.27 | bank: 12144.27 | next offset: 105200 | timestamp 2025-09-23T10:00:09.048729Z
+
+batch:105 | markets_total:3405 | total spent 9247.64 | batch P/L: 80.00 | total P/L: 7224.27 | bank: 12224.27 | next offset: 105250 | timestamp 2025-09-23T14:00:00.703198Z
+
+batch:106 | markets_total:3455 | total spent 9277.64 | batch P/L: -5.00 | total P/L: 7219.27 | bank: 12219.27 | next offset: 105300 | timestamp 2025-09-23T14:00:01.645945Z
+
+batch:107 | markets_total:3497 | total spent 9557.64 | batch P/L: 270.00 | total P/L: 7489.27 | bank: 12489.27 | next offset: 105350 | timestamp 2025-09-23T14:00:03.239419Z
+
+batch:108 | markets_total:3521 | total spent 9730.04 | batch P/L: 152.60 | total P/L: 7641.87 | bank: 12641.87 | next offset: 105400 | timestamp 2025-09-23T16:00:00.791149Z
+
+batch:109 | markets_total:3544 | total spent 9890.04 | batch P/L: 65.00 | total P/L: 7706.87 | bank: 12706.87 | next offset: 105450 | timestamp 2025-09-23T16:00:01.89698Z
+
+batch:110 | markets_total:3587 | total spent 10096.84 | batch P/L: 254.20 | total P/L: 7961.07 | bank: 12961.07 | next offset: 105500 | timestamp 2025-09-23T16:00:03.051592Z
+
+batch:111 | markets_total:3616 | total spent 10109.24 | batch P/L: -12.40 | total P/L: 7948.67 | bank: 12948.67 | next offset: 105550 | timestamp 2025-09-23T17:19:02.228354Z
+
+batch:112 | markets_total:3665 | total spent 10109.24 | batch P/L: 0.00 | total P/L: 7948.67 | bank: 12948.67 | next offset: 105600 | timestamp 2025-09-23T18:00:01.508902Z
+
+batch:113 | markets_total:3695 | total spent 10212.84 | batch P/L: 105.40 | total P/L: 8054.07 | bank: 13054.07 | next offset: 105650 | timestamp 2025-09-23T18:00:06.691922Z
+
+batch:114 | markets_total:3727 | total spent 10512.84 | batch P/L: 125.00 | total P/L: 8179.07 | bank: 13179.07 | next offset: 105700 | timestamp 2025-09-23T19:55:33.618598Z
+
+batch:115 | markets_total:3767 | total spent 10712.84 | batch P/L: 175.00 | total P/L: 8354.07 | bank: 13354.07 | next offset: 105750 | timestamp 2025-09-23T21:12:41.49997Z
+
+batch:116 | markets_total:3817 | total spent 10817.64 | batch P/L: 120.20 | total P/L: 8474.27 | bank: 13474.27 | next offset: 105800 | timestamp 2025-09-23T22:00:01.811372Z
+
+batch:117 | markets_total:3849 | total spent 10995.64 | batch P/L: 167.00 | total P/L: 8641.27 | bank: 13641.27 | next offset: 105850 | timestamp 2025-09-23T22:00:03.342605Z
+
+batch:118 | markets_total:3887 | total spent 11316.34 | batch P/L: 206.05 | total P/L: 8847.32 | bank: 13847.32 | next offset: 105900 | timestamp 2025-09-23T23:05:57.647077Z
+
+batch:119 | markets_total:3892 | total spent 11326.34 | batch P/L: 15.00 | total P/L: 8862.32 | bank: 13862.32 | next offset: 105950 | timestamp 2025-09-24T00:21:02.135397Z
+
+batch:120 | markets_total:3924 | total spent 11326.34 | batch P/L: 0.00 | total P/L: 8862.32 | bank: 13862.32 | next offset: 106000 | timestamp 2025-09-24T01:43:56.322425Z
+
+batch:121 | markets_total:3974 | total spent 11326.34 | batch P/L: 0.00 | total P/L: 8862.32 | bank: 13862.32 | next offset: 106050 | timestamp 2025-09-24T02:00:02.017867Z
+
+batch:122 | markets_total:4000 | total spent 11326.34 | batch P/L: 0.00 | total P/L: 8862.32 | bank: 13862.32 | next offset: 106100 | timestamp 2025-09-24T02:00:03.500629Z
+
+batch:123 | markets_total:4038 | total spent 11386.34 | batch P/L: 65.00 | total P/L: 8927.32 | bank: 13927.32 | next offset: 106150 | timestamp 2025-09-24T04:00:01.897247Z
+
+batch:124 | markets_total:4076 | total spent 11646.34 | batch P/L: 165.00 | total P/L: 9092.32 | bank: 14092.32 | next offset: 106200 | timestamp 2025-09-24T05:00:25.544412Z
+
+batch:125 | markets_total:4124 | total spent 11656.34 | batch P/L: -10.00 | total P/L: 9082.32 | bank: 14082.32 | next offset: 106250 | timestamp 2025-09-24T06:00:01.155736Z
+
+batch:126 | markets_total:4152 | total spent 11656.34 | batch P/L: 0.00 | total P/L: 9082.32 | bank: 14082.32 | next offset: 106300 | timestamp 2025-09-24T06:00:03.113398Z
+
+batch:127 | markets_total:4160 | total spent 11656.34 | batch P/L: 0.00 | total P/L: 9082.32 | bank: 14082.32 | next offset: 106350 | timestamp 2025-09-24T10:00:01.125145Z
+
+batch:128 | markets_total:4204 | total spent 11666.34 | batch P/L: 15.00 | total P/L: 9097.32 | bank: 14097.32 | next offset: 106400 | timestamp 2025-09-24T10:00:01.170338Z
+
+batch:129 | markets_total:4240 | total spent 11666.34 | batch P/L: 0.00 | total P/L: 9097.32 | bank: 14097.32 | next offset: 106450 | timestamp 2025-09-24T10:00:02.927247Z
+
+batch:130 | markets_total:4259 | total spent 11776.34 | batch P/L: 115.00 | total P/L: 9212.32 | bank: 14212.32 | next offset: 106500 | timestamp 2025-09-24T11:50:46.973074Z
+
+batch:131 | markets_total:4306 | total spent 11816.34 | batch P/L: 10.00 | total P/L: 9222.32 | bank: 14222.32 | next offset: 106550 | timestamp 2025-09-24T14:00:00.657364Z
+
+batch:132 | markets_total:4350 | total spent 11886.34 | batch P/L: 55.00 | total P/L: 9277.32 | bank: 14277.32 | next offset: 106600 | timestamp 2025-09-24T14:00:03.451342Z
+
+batch:133 | markets_total:4392 | total spent 12226.34 | batch P/L: 410.00 | total P/L: 9687.32 | bank: 14687.32 | next offset: 106650 | timestamp 2025-09-24T14:51:24.447943Z
+
+batch:134 | markets_total:4429 | total spent 12436.34 | batch P/L: 115.00 | total P/L: 9802.32 | bank: 14802.32 | next offset: 106700 | timestamp 2025-09-24T16:00:00.955354Z
+
+batch:135 | markets_total:4474 | total spent 12692.74 | batch P/L: 84.60 | total P/L: 9886.92 | bank: 14886.92 | next offset: 106750 | timestamp 2025-09-24T16:00:02.27311Z
+
+batch:136 | markets_total:4500 | total spent 12792.74 | batch P/L: 50.00 | total P/L: 9936.92 | bank: 14936.92 | next offset: 106800 | timestamp 2025-09-24T16:00:07.814517Z
+
+batch:137 | markets_total:4527 | total spent 12832.74 | batch P/L: 60.00 | total P/L: 9996.92 | bank: 14996.92 | next offset: 106850 | timestamp 2025-09-24T17:22:29.79127Z
+
+batch:138 | markets_total:4576 | total spent 12832.74 | batch P/L: 0.00 | total P/L: 9996.92 | bank: 14996.92 | next offset: 106900 | timestamp 2025-09-24T18:00:01.913803Z
+
+batch:139 | markets_total:4596 | total spent 12862.74 | batch P/L: 20.00 | total P/L: 10016.92 | bank: 15016.92 | next offset: 106950 | timestamp 2025-09-24T18:00:03.650727Z
+
+batch:140 | markets_total:4609 | total spent 12878.34 | batch P/L: 3.40 | total P/L: 10020.32 | bank: 15020.32 | next offset: 107000 | timestamp 2025-09-24T22:00:01.086894Z
+
+batch:141 | markets_total:4658 | total spent 12984.34 | batch P/L: 134.00 | total P/L: 10154.32 | bank: 15154.32 | next offset: 107050 | timestamp 2025-09-24T22:00:01.251375Z
+
+batch:142 | markets_total:4694 | total spent 13008.34 | batch P/L: 36.00 | total P/L: 10190.32 | bank: 15190.32 | next offset: 107100 | timestamp 2025-09-24T22:00:08.271572Z
+
+batch:143 | markets_total:4712 | total spent 13008.34 | batch P/L: 0.00 | total P/L: 10190.32 | bank: 15190.32 | next offset: 107150 | timestamp 2025-09-25T02:00:01.076286Z
+
+batch:144 | markets_total:4760 | total spent 13008.34 | batch P/L: 0.00 | total P/L: 10190.32 | bank: 15190.32 | next offset: 107200 | timestamp 2025-09-25T02:00:01.157098Z
+
+batch:145 | markets_total:4782 | total spent 13008.34 | batch P/L: 0.00 | total P/L: 10190.32 | bank: 15190.32 | next offset: 107250 | timestamp 2025-09-25T02:00:10.22694Z
+
+batch:146 | markets_total:4784 | total spent 13028.34 | batch P/L: 30.00 | total P/L: 10220.32 | bank: 15220.32 | next offset: 107300 | timestamp 2025-09-25T05:00:15.000732Z
+
+batch:147 | markets_total:4825 | total spent 13298.34 | batch P/L: 180.00 | total P/L: 10400.32 | bank: 15400.32 | next offset: 107350 | timestamp 2025-09-25T05:00:50.474194Z
+
+batch:148 | markets_total:4872 | total spent 13321.94 | batch P/L: 10.40 | total P/L: 10410.72 | bank: 15410.72 | next offset: 107400 | timestamp 2025-09-25T06:00:00.7159Z
+
+batch:149 | markets_total:4897 | total spent 13321.94 | batch P/L: 0.00 | total P/L: 10410.72 | bank: 15410.72 | next offset: 107450 | timestamp 2025-09-25T06:00:04.240629Z
+
+batch:150 | markets_total:4909 | total spent 13411.94 | batch P/L: -15.00 | total P/L: 10395.72 | bank: 15395.72 | next offset: 107500 | timestamp 2025-09-25T10:00:00.703857Z
+
+batch:151 | markets_total:4937 | total spent 13551.94 | batch P/L: 60.00 | total P/L: 10455.72 | bank: 15455.72 | next offset: 107550 | timestamp 2025-09-25T10:00:01.535874Z
+
+batch:152 | markets_total:4972 | total spent 13661.94 | batch P/L: 90.00 | total P/L: 10545.72 | bank: 15545.72 | next offset: 107600 | timestamp 2025-09-25T10:00:02.432015Z
+
+batch:153 | markets_total:4990 | total spent 13691.94 | batch P/L: 20.00 | total P/L: 10565.72 | bank: 15565.72 | next offset: 107650 | timestamp 2025-09-25T10:00:05.363673Z
+
+batch:154 | markets_total:5024 | total spent 13875.94 | batch P/L: 176.00 | total P/L: 10741.72 | bank: 15741.72 | next offset: 107700 | timestamp 2025-09-25T12:51:47.938423Z
+
+batch:155 | markets_total:5074 | total spent 13985.94 | batch P/L: 65.00 | total P/L: 10806.72 | bank: 15806.72 | next offset: 107750 | timestamp 2025-09-25T14:00:01.829559Z
+
+batch:156 | markets_total:5104 | total spent 14081.94 | batch P/L: 119.00 | total P/L: 10925.72 | bank: 15925.72 | next offset: 107800 | timestamp 2025-09-25T14:00:03.438368Z
+
+batch:157 | markets_total:5141 | total spent 14271.94 | batch P/L: 135.00 | total P/L: 11060.72 | bank: 16060.72 | next offset: 107850 | timestamp 2025-09-25T15:50:13.241078Z
+
+batch:158 | markets_total:5188 | total spent 14521.75 | batch P/L: 75.19 | total P/L: 11135.92 | bank: 16135.92 | next offset: 107900 | timestamp 2025-09-25T16:00:02.020976Z
+
+batch:159 | markets_total:5234 | total spent 14751.27 | batch P/L: 295.48 | total P/L: 11431.39 | bank: 16431.39 | next offset: 107950 | timestamp 2025-09-25T16:00:03.730655Z
+
+batch:160 | markets_total:5282 | total spent 14851.27 | batch P/L: 150.00 | total P/L: 11581.39 | bank: 16581.39 | next offset: 108000 | timestamp 2025-09-25T16:40:48.344282Z
+
+batch:161 | markets_total:5315 | total spent 14941.27 | batch P/L: 85.00 | total P/L: 11666.39 | bank: 16666.39 | next offset: 108050 | timestamp 2025-09-25T17:16:04.767777Z
+
+batch:162 | markets_total:5364 | total spent 14969.27 | batch P/L: 32.00 | total P/L: 11698.39 | bank: 16698.39 | next offset: 108100 | timestamp 2025-09-25T18:00:01.460089Z
+
+batch:163 | markets_total:5389 | total spent 15039.27 | batch P/L: 5.00 | total P/L: 11703.39 | bank: 16703.39 | next offset: 108150 | timestamp 2025-09-25T18:00:03.147908Z
+
+batch:164 | markets_total:5411 | total spent 15239.27 | batch P/L: 250.00 | total P/L: 11953.39 | bank: 16953.39 | next offset: 108200 | timestamp 2025-09-25T20:37:37.678054Z
+
+batch:165 | markets_total:5459 | total spent 15269.27 | batch P/L: -5.00 | total P/L: 11948.39 | bank: 16948.39 | next offset: 108250 | timestamp 2025-09-25T22:00:01.110542Z
+
+batch:166 | markets_total:5503 | total spent 15329.27 | batch P/L: 65.00 | total P/L: 12013.39 | bank: 17013.39 | next offset: 108300 | timestamp 2025-09-25T22:00:02.866164Z
+
+batch:167 | markets_total:5534 | total spent 15483.27 | batch P/L: -44.00 | total P/L: 11969.39 | bank: 16969.39 | next offset: 108350 | timestamp 2025-09-25T22:36:27.372487Z
+
+batch:168 | markets_total:5561 | total spent 15523.27 | batch P/L: 10.00 | total P/L: 11979.39 | bank: 16979.39 | next offset: 108400 | timestamp 2025-09-26T02:00:00.708953Z
+
+batch:169 | markets_total:5611 | total spent 15533.27 | batch P/L: -10.00 | total P/L: 11969.39 | bank: 16969.39 | next offset: 108450 | timestamp 2025-09-26T02:00:01.97914Z
+
+batch:170 | markets_total:5625 | total spent 15533.27 | batch P/L: 0.00 | total P/L: 11969.39 | bank: 16969.39 | next offset: 108500 | timestamp 2025-09-26T02:00:03.307624Z
+
+batch:171 | markets_total:5625 | total spent 15533.27 | batch P/L: 0.00 | total P/L: 11969.39 | bank: 16969.39 | next offset: 108550 | timestamp None
+
+batch:172 | markets_total:5662 | total spent 15593.27 | batch P/L: -10.00 | total P/L: 11959.39 | bank: 16959.39 | next offset: 108600 | timestamp 2025-09-26T06:00:01.15938Z
+
+batch:173 | markets_total:5712 | total spent 15684.87 | batch P/L: 99.40 | total P/L: 12058.79 | bank: 17058.79 | next offset: 108650 | timestamp 2025-09-26T06:00:03.486971Z
+
+batch:174 | markets_total:5748 | total spent 16034.87 | batch P/L: 250.00 | total P/L: 12308.79 | bank: 17308.79 | next offset: 108700 | timestamp 2025-09-26T06:00:05.308841Z
+
+batch:175 | markets_total:5767 | total spent 16224.87 | batch P/L: 110.00 | total P/L: 12418.79 | bank: 17418.79 | next offset: 108750 | timestamp 2025-09-26T07:12:01.46846Z
+
+batch:176 | markets_total:5807 | total spent 16474.87 | batch P/L: 225.00 | total P/L: 12643.79 | bank: 17643.79 | next offset: 108800 | timestamp 2025-09-26T09:04:05.946024Z
+
+batch:177 | markets_total:5844 | total spent 16516.87 | batch P/L: 8.00 | total P/L: 12651.79 | bank: 17651.79 | next offset: 108850 | timestamp 2025-09-26T09:17:24.099194Z
+
+batch:178 | markets_total:5894 | total spent 16622.87 | batch P/L: 159.00 | total P/L: 12810.79 | bank: 17810.79 | next offset: 108900 | timestamp 2025-09-26T10:00:01.946813Z
+
+batch:179 | markets_total:5898 | total spent 16622.87 | batch P/L: 0.00 | total P/L: 12810.79 | bank: 17810.79 | next offset: 108950 | timestamp 2025-09-26T10:00:03.343304Z
+
+batch:180 | markets_total:5946 | total spent 16731.26 | batch P/L: 86.61 | total P/L: 12897.40 | bank: 17897.40 | next offset: 109000 | timestamp 2025-09-26T14:00:01.047551Z
+
+batch:181 | markets_total:5985 | total spent 16811.26 | batch P/L: 70.00 | total P/L: 12967.40 | bank: 17967.40 | next offset: 109050 | timestamp 2025-09-26T14:00:02.46744Z
+
+batch:182 | markets_total:6026 | total spent 17109.26 | batch P/L: 202.00 | total P/L: 13169.40 | bank: 18169.40 | next offset: 109100 | timestamp 2025-09-26T15:57:21.704667Z
+
+batch:183 | markets_total:6062 | total spent 17239.26 | batch P/L: 70.00 | total P/L: 13239.40 | bank: 18239.40 | next offset: 109150 | timestamp 2025-09-26T16:00:01.171027Z
+
+batch:184 | markets_total:6107 | total spent 17509.26 | batch P/L: 80.00 | total P/L: 13319.40 | bank: 18319.40 | next offset: 109200 | timestamp 2025-09-26T16:00:02.062674Z
+
+batch:185 | markets_total:6155 | total spent 17859.26 | batch P/L: 300.00 | total P/L: 13619.40 | bank: 18619.40 | next offset: 109250 | timestamp 2025-09-26T16:00:02.939695Z
+
+batch:186 | markets_total:6176 | total spent 18017.26 | batch P/L: 142.00 | total P/L: 13761.40 | bank: 18761.40 | next offset: 109300 | timestamp 2025-09-26T16:55:42.113378Z
+
+batch:187 | markets_total:6176 | total spent 18017.26 | batch P/L: 0.00 | total P/L: 13761.40 | bank: 18761.40 | next offset: 109350 | timestamp None
+
+batch:188 | markets_total:6176 | total spent 18017.26 | batch P/L: 0.00 | total P/L: 13761.40 | bank: 18761.40 | next offset: 109400 | timestamp None
+
+batch:189 | markets_total:6201 | total spent 18147.26 | batch P/L: 70.00 | total P/L: 13831.40 | bank: 18831.40 | next offset: 109450 | timestamp 2025-09-26T17:11:54.831382Z
+
+batch:190 | markets_total:6249 | total spent 18417.26 | batch P/L: 305.00 | total P/L: 14136.40 | bank: 19136.40 | next offset: 109500 | timestamp 2025-09-26T17:11:59.693443Z
+
+batch:191 | markets_total:6292 | total spent 18517.26 | batch P/L: 125.00 | total P/L: 14261.40 | bank: 19261.40 | next offset: 109550 | timestamp 2025-09-26T18:00:01.012425Z
+
+batch:192 | markets_total:6341 | total spent 18517.26 | batch P/L: 0.00 | total P/L: 14261.40 | bank: 19261.40 | next offset: 109600 | timestamp 2025-09-26T18:00:01.115174Z
+
+batch:193 | markets_total:6384 | total spent 18603.88 | batch P/L: -36.62 | total P/L: 14224.78 | bank: 19224.78 | next offset: 109650 | timestamp 2025-09-26T18:00:03.197753Z
+
+batch:194 | markets_total:6420 | total spent 18763.88 | batch P/L: 15.00 | total P/L: 14239.78 | bank: 19239.78 | next offset: 109700 | timestamp 2025-09-26T18:34:49.311205Z
+
+batch:195 | markets_total:6459 | total spent 19081.88 | batch P/L: 302.00 | total P/L: 14541.78 | bank: 19541.78 | next offset: 109750 | timestamp 2025-09-26T20:10:27.599255Z
+
+batch:196 | markets_total:6500 | total spent 19161.88 | batch P/L: 70.00 | total P/L: 14611.78 | bank: 19611.78 | next offset: 109800 | timestamp 2025-09-26T21:16:11.02698Z
+
+batch:197 | markets_total:6548 | total spent 19370.52 | batch P/L: 166.36 | total P/L: 14778.14 | bank: 19778.14 | next offset: 109850 | timestamp 2025-09-26T21:31:42.042449Z
+
+batch:198 | markets_total:6589 | total spent 19618.58 | batch P/L: 91.94 | total P/L: 14870.08 | bank: 19870.08 | next offset: 109900 | timestamp 2025-09-26T21:35:56.798828Z
+
+batch:199 | markets_total:6621 | total spent 19628.58 | batch P/L: 15.00 | total P/L: 14885.08 | bank: 19885.08 | next offset: 109950 | timestamp 2025-09-26T22:00:01.057571Z
+
+batch:200 | markets_total:6671 | total spent 19648.58 | batch P/L: 5.00 | total P/L: 14890.08 | bank: 19890.08 | next offset: 110000 | timestamp 2025-09-26T22:00:02.52379Z
+
+batch:201 | markets_total:6683 | total spent 19688.58 | batch P/L: 10.00 | total P/L: 14900.08 | bank: 19900.08 | next offset: 110050 | timestamp 2025-09-26T22:00:03.4129Z
+
+batch:202 | markets_total:6723 | total spent 19688.58 | batch P/L: 0.00 | total P/L: 14900.08 | bank: 19900.08 | next offset: 110100 | timestamp 2025-09-27T02:00:01.064089Z
+
+batch:203 | markets_total:6771 | total spent 19688.58 | batch P/L: 0.00 | total P/L: 14900.08 | bank: 19900.08 | next offset: 110150 | timestamp 2025-09-27T02:00:01.861702Z
+
+batch:204 | markets_total:6797 | total spent 19758.58 | batch P/L: 80.00 | total P/L: 14980.08 | bank: 19980.08 | next offset: 110200 | timestamp 2025-09-27T04:00:01.733699Z
+
+batch:205 | markets_total:6797 | total spent 19758.58 | batch P/L: 0.00 | total P/L: 14980.08 | bank: 19980.08 | next offset: 110250 | timestamp None
+
+batch:206 | markets_total:6844 | total spent 19798.58 | batch P/L: 60.00 | total P/L: 15040.08 | bank: 20040.08 | next offset: 110300 | timestamp 2025-09-27T06:00:00.644973Z
+
+batch:207 | markets_total:6885 | total spent 19808.58 | batch P/L: 15.00 | total P/L: 15055.08 | bank: 20055.08 | next offset: 110350 | timestamp 2025-09-27T06:00:02.145585Z
+
+batch:208 | markets_total:6885 | total spent 19808.58 | batch P/L: 0.00 | total P/L: 15055.08 | bank: 20055.08 | next offset: 110400 | timestamp None
+
+batch:209 | markets_total:6925 | total spent 19833.23 | batch P/L: 25.35 | total P/L: 15080.44 | bank: 20080.44 | next offset: 110450 | timestamp 2025-09-27T10:00:00.698742Z
+
+batch:210 | markets_total:6973 | total spent 19843.23 | batch P/L: 15.00 | total P/L: 15095.44 | bank: 20095.44 | next offset: 110500 | timestamp 2025-09-27T10:00:01.760203Z
+
+batch:211 | markets_total:6979 | total spent 19843.23 | batch P/L: 0.00 | total P/L: 15095.44 | bank: 20095.44 | next offset: 110550 | timestamp 2025-09-27T14:00:01.053646Z
+
+batch:212 | markets_total:7027 | total spent 19863.23 | batch P/L: 5.00 | total P/L: 15100.44 | bank: 20100.44 | next offset: 110600 | timestamp 2025-09-27T14:00:01.06187Z
+
+batch:213 | markets_total:7061 | total spent 19863.23 | batch P/L: 0.00 | total P/L: 15100.44 | bank: 20100.44 | next offset: 110650 | timestamp 2025-09-27T14:00:02.775977Z
+
+batch:214 | markets_total:7092 | total spent 20018.46 | batch P/L: 119.77 | total P/L: 15220.21 | bank: 20220.21 | next offset: 110700 | timestamp 2025-09-27T16:00:00.845634Z
+
+batch:215 | markets_total:7132 | total spent 20248.46 | batch P/L: 20.00 | total P/L: 15240.21 | bank: 20240.21 | next offset: 110750 | timestamp 2025-09-27T16:00:02.079025Z
+
+batch:216 | markets_total:7149 | total spent 20358.46 | batch P/L: 90.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 110800 | timestamp 2025-09-27T16:00:10.227166Z
+
+batch:217 | markets_total:7149 | total spent 20358.46 | batch P/L: 0.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 110850 | timestamp None
+
+batch:218 | markets_total:7149 | total spent 20358.46 | batch P/L: 0.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 110900 | timestamp None
+
+batch:219 | markets_total:7149 | total spent 20358.46 | batch P/L: 0.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 110950 | timestamp None
+
+batch:220 | markets_total:7149 | total spent 20358.46 | batch P/L: 0.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 111000 | timestamp None
+
+batch:221 | markets_total:7149 | total spent 20358.46 | batch P/L: 0.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 111050 | timestamp None
+
+batch:222 | markets_total:7149 | total spent 20358.46 | batch P/L: 0.00 | total P/L: 15330.21 | bank: 20330.21 | next offset: 111100 | timestamp None
+
+batch:223 | markets_total:7172 | total spent 20458.46 | batch P/L: 50.00 | total P/L: 15380.21 | bank: 20380.21 | next offset: 111150 | timestamp 2025-09-28T16:00:01.093679Z
+
+batch:224 | markets_total:7220 | total spent 20638.46 | batch P/L: 120.00 | total P/L: 15500.21 | bank: 20500.21 | next offset: 111200 | timestamp 2025-09-28T16:00:01.898963Z
+
+batch:225 | markets_total:7250 | total spent 20852.09 | batch P/L: 36.36 | total P/L: 15536.57 | bank: 20536.57 | next offset: 111250 | timestamp 2025-09-28T16:00:09.648303Z
+
+batch:226 | markets_total:7288 | total spent 20952.09 | batch P/L: 75.00 | total P/L: 15611.57 | bank: 20611.57 | next offset: 111300 | timestamp 2025-09-28T18:07:11.819392Z
+
+batch:227 | markets_total:7331 | total spent 20982.09 | batch P/L: 45.00 | total P/L: 15656.57 | bank: 20656.57 | next offset: 111350 | timestamp 2025-09-28T19:03:25.476807Z
+
+batch:228 | markets_total:7341 | total spent 21062.09 | batch P/L: -5.00 | total P/L: 15651.57 | bank: 20651.57 | next offset: 111400 | timestamp 2025-09-28T19:17:05.481942Z
+
+batch:229 | markets_total:7341 | total spent 21062.09 | batch P/L: 0.00 | total P/L: 15651.57 | bank: 20651.57 | next offset: 111450 | timestamp None
+
+batch:230 | markets_total:7357 | total spent 21192.09 | batch P/L: 145.00 | total P/L: 15796.57 | bank: 20796.57 | next offset: 111500 | timestamp 2025-09-29T00:57:41.12344Z
+
+batch:231 | markets_total:7372 | total spent 21262.09 | batch P/L: -20.00 | total P/L: 15776.57 | bank: 20776.57 | next offset: 111550 | timestamp 2025-09-29T04:00:01.218777Z
+
+batch:232 | markets_total:7413 | total spent 21492.09 | batch P/L: 170.00 | total P/L: 15946.57 | bank: 20946.57 | next offset: 111600 | timestamp 2025-09-29T04:00:02.609389Z
+
+batch:233 | markets_total:7413 | total spent 21492.09 | batch P/L: 0.00 | total P/L: 15946.57 | bank: 20946.57 | next offset: 111650 | timestamp None
+
+batch:234 | markets_total:7429 | total spent 21584.09 | batch P/L: 88.00 | total P/L: 16034.57 | bank: 21034.57 | next offset: 111700 | timestamp 2025-09-29T11:35:48.305028Z
+
+batch:235 | markets_total:7447 | total spent 21714.09 | batch P/L: 195.00 | total P/L: 16229.57 | bank: 21229.57 | next offset: 111750 | timestamp 2025-09-29T14:30:01.997511Z
+
+batch:236 | markets_total:7485 | total spent 22001.60 | batch P/L: 181.26 | total P/L: 16410.83 | bank: 21410.83 | next offset: 111800 | timestamp 2025-09-29T14:30:02.189816Z
+
+batch:237 | markets_total:7521 | total spent 22212.72 | batch P/L: 114.93 | total P/L: 16525.76 | bank: 21525.76 | next offset: 111850 | timestamp 2025-09-29T16:00:00.803461Z
+
+batch:238 | markets_total:7561 | total spent 22442.72 | batch P/L: 95.00 | total P/L: 16620.76 | bank: 21620.76 | next offset: 111900 | timestamp 2025-09-29T16:00:01.742759Z
+
+batch:239 | markets_total:7609 | total spent 22753.88 | batch P/L: 202.73 | total P/L: 16823.50 | bank: 21823.50 | next offset: 111950 | timestamp 2025-09-29T16:00:03.638841Z
+
+batch:240 | markets_total:7646 | total spent 23077.88 | batch P/L: 186.00 | total P/L: 17009.50 | bank: 22009.50 | next offset: 112000 | timestamp 2025-09-29T16:15:03.762925Z
+
+batch:241 | markets_total:7691 | total spent 23417.09 | batch P/L: 208.82 | total P/L: 17218.32 | bank: 22218.32 | next offset: 112050 | timestamp 2025-09-29T17:30:02.288196Z
+
+batch:242 | markets_total:7711 | total spent 23498.96 | batch P/L: 68.13 | total P/L: 17286.45 | bank: 22286.45 | next offset: 112100 | timestamp 2025-09-29T20:01:58.496476Z
+
+batch:243 | markets_total:7749 | total spent 23739.53 | batch P/L: 219.55 | total P/L: 17506.00 | bank: 22506.00 | next offset: 112150 | timestamp 2025-09-29T20:16:29.451337Z
+
+batch:244 | markets_total:7783 | total spent 23871.53 | batch P/L: 98.00 | total P/L: 17604.00 | bank: 22604.00 | next offset: 112200 | timestamp 2025-09-29T21:26:09.538834Z
+
+batch:245 | markets_total:7783 | total spent 23871.53 | batch P/L: 0.00 | total P/L: 17604.00 | bank: 22604.00 | next offset: 112250 | timestamp None
+
+batch:246 | markets_total:7783 | total spent 23871.53 | batch P/L: 0.00 | total P/L: 17604.00 | bank: 22604.00 | next offset: 112300 | timestamp None
+
+batch:247 | markets_total:7783 | total spent 23871.53 | batch P/L: 0.00 | total P/L: 17604.00 | bank: 22604.00 | next offset: 112350 | timestamp None
+
+batch:248 | markets_total:7783 | total spent 23871.53 | batch P/L: 0.00 | total P/L: 17604.00 | bank: 22604.00 | next offset: 112400 | timestamp None
+
+batch:249 | markets_total:7785 | total spent 23881.53 | batch P/L: 15.00 | total P/L: 17619.00 | bank: 22619.00 | next offset: 112450 | timestamp 2025-09-29T23:10:43.670945Z
+
+batch:250 | markets_total:7794 | total spent 23951.53 | batch P/L: 105.00 | total P/L: 17724.00 | bank: 22724.00 | next offset: 112500 | timestamp 2025-09-30T00:50:41.24306Z
+
+batch:251 | markets_total:7820 | total spent 24011.53 | batch P/L: 65.00 | total P/L: 17789.00 | bank: 22789.00 | next offset: 112550 | timestamp 2025-09-30T04:00:02.343389Z
+
+batch:252 | markets_total:7823 | total spent 24041.53 | batch P/L: 20.00 | total P/L: 17809.00 | bank: 22809.00 | next offset: 112600 | timestamp 2025-09-30T04:00:14.414739Z
+
+batch:253 | markets_total:7823 | total spent 24041.53 | batch P/L: 0.00 | total P/L: 17809.00 | bank: 22809.00 | next offset: 112650 | timestamp None
+
+batch:254 | markets_total:7837 | total spent 24121.53 | batch P/L: 70.00 | total P/L: 17879.00 | bank: 22879.00 | next offset: 112700 | timestamp 2025-09-30T11:35:32.805061Z
+
+batch:255 | markets_total:7853 | total spent 24211.53 | batch P/L: 110.00 | total P/L: 17989.00 | bank: 22989.00 | next offset: 112750 | timestamp 2025-09-30T13:58:37.775205Z
+
+batch:256 | markets_total:7889 | total spent 24481.53 | batch P/L: 130.00 | total P/L: 18119.00 | bank: 23119.00 | next offset: 112800 | timestamp 2025-09-30T15:21:08.582215Z
+
+batch:257 | markets_total:7922 | total spent 24661.53 | batch P/L: 45.00 | total P/L: 18164.00 | bank: 23164.00 | next offset: 112850 | timestamp 2025-09-30T16:00:01.648845Z
+
+batch:258 | markets_total:7969 | total spent 24944.06 | batch P/L: 167.48 | total P/L: 18331.48 | bank: 23331.48 | next offset: 112900 | timestamp 2025-09-30T16:00:02.989812Z
+
+batch:259 | markets_total:8007 | total spent 25254.06 | batch P/L: 240.00 | total P/L: 18571.48 | bank: 23571.48 | next offset: 112950 | timestamp 2025-09-30T16:00:05.740731Z
+
+batch:260 | markets_total:8016 | total spent 25334.06 | batch P/L: 45.00 | total P/L: 18616.48 | bank: 23616.48 | next offset: 113000 | timestamp 2025-09-30T16:00:09.100951Z
+
+batch:261 | markets_total:8016 | total spent 25334.06 | batch P/L: 0.00 | total P/L: 18616.48 | bank: 23616.48 | next offset: 113050 | timestamp None
+
+batch:262 | markets_total:8019 | total spent 25364.06 | batch P/L: 45.00 | total P/L: 18661.48 | bank: 23661.48 | next offset: 113100 | timestamp 2025-09-30T16:33:22.022394Z
+
+batch:263 | markets_total:8034 | total spent 25464.06 | batch P/L: 50.00 | total P/L: 18711.48 | bank: 23711.48 | next offset: 113150 | timestamp 2025-09-30T17:18:04.646996Z
+
+batch:264 | markets_total:8065 | total spent 25654.06 | batch P/L: 160.00 | total P/L: 18871.48 | bank: 23871.48 | next offset: 113200 | timestamp 2025-09-30T20:05:43.117059Z
+
+batch:265 | markets_total:8072 | total spent 25704.06 | batch P/L: 0.00 | total P/L: 18871.48 | bank: 23871.48 | next offset: 113250 | timestamp 2025-09-30T21:36:23.578365Z
+
+batch:266 | markets_total:8072 | total spent 25704.06 | batch P/L: 0.00 | total P/L: 18871.48 | bank: 23871.48 | next offset: 113300 | timestamp None
+
+batch:267 | markets_total:8072 | total spent 25704.06 | batch P/L: 0.00 | total P/L: 18871.48 | bank: 23871.48 | next offset: 113350 | timestamp None
+
+batch:268 | markets_total:8085 | total spent 25724.06 | batch P/L: -20.00 | total P/L: 18851.48 | bank: 23851.48 | next offset: 113400 | timestamp 2025-09-30T22:10:12.898526Z
+
+batch:269 | markets_total:8091 | total spent 25764.06 | batch P/L: 10.00 | total P/L: 18861.48 | bank: 23861.48 | next offset: 113450 | timestamp 2025-09-30T22:34:18.139215Z
+
+batch:270 | markets_total:8091 | total spent 25764.06 | batch P/L: 0.00 | total P/L: 18861.48 | bank: 23861.48 | next offset: 113500 | timestamp None
+
+batch:271 | markets_total:8100 | total spent 25814.06 | batch P/L: -50.00 | total P/L: 18811.48 | bank: 23811.48 | next offset: 113550 | timestamp 2025-10-01T08:07:16.30163Z
+
+batch:272 | markets_total:8148 | total spent 26010.06 | batch P/L: -171.00 | total P/L: 18640.48 | bank: 23640.48 | next offset: 113600 | timestamp 2025-10-01T08:07:22.462805Z
+
+batch:273 | markets_total:8168 | total spent 26100.06 | batch P/L: -90.00 | total P/L: 18550.48 | bank: 23550.48 | next offset: 113650 | timestamp 2025-10-01T08:30:56.47979Z
+
+batch:274 | markets_total:8188 | total spent 26210.06 | batch P/L: 90.00 | total P/L: 18640.48 | bank: 23640.48 | next offset: 113700 | timestamp 2025-10-01T11:38:03.971736Z
+
+batch:275 | markets_total:8202 | total spent 26300.06 | batch P/L: 35.00 | total P/L: 18675.48 | bank: 23675.48 | next offset: 113750 | timestamp 2025-10-01T12:49:18.2931Z
+
+batch:276 | markets_total:8234 | total spent 26468.12 | batch P/L: 56.94 | total P/L: 18732.41 | bank: 23732.41 | next offset: 113800 | timestamp 2025-10-01T16:00:01.352528Z
+
+batch:277 | markets_total:8282 | total spent 26768.12 | batch P/L: 25.00 | total P/L: 18757.41 | bank: 23757.41 | next offset: 113850 | timestamp 2025-10-01T16:00:04.177173Z
+
+batch:278 | markets_total:8326 | total spent 26968.12 | batch P/L: 255.00 | total P/L: 19012.41 | bank: 24012.41 | next offset: 113900 | timestamp 2025-10-01T16:00:08.920916Z
+
+batch:279 | markets_total:8353 | total spent 27094.12 | batch P/L: 89.00 | total P/L: 19101.41 | bank: 24101.41 | next offset: 113950 | timestamp 2025-10-01T16:40:02.79324Z
+
+batch:280 | markets_total:8380 | total spent 27286.83 | batch P/L: 210.62 | total P/L: 19312.04 | bank: 24312.04 | next offset: 114000 | timestamp 2025-10-01T18:17:24.308294Z
+
+batch:281 | markets_total:8413 | total spent 27414.97 | batch P/L: 122.22 | total P/L: 19434.25 | bank: 24434.25 | next offset: 114050 | timestamp 2025-10-01T21:52:28.193687Z
+
+batch:282 | markets_total:8414 | total spent 27424.97 | batch P/L: -10.00 | total P/L: 19424.25 | bank: 24424.25 | next offset: 114100 | timestamp 2025-10-01T22:19:49.023005Z
+
+batch:283 | markets_total:8419 | total spent 27474.97 | batch P/L: -25.00 | total P/L: 19399.25 | bank: 24399.25 | next offset: 114150 | timestamp 2025-10-01T23:43:52.160415Z
+
+batch:284 | markets_total:8419 | total spent 27474.97 | batch P/L: 0.00 | total P/L: 19399.25 | bank: 24399.25 | next offset: 114200 | timestamp None
+
+batch:285 | markets_total:8419 | total spent 27474.97 | batch P/L: 0.00 | total P/L: 19399.25 | bank: 24399.25 | next offset: 114250 | timestamp None
+
+batch:286 | markets_total:8419 | total spent 27474.97 | batch P/L: 0.00 | total P/L: 19399.25 | bank: 24399.25 | next offset: 114300 | timestamp None
+
+batch:287 | markets_total:8438 | total spent 27584.97 | batch P/L: 90.00 | total P/L: 19489.25 | bank: 24489.25 | next offset: 114350 | timestamp 2025-10-02T11:41:06.649015Z
+
+batch:288 | markets_total:8451 | total spent 27704.97 | batch P/L: 80.00 | total P/L: 19569.25 | bank: 24569.25 | next offset: 114400 | timestamp 2025-10-02T13:54:38.383783Z
+
+batch:289 | markets_total:8477 | total spent 27874.97 | batch P/L: 130.00 | total P/L: 19699.25 | bank: 24699.25 | next offset: 114450 | timestamp 2025-10-02T16:00:00.96343Z
+
+batch:290 | markets_total:8523 | total spent 28199.97 | batch P/L: 162.50 | total P/L: 19861.75 | bank: 24861.75 | next offset: 114500 | timestamp 2025-10-02T16:00:02.513658Z
+
+batch:291 | markets_total:8543 | total spent 28299.97 | batch P/L: 25.00 | total P/L: 19886.75 | bank: 24886.75 | next offset: 114550 | timestamp 2025-10-02T16:00:04.079609Z
+
+batch:292 | markets_total:8556 | total spent 28409.97 | batch P/L: 65.00 | total P/L: 19951.75 | bank: 24951.75 | next offset: 114600 | timestamp 2025-10-02T16:31:20.150382Z
+
+batch:293 | markets_total:8580 | total spent 28459.97 | batch P/L: 50.00 | total P/L: 20001.75 | bank: 25001.75 | next offset: 114650 | timestamp 2025-10-02T20:41:23.735072Z
+
+batch:294 | markets_total:8630 | total spent 28774.45 | batch P/L: 101.71 | total P/L: 20103.46 | bank: 25103.46 | next offset: 114700 | timestamp 2025-10-02T21:13:05.132912Z
+
+batch:295 | markets_total:8669 | total spent 28821.96 | batch P/L: 21.27 | total P/L: 20124.73 | bank: 25124.73 | next offset: 114750 | timestamp 2025-10-02T21:18:50.252186Z
+
+batch:296 | markets_total:8676 | total spent 28831.96 | batch P/L: -10.00 | total P/L: 20114.73 | bank: 25114.73 | next offset: 114800 | timestamp 2025-10-02T22:03:25.755559Z
+
+batch:297 | markets_total:8702 | total spent 28911.96 | batch P/L: 70.00 | total P/L: 20184.73 | bank: 25184.73 | next offset: 114850 | timestamp 2025-10-02T22:16:41.386068Z
+
+batch:298 | markets_total:8702 | total spent 28911.96 | batch P/L: 0.00 | total P/L: 20184.73 | bank: 25184.73 | next offset: 114900 | timestamp None
+
+batch:299 | markets_total:8702 | total spent 28911.96 | batch P/L: 0.00 | total P/L: 20184.73 | bank: 25184.73 | next offset: 114950 | timestamp None
+
+batch:300 | markets_total:8702 | total spent 28911.96 | batch P/L: 0.00 | total P/L: 20184.73 | bank: 25184.73 | next offset: 115000 | timestamp None
+
+batch:301 | markets_total:8707 | total spent 28941.96 | batch P/L: 45.00 | total P/L: 20229.73 | bank: 25229.73 | next offset: 115050 | timestamp 2025-10-03T13:33:11.279955Z
+
+batch:302 | markets_total:8745 | total spent 29245.96 | batch P/L: 306.00 | total P/L: 20535.73 | bank: 25535.73 | next offset: 115100 | timestamp 2025-10-03T13:33:12.960932Z
+
+batch:303 | markets_total:8761 | total spent 29295.96 | batch P/L: 0.00 | total P/L: 20535.73 | bank: 25535.73 | next offset: 115150 | timestamp 2025-10-03T14:10:46.062508Z
+
+batch:304 | markets_total:8785 | total spent 29475.96 | batch P/L: 220.00 | total P/L: 20755.73 | bank: 25755.73 | next offset: 115200 | timestamp 2025-10-03T15:33:39.011508Z
+
+batch:305 | markets_total:8809 | total spent 29635.96 | batch P/L: 115.00 | total P/L: 20870.73 | bank: 25870.73 | next offset: 115250 | timestamp 2025-10-03T16:00:02.472866Z
+
+batch:306 | markets_total:8839 | total spent 29815.96 | batch P/L: 120.00 | total P/L: 20990.73 | bank: 25990.73 | next offset: 115300 | timestamp 2025-10-03T16:00:05.868345Z
+
+batch:307 | markets_total:8851 | total spent 29865.96 | batch P/L: 50.00 | total P/L: 21040.73 | bank: 26040.73 | next offset: 115350 | timestamp 2025-10-03T16:00:06.944514Z
+
+batch:308 | markets_total:8855 | total spent 29905.96 | batch P/L: 35.00 | total P/L: 21075.73 | bank: 26075.73 | next offset: 115400 | timestamp 2025-10-03T16:24:20.260756Z
+
+batch:309 | markets_total:8881 | total spent 30049.96 | batch P/L: 86.00 | total P/L: 21161.73 | bank: 26161.73 | next offset: 115450 | timestamp 2025-10-03T16:45:10.446475Z
+
+batch:310 | markets_total:8889 | total spent 30067.96 | batch P/L: 27.00 | total P/L: 21188.73 | bank: 26188.73 | next offset: 115500 | timestamp 2025-10-03T18:40:37.013662Z
+
+batch:311 | markets_total:8899 | total spent 30117.96 | batch P/L: 50.00 | total P/L: 21238.73 | bank: 26238.73 | next offset: 115550 | timestamp 2025-10-03T21:55:15.523893Z
+
+batch:312 | markets_total:8899 | total spent 30117.96 | batch P/L: 0.00 | total P/L: 21238.73 | bank: 26238.73 | next offset: 115600 | timestamp None
+
+batch:313 | markets_total:8923 | total spent 30131.96 | batch P/L: 11.00 | total P/L: 21249.73 | bank: 26249.73 | next offset: 115650 | timestamp 2025-10-03T22:56:49.954731Z
+
+batch:314 | markets_total:8927 | total spent 30171.96 | batch P/L: 35.00 | total P/L: 21284.73 | bank: 26284.73 | next offset: 115700 | timestamp 2025-10-04T01:51:20.744166Z
+
+batch:315 | markets_total:8947 | total spent 30211.96 | batch P/L: 35.00 | total P/L: 21319.73 | bank: 26319.73 | next offset: 115750 | timestamp 2025-10-04T04:00:01.905735Z
+
+batch:316 | markets_total:8962 | total spent 30301.96 | batch P/L: 60.00 | total P/L: 21379.73 | bank: 26379.73 | next offset: 115800 | timestamp 2025-10-04T04:00:11.385095Z
+
+batch:317 | markets_total:8962 | total spent 30301.96 | batch P/L: 0.00 | total P/L: 21379.73 | bank: 26379.73 | next offset: 115850 | timestamp None
+
+batch:318 | markets_total:8962 | total spent 30301.96 | batch P/L: 0.00 | total P/L: 21379.73 | bank: 26379.73 | next offset: 115900 | timestamp None
+
+batch:319 | markets_total:8962 | total spent 30301.96 | batch P/L: 0.00 | total P/L: 21379.73 | bank: 26379.73 | next offset: 115950 | timestamp None
+
+batch:320 | markets_total:8962 | total spent 30301.96 | batch P/L: 0.00 | total P/L: 21379.73 | bank: 26379.73 | next offset: 116000 | timestamp None
+
+batch:321 | markets_total:9003 | total spent 30561.96 | batch P/L: 340.00 | total P/L: 21719.73 | bank: 26719.73 | next offset: 116050 | timestamp 2025-10-04T16:00:01.311427Z
+
+batch:322 | markets_total:9050 | total spent 30875.96 | batch P/L: 346.00 | total P/L: 22065.73 | bank: 27065.73 | next offset: 116100 | timestamp 2025-10-04T16:00:03.504063Z
+
+batch:323 | markets_total:9050 | total spent 30875.96 | batch P/L: 0.00 | total P/L: 22065.73 | bank: 27065.73 | next offset: 116150 | timestamp None
+
+batch:324 | markets_total:9053 | total spent 30875.96 | batch P/L: 0.00 | total P/L: 22065.73 | bank: 27065.73 | next offset: 116200 | timestamp 2025-10-04T22:00:49.595965Z
+
+batch:325 | markets_total:9055 | total spent 30875.96 | batch P/L: 0.00 | total P/L: 22065.73 | bank: 27065.73 | next offset: 116250 | timestamp 2025-10-04T22:01:11.159568Z
+
+batch:326 | markets_total:9067 | total spent 30995.96 | batch P/L: 80.00 | total P/L: 22145.73 | bank: 27145.73 | next offset: 116300 | timestamp 2025-10-05T04:00:11.941097Z
+
+batch:327 | markets_total:9115 | total spent 31475.96 | batch P/L: 320.00 | total P/L: 22465.73 | bank: 27465.73 | next offset: 116350 | timestamp 2025-10-05T04:03:58.977967Z
+
+batch:328 | markets_total:9124 | total spent 31565.96 | batch P/L: 60.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116400 | timestamp 2025-10-05T04:23:37.001127Z
+
+batch:329 | markets_total:9124 | total spent 31565.96 | batch P/L: 0.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116450 | timestamp None
+
+batch:330 | markets_total:9124 | total spent 31565.96 | batch P/L: 0.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116500 | timestamp None
+
+batch:331 | markets_total:9124 | total spent 31565.96 | batch P/L: 0.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116550 | timestamp None
+
+batch:332 | markets_total:9124 | total spent 31565.96 | batch P/L: 0.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116600 | timestamp None
+
+batch:333 | markets_total:9124 | total spent 31565.96 | batch P/L: 0.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116650 | timestamp None
+
+batch:334 | markets_total:9124 | total spent 31565.96 | batch P/L: 0.00 | total P/L: 22525.73 | bank: 27525.73 | next offset: 116700 | timestamp None
+
+batch:335 | markets_total:9145 | total spent 31705.96 | batch P/L: 160.00 | total P/L: 22685.73 | bank: 27685.73 | next offset: 116750 | timestamp 2025-10-05T16:00:00.857264Z
+
+batch:336 | markets_total:9174 | total spent 31925.96 | batch P/L: 230.00 | total P/L: 22915.73 | bank: 27915.73 | next offset: 116800 | timestamp 2025-10-05T16:00:02.351826Z
+
+batch:337 | markets_total:9207 | total spent 32114.54 | batch P/L: 232.86 | total P/L: 23148.60 | bank: 28148.60 | next offset: 116850 | timestamp 2025-10-05T16:00:03.23014Z
+
+batch:338 | markets_total:9212 | total spent 32114.54 | batch P/L: 0.00 | total P/L: 23148.60 | bank: 28148.60 | next offset: 116900 | timestamp 2025-10-05T16:00:07.833116Z
+
+batch:339 | markets_total:9212 | total spent 32114.54 | batch P/L: 0.00 | total P/L: 23148.60 | bank: 28148.60 | next offset: 116950 | timestamp None
+
+batch:340 | markets_total:9212 | total spent 32114.54 | batch P/L: 0.00 | total P/L: 23148.60 | bank: 28148.60 | next offset: 117000 | timestamp None
+
+batch:341 | markets_total:9212 | total spent 32114.54 | batch P/L: 0.00 | total P/L: 23148.60 | bank: 28148.60 | next offset: 117050 | timestamp None
+
+batch:342 | markets_total:9214 | total spent 32134.54 | batch P/L: 5.00 | total P/L: 23153.60 | bank: 28153.60 | next offset: 117100 | timestamp 2025-10-05T20:04:25.962415Z
+
+batch:343 | markets_total:9214 | total spent 32134.54 | batch P/L: 0.00 | total P/L: 23153.60 | bank: 28153.60 | next offset: 117150 | timestamp None
+
+batch:344 | markets_total:9214 | total spent 32134.54 | batch P/L: 0.00 | total P/L: 23153.60 | bank: 28153.60 | next offset: 117200 | timestamp None
+
+batch:345 | markets_total:9220 | total spent 32134.54 | batch P/L: 0.00 | total P/L: 23153.60 | bank: 28153.60 | next offset: 117250 | timestamp 2025-10-06T04:00:00.99309Z
+
+batch:346 | markets_total:9228 | total spent 32214.54 | batch P/L: -80.00 | total P/L: 23073.60 | bank: 28073.60 | next offset: 117300 | timestamp 2025-10-06T04:00:01.265708Z
+
+batch:347 | markets_total:9274 | total spent 32554.54 | batch P/L: 35.00 | total P/L: 23108.60 | bank: 28108.60 | next offset: 117350 | timestamp 2025-10-06T04:00:10.273113Z
+
+batch:348 | markets_total:9320 | total spent 33004.54 | batch P/L: 275.00 | total P/L: 23383.60 | bank: 28383.60 | next offset: 117400 | timestamp 2025-10-06T04:00:48.547341Z
+
+batch:349 | markets_total:9324 | total spent 33044.54 | batch P/L: 35.00 | total P/L: 23418.60 | bank: 28418.60 | next offset: 117450 | timestamp 2025-10-06T04:17:55.793641Z
+
+batch:350 | markets_total:9324 | total spent 33044.54 | batch P/L: 0.00 | total P/L: 23418.60 | bank: 28418.60 | next offset: 117500 | timestamp None
+
+batch:351 | markets_total:9337 | total spent 33154.54 | batch P/L: 90.00 | total P/L: 23508.60 | bank: 28508.60 | next offset: 117550 | timestamp 2025-10-06T12:23:47.125658Z
+
+batch:352 | markets_total:9379 | total spent 33514.54 | batch P/L: 240.00 | total P/L: 23748.60 | bank: 28748.60 | next offset: 117600 | timestamp 2025-10-06T12:23:51.296125Z
+
+batch:353 | markets_total:9425 | total spent 33891.34 | batch P/L: 128.20 | total P/L: 23876.80 | bank: 28876.80 | next offset: 117650 | timestamp 2025-10-06T13:00:09.497057Z
+
+batch:354 | markets_total:9453 | total spent 34071.34 | batch P/L: 170.00 | total P/L: 24046.80 | bank: 29046.80 | next offset: 117700 | timestamp 2025-10-06T13:22:00.461589Z
+
+batch:355 | markets_total:9475 | total spent 34194.94 | batch P/L: 85.40 | total P/L: 24132.20 | bank: 29132.20 | next offset: 117750 | timestamp 2025-10-06T16:00:00.908878Z
+
+batch:356 | markets_total:9514 | total spent 34442.08 | batch P/L: 195.71 | total P/L: 24327.91 | bank: 29327.91 | next offset: 117800 | timestamp 2025-10-06T16:00:01.092924Z
+
+batch:357 | markets_total:9562 | total spent 34672.08 | batch P/L: 220.00 | total P/L: 24547.91 | bank: 29547.91 | next offset: 117850 | timestamp 2025-10-06T16:00:08.860248Z
+
+batch:358 | markets_total:9599 | total spent 34822.08 | batch P/L: 175.00 | total P/L: 24722.91 | bank: 29722.91 | next offset: 117900 | timestamp 2025-10-06T16:57:19.222181Z
+
+batch:359 | markets_total:9647 | total spent 35211.45 | batch P/L: 319.62 | total P/L: 25042.53 | bank: 30042.53 | next offset: 117950 | timestamp 2025-10-06T17:08:48.116898Z
+
+batch:360 | markets_total:9685 | total spent 35532.50 | batch P/L: 153.95 | total P/L: 25196.48 | bank: 30196.48 | next offset: 118000 | timestamp 2025-10-06T17:30:08.304717Z
+
+batch:361 | markets_total:9725 | total spent 35899.29 | batch P/L: 158.21 | total P/L: 25354.69 | bank: 30354.69 | next offset: 118050 | timestamp 2025-10-06T18:29:10.498756Z
+
+batch:362 | markets_total:9769 | total spent 36199.29 | batch P/L: 225.00 | total P/L: 25579.69 | bank: 30579.69 | next offset: 118100 | timestamp 2025-10-06T19:51:03.664233Z
+
+batch:363 | markets_total:9809 | total spent 36472.89 | batch P/L: 235.40 | total P/L: 25815.09 | bank: 30815.09 | next offset: 118150 | timestamp 2025-10-06T19:51:18.766293Z
+
+batch:364 | markets_total:9826 | total spent 36535.15 | batch P/L: 20.24 | total P/L: 25835.33 | bank: 30835.33 | next offset: 118200 | timestamp 2025-10-06T20:46:32.644174Z
+
+batch:365 | markets_total:9826 | total spent 36535.15 | batch P/L: 0.00 | total P/L: 25835.33 | bank: 30835.33 | next offset: 118250 | timestamp None
+
+batch:366 | markets_total:9826 | total spent 36535.15 | batch P/L: 0.00 | total P/L: 25835.33 | bank: 30835.33 | next offset: 118300 | timestamp None
+
+batch:367 | markets_total:9826 | total spent 36535.15 | batch P/L: 0.00 | total P/L: 25835.33 | bank: 30835.33 | next offset: 118350 | timestamp None
+
+batch:368 | markets_total:9857 | total spent 36647.14 | batch P/L: 68.01 | total P/L: 25903.34 | bank: 30903.34 | next offset: 118400 | timestamp 2025-10-06T22:53:49.797699Z
+
+batch:369 | markets_total:9907 | total spent 36822.60 | batch P/L: 151.95 | total P/L: 26055.29 | bank: 31055.29 | next offset: 118450 | timestamp 2025-10-06T22:54:20.854598Z
+
+batch:370 | markets_total:9947 | total spent 37114.25 | batch P/L: 190.00 | total P/L: 26245.29 | bank: 31245.29 | next offset: 118500 | timestamp 2025-10-06T22:54:45.588851Z
+
+batch:371 | markets_total:9957 | total spent 37204.25 | batch P/L: 35.00 | total P/L: 26280.29 | bank: 31280.29 | next offset: 118550 | timestamp 2025-10-07T02:38:41.333815Z
+
+batch:372 | markets_total:10007 | total spent 37704.25 | batch P/L: 350.00 | total P/L: 26630.29 | bank: 31630.29 | next offset: 118600 | timestamp 2025-10-07T02:38:55.602072Z
+
+batch:373 | markets_total:10057 | total spent 38184.25 | batch P/L: 295.00 | total P/L: 26925.29 | bank: 31925.29 | next offset: 118650 | timestamp 2025-10-07T02:39:26.172118Z
+
+batch:374 | markets_total:10107 | total spent 38525.85 | batch P/L: 212.40 | total P/L: 27137.69 | bank: 32137.69 | next offset: 118700 | timestamp 2025-10-07T02:40:02.44061Z
+
+batch:1 | markets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100050 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | markets_total:82 | total spent 100.00 | batch P/L: 90.00 | total P/L: 100.00 | bank: 5100.00 | next offset: 100100 | timestamp 2025-09-19T14:00:02.04331Z
+
+batch:3 | markets_total:108 | total spent 280.00 | batch P/L: 245.00 | total P/L: 345.00 | bank: 5345.00 | next offset: 100150 | timestamp 2025-09-19T14:00:03.109891Z
+
+batch:375 | markets_total:10157 | total spent 38969.15 | batch P/L: 240.27 | total P/L: 27377.95 | bank: 32377.95 | next offset: 118750 | timestamp 2025-10-07T02:42:23.81951Z
+
+batch:4 | markets_total:154 | total spent 549.20 | batch P/L: 278.80 | total P/L: 623.80 | bank: 5623.80 | next offset: 100200 | timestamp 2025-09-19T16:00:01.441582Z
+
+batch:5 | markets_total:184 | total spent 729.20 | batch P/L: 170.00 | total P/L: 793.80 | bank: 5793.80 | next offset: 100250 | timestamp 2025-09-19T16:00:03.225547Z
+
+batch:376 | markets_total:10207 | total spent 39459.15 | batch P/L: 335.00 | total P/L: 27712.95 | bank: 32712.95 | next offset: 118800 | timestamp 2025-10-07T02:43:03.647304Z
+
+batch:6 | markets_total:229 | total spent 759.20 | batch P/L: 20.00 | total P/L: 813.80 | bank: 5813.80 | next offset: 100300 | timestamp 2025-09-19T18:00:00.627576Z
+
+batch:377 | markets_total:10234 | total spent 39532.43 | batch P/L: 59.92 | total P/L: 27772.87 | bank: 32772.87 | next offset: 118850 | timestamp 2025-10-07T02:43:35.850049Z
+
+batch:7 | markets_total:273 | total spent 779.20 | batch P/L: 30.00 | total P/L: 843.80 | bank: 5843.80 | next offset: 100350 | timestamp 2025-09-19T18:00:02.60119Z
+
+batch:378 | markets_total:10246 | total spent 39632.43 | batch P/L: 75.00 | total P/L: 27847.87 | bank: 32847.87 | next offset: 118900 | timestamp 2025-10-07T04:00:11.704793Z
+
+batch:379 | markets_total:10246 | total spent 39632.43 | batch P/L: 0.00 | total P/L: 27847.87 | bank: 32847.87 | next offset: 118950 | timestamp None
+
+batch:380 | markets_total:10253 | total spent 39682.43 | batch P/L: 25.00 | total P/L: 27872.87 | bank: 32872.87 | next offset: 119000 | timestamp 2025-10-07T12:04:11.964421Z
+
+batch:8 | markets_total:301 | total spent 999.20 | batch P/L: 105.00 | total P/L: 948.80 | bank: 5948.80 | next offset: 100400 | timestamp 2025-09-19T18:51:06.489045Z
+
+batch:9 | markets_total:328 | total spent 1039.20 | batch P/L: 35.00 | total P/L: 983.80 | bank: 5983.80 | next offset: 100450 | timestamp 2025-09-19T20:26:12.797125Z
+
+batch:10 | markets_total:360 | total spent 1049.20 | batch P/L: 15.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100500 | timestamp 2025-09-19T22:00:01.756121Z
+
+batch:381 | markets_total:10289 | total spent 40002.43 | batch P/L: 230.00 | total P/L: 28102.87 | bank: 33102.87 | next offset: 119050 | timestamp 2025-10-07T12:04:15.279179Z
+
+batch:11 | markets_total:394 | total spent 1049.20 | batch P/L: 0.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100550 | timestamp 2025-09-19T22:00:02.510482Z
+
+batch:12 | markets_total:415 | total spent 1125.20 | batch P/L: 114.00 | total P/L: 1112.80 | bank: 6112.80 | next offset: 100600 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:13 | markets_total:462 | total spent 1145.20 | batch P/L: 30.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100650 | timestamp 2025-09-20T02:00:00.731876Z
+
+batch:14 | markets_total:487 | total spent 1145.20 | batch P/L: 0.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100700 | timestamp 2025-09-20T02:00:02.186513Z
+
+batch:15 | markets_total:522 | total spent 1195.20 | batch P/L: 25.00 | total P/L: 1167.80 | bank: 6167.80 | next offset: 100750 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:382 | markets_total:10339 | total spent 40458.91 | batch P/L: 278.73 | total P/L: 28381.60 | bank: 33381.60 | next offset: 119100 | timestamp 2025-10-07T13:29:22.55497Z
+
+batch:16 | markets_total:546 | total spent 1345.20 | batch P/L: 100.00 | total P/L: 1267.80 | bank: 6267.80 | next offset: 100800 | timestamp 2025-09-20T04:00:02.119227Z
+
+batch:17 | markets_total:579 | total spent 1375.20 | batch P/L: 45.00 | total P/L: 1312.80 | bank: 6312.80 | next offset: 100850 | timestamp 2025-09-20T06:00:00.625469Z
+
+batch:18 | markets_total:629 | total spent 1415.20 | batch P/L: 35.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100900 | timestamp 2025-09-20T06:00:01.815988Z
+
+batch:19 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100950 | timestamp 2025-09-20T06:00:03.718724Z
+
+batch:383 | markets_total:10387 | total spent 40881.79 | batch P/L: 280.74 | total P/L: 28662.34 | bank: 33662.34 | next offset: 119150 | timestamp 2025-10-07T13:30:03.401633Z
+
+batch:20 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101000 | timestamp None
+
+batch:21 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101050 | timestamp None
+
+batch:22 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101100 | timestamp None
+
+batch:23 | markets_total:664 | total spent 1455.20 | batch P/L: 35.00 | total P/L: 1382.80 | bank: 6382.80 | next offset: 101150 | timestamp 2025-09-20T10:00:00.647431Z
+
+batch:24 | markets_total:713 | total spent 1515.20 | batch P/L: 40.00 | total P/L: 1422.80 | bank: 6422.80 | next offset: 101200 | timestamp 2025-09-20T10:00:01.564756Z
+
+batch:25 | markets_total:722 | total spent 1525.20 | batch P/L: 15.00 | total P/L: 1437.80 | bank: 6437.80 | next offset: 101250 | timestamp 2025-09-20T10:00:03.018508Z
+
+batch:1 | markets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100050 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | markets_total:82 | total spent 100.00 | batch P/L: 90.00 | total P/L: 100.00 | bank: 5100.00 | next offset: 100100 | timestamp 2025-09-19T14:00:02.04331Z
+
+batch:30 | markets_total:766 | total spent 1585.20 | batch P/L: 65.00 | total P/L: 1502.80 | bank: 6502.80 | next offset: 101300 | timestamp 2025-09-20T14:00:00.606091Z
+
+batch:3 | markets_total:108 | total spent 280.00 | batch P/L: 245.00 | total P/L: 345.00 | bank: 5345.00 | next offset: 100150 | timestamp 2025-09-19T14:00:03.109891Z
+
+batch:4 | markets_total:154 | total spent 549.20 | batch P/L: 278.80 | total P/L: 623.80 | bank: 5623.80 | next offset: 100200 | timestamp 2025-09-19T16:00:01.441582Z
+
+batch:5 | markets_total:184 | total spent 729.20 | batch P/L: 170.00 | total P/L: 793.80 | bank: 5793.80 | next offset: 100250 | timestamp 2025-09-19T16:00:03.225547Z
+
+batch:6 | markets_total:229 | total spent 759.20 | batch P/L: 20.00 | total P/L: 813.80 | bank: 5813.80 | next offset: 100300 | timestamp 2025-09-19T18:00:00.627576Z
+
+batch:7 | markets_total:273 | total spent 779.20 | batch P/L: 30.00 | total P/L: 843.80 | bank: 5843.80 | next offset: 100350 | timestamp 2025-09-19T18:00:02.60119Z
+
+batch:8 | markets_total:301 | total spent 999.20 | batch P/L: 105.00 | total P/L: 948.80 | bank: 5948.80 | next offset: 100400 | timestamp 2025-09-19T18:51:06.489045Z
+
+batch:9 | markets_total:328 | total spent 1039.20 | batch P/L: 35.00 | total P/L: 983.80 | bank: 5983.80 | next offset: 100450 | timestamp 2025-09-19T20:26:12.797125Z
+
+batch:10 | markets_total:360 | total spent 1049.20 | batch P/L: 15.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100500 | timestamp 2025-09-19T22:00:01.756121Z
+
+batch:11 | markets_total:394 | total spent 1049.20 | batch P/L: 0.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100550 | timestamp 2025-09-19T22:00:02.510482Z
+
+batch:12 | markets_total:415 | total spent 1125.20 | batch P/L: 114.00 | total P/L: 1112.80 | bank: 6112.80 | next offset: 100600 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:13 | markets_total:462 | total spent 1145.20 | batch P/L: 30.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100650 | timestamp 2025-09-20T02:00:00.731876Z
+
+batch:14 | markets_total:487 | total spent 1145.20 | batch P/L: 0.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100700 | timestamp 2025-09-20T02:00:02.186513Z
+
+batch:15 | markets_total:522 | total spent 1195.20 | batch P/L: 25.00 | total P/L: 1167.80 | bank: 6167.80 | next offset: 100750 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:16 | markets_total:546 | total spent 1345.20 | batch P/L: 100.00 | total P/L: 1267.80 | bank: 6267.80 | next offset: 100800 | timestamp 2025-09-20T04:00:02.119227Z
+
+batch:17 | markets_total:579 | total spent 1375.20 | batch P/L: 45.00 | total P/L: 1312.80 | bank: 6312.80 | next offset: 100850 | timestamp 2025-09-20T06:00:00.625469Z
+
+batch:18 | markets_total:629 | total spent 1415.20 | batch P/L: 35.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100900 | timestamp 2025-09-20T06:00:01.815988Z
+
+batch:19 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100950 | timestamp 2025-09-20T06:00:03.718724Z
+
+batch:20 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101000 | timestamp None
+
+batch:21 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101050 | timestamp None
+
+batch:22 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101100 | timestamp None
+
+batch:23 | markets_total:664 | total spent 1455.20 | batch P/L: 35.00 | total P/L: 1382.80 | bank: 6382.80 | next offset: 101150 | timestamp 2025-09-20T10:00:00.647431Z
+
+batch:24 | markets_total:713 | total spent 1515.20 | batch P/L: 40.00 | total P/L: 1422.80 | bank: 6422.80 | next offset: 101200 | timestamp 2025-09-20T10:00:01.564756Z
+
+batch:25 | markets_total:722 | total spent 1525.20 | batch P/L: 15.00 | total P/L: 1437.80 | bank: 6437.80 | next offset: 101250 | timestamp 2025-09-20T10:00:03.018508Z
+
+batch:26 | markets_total:766 | total spent 1585.20 | batch P/L: 65.00 | total P/L: 1502.80 | bank: 6502.80 | next offset: 101300 | timestamp 2025-09-20T14:00:00.606091Z
+
+batch:27 | markets_total:810 | total spent 1595.20 | batch P/L: 15.00 | total P/L: 1517.80 | bank: 6517.80 | next offset: 101350 | timestamp 2025-09-20T14:00:02.121082Z
+
+batch:28 | markets_total:835 | total spent 1733.20 | batch P/L: 107.00 | total P/L: 1624.80 | bank: 6624.80 | next offset: 101400 | timestamp 2025-09-20T16:00:00.683218Z
+
+batch:29 | markets_total:883 | total spent 1948.00 | batch P/L: 222.20 | total P/L: 1847.00 | bank: 6847.00 | next offset: 101450 | timestamp 2025-09-20T16:00:01.481006Z
+
+batch:30 | markets_total:912 | total spent 1998.00 | batch P/L: 50.00 | total P/L: 1897.00 | bank: 6897.00 | next offset: 101500 | timestamp 2025-09-20T16:00:03.10806Z
+
+batch:1 | markets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100050 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | markets_total:82 | total spent 100.00 | batch P/L: 90.00 | total P/L: 100.00 | bank: 5100.00 | next offset: 100100 | timestamp 2025-09-19T14:00:02.04331Z
+
+batch:3 | markets_total:108 | total spent 280.00 | batch P/L: 245.00 | total P/L: 345.00 | bank: 5345.00 | next offset: 100150 | timestamp 2025-09-19T14:00:03.109891Z
+
+batch:4 | markets_total:154 | total spent 549.20 | batch P/L: 278.80 | total P/L: 623.80 | bank: 5623.80 | next offset: 100200 | timestamp 2025-09-19T16:00:01.441582Z
+
+batch:5 | markets_total:184 | total spent 729.20 | batch P/L: 170.00 | total P/L: 793.80 | bank: 5793.80 | next offset: 100250 | timestamp 2025-09-19T16:00:03.225547Z
+
+batch:6 | markets_total:229 | total spent 759.20 | batch P/L: 20.00 | total P/L: 813.80 | bank: 5813.80 | next offset: 100300 | timestamp 2025-09-19T18:00:00.627576Z
+
+batch:7 | markets_total:273 | total spent 779.20 | batch P/L: 30.00 | total P/L: 843.80 | bank: 5843.80 | next offset: 100350 | timestamp 2025-09-19T18:00:02.60119Z
+
+batch:9 | markets_total:301 | total spent 999.20 | batch P/L: 105.00 | total P/L: 948.80 | bank: 5948.80 | next offset: 100400 | timestamp 2025-09-19T18:51:06.489045Z
+
+batch:10 | markets_total:328 | total spent 1039.20 | batch P/L: 35.00 | total P/L: 983.80 | bank: 5983.80 | next offset: 100450 | timestamp 2025-09-19T20:26:12.797125Z
+
+batch:11 | markets_total:360 | total spent 1049.20 | batch P/L: 15.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100500 | timestamp 2025-09-19T22:00:01.756121Z
+
+batch:13 | markets_total:394 | total spent 1049.20 | batch P/L: 0.00 | total P/L: 998.80 | bank: 5998.80 | next offset: 100550 | timestamp 2025-09-19T22:00:02.510482Z
+
+batch:14 | markets_total:415 | total spent 1125.20 | batch P/L: 114.00 | total P/L: 1112.80 | bank: 6112.80 | next offset: 100600 | timestamp 2025-09-19T23:18:02.918975Z
+
+batch:15 | markets_total:462 | total spent 1145.20 | batch P/L: 30.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100650 | timestamp 2025-09-20T02:00:00.731876Z
+
+batch:16 | markets_total:487 | total spent 1145.20 | batch P/L: 0.00 | total P/L: 1142.80 | bank: 6142.80 | next offset: 100700 | timestamp 2025-09-20T02:00:02.186513Z
+
+batch:17 | markets_total:522 | total spent 1195.20 | batch P/L: 25.00 | total P/L: 1167.80 | bank: 6167.80 | next offset: 100750 | timestamp 2025-09-20T04:00:01.16682Z
+
+batch:18 | markets_total:546 | total spent 1345.20 | batch P/L: 100.00 | total P/L: 1267.80 | bank: 6267.80 | next offset: 100800 | timestamp 2025-09-20T04:00:02.119227Z
+
+batch:19 | markets_total:579 | total spent 1375.20 | batch P/L: 45.00 | total P/L: 1312.80 | bank: 6312.80 | next offset: 100850 | timestamp 2025-09-20T06:00:00.625469Z
+
+batch:20 | markets_total:629 | total spent 1415.20 | batch P/L: 35.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100900 | timestamp 2025-09-20T06:00:01.815988Z
+
+batch:21 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 100950 | timestamp 2025-09-20T06:00:03.718724Z
+
+batch:22 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101000 | timestamp None
+
+batch:23 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101050 | timestamp None
+
+batch:24 | markets_total:634 | total spent 1415.20 | batch P/L: 0.00 | total P/L: 1347.80 | bank: 6347.80 | next offset: 101100 | timestamp None
+
+batch:25 | markets_total:664 | total spent 1455.20 | batch P/L: 35.00 | total P/L: 1382.80 | bank: 6382.80 | next offset: 101150 | timestamp 2025-09-20T10:00:00.647431Z
+
+batch:26 | markets_total:713 | total spent 1515.20 | batch P/L: 40.00 | total P/L: 1422.80 | bank: 6422.80 | next offset: 101200 | timestamp 2025-09-20T10:00:01.564756Z
+
+batch:27 | markets_total:722 | total spent 1525.20 | batch P/L: 15.00 | total P/L: 1437.80 | bank: 6437.80 | next offset: 101250 | timestamp 2025-09-20T10:00:03.018508Z
+
+batch:28 | markets_total:766 | total spent 1585.20 | batch P/L: 65.00 | total P/L: 1502.80 | bank: 6502.80 | next offset: 101300 | timestamp 2025-09-20T14:00:00.606091Z
+
+batch:29 | markets_total:810 | total spent 1595.20 | batch P/L: 15.00 | total P/L: 1517.80 | bank: 6517.80 | next offset: 101350 | timestamp 2025-09-20T14:00:02.121082Z
+
+batch:30 | markets_total:835 | total spent 1733.20 | batch P/L: 107.00 | total P/L: 1624.80 | bank: 6624.80 | next offset: 101400 | timestamp 2025-09-20T16:00:00.683218Z

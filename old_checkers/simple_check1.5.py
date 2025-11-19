@@ -15,9 +15,8 @@ CAP_NO       = 0.40      # maker NO cap
 FEE_BPS      = 0         # 600 = 6.00%
 SLIP_BPS     = 0         # 200 = 2.00%
 START_BANK   = 5000.0
-START_OFFSET = 70000     # Gamma offset to start from
+START_OFFSET = 100000    # Gamma offset to start from
 BATCH_LIMIT  = 50        # markets per batch
-MAX_BATCHES  = 100       # max batches to run
 MIN_BANK     = 10.0      # stop if bank below this
 
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
@@ -78,10 +77,8 @@ class SimMarket:
         else:
             t_from_ts = int(t_from)
 
-        # Treat max_no_price as our cap. If None, assume 1.0 (effectively uncapped).
         cap = 1.0 if max_no_price is None else float(max_no_price)
 
-        # Gather eligible blocks (NO trades at or below cap, after t_from)
         eligible = []
         total_shares = 0.0
 
@@ -103,22 +100,17 @@ class SimMarket:
             total_shares += sh
 
         if total_shares <= 0.0:
-            # No liquidity under cap
             return 0.0, 0.0, 0.0, []
 
-        # How many shares can our bankroll buy at the cap?
         max_shares_by_bank = dollars / cap
         target_shares = min(total_shares, max_shares_by_bank)
 
-        # Cost is at cap, not at historical trade prices
         spent_pre = target_shares * cap
         spent_after = spent_pre * (1.0 + self.fee + self.slip)
         avg_no = spent_after / target_shares
 
-        # Optional: build a “fills” breakdown by shares
         fills = []
         remaining = target_shares
-
         for b in eligible:
             if remaining <= 0:
                 break
@@ -147,28 +139,53 @@ class SimMarket:
 
         return target_shares, spent_after, avg_no, fills
 
-    # (You can keep take_first_yes if you want, but for this sanity check it's not needed.)
-
 # ======================================================
-#  Old main wrapper helpers
+#  Rolling over Gamma markets
 # ======================================================
 
-def rolling_markets(bank, check, limit=BATCH_LIMIT, offset=START_OFFSET,
-                    max_price_cap=CAP_NO, fee_bps=FEE_BPS, slip_bps=SLIP_BPS):
+def rolling_markets(bank,
+                    check,
+                    limit=BATCH_LIMIT,
+                    offset=START_OFFSET,
+                    max_price_cap=CAP_NO,
+                    fee_bps=FEE_BPS,
+                    slip_bps=SLIP_BPS,
+                    global_pl_start=0.0):
     """
     Runs through up to `limit` markets starting at `offset`, placing a NO bet
     per market as a MAKER at `max_price_cap`.
 
-    Returns (pnl_sum, bank, next_offset, num_markets, last_createdAt, total_spent)
+    Returns:
+      (pnl_sum, bank, next_offset, num_valid_markets, last_createdAt, total_spent, end_of_list)
     """
     pnl_sum = 0.0
-    markets = filter_markets(fetch_markets(limit, offset))
-    if not markets:
-        return 0.0, bank, offset, 0, None, 0.0
-
-    next_offset = offset + len(markets)
     spent = 0.0
 
+    # 1) Fetch RAW markets from Gamma
+    raw_markets = fetch_markets(limit, offset)
+    raw_count = len(raw_markets)
+
+    if raw_count == 0:
+        # True end of the list
+        print(f"[rolling_markets] No raw markets at offset={offset} → END OF LIST.")
+        return 0.0, bank, offset, 0, None, 0.0, True
+
+    # 2) Advance offset by RAW count (not filtered count)
+    next_offset = offset + raw_count
+
+    # 3) Filter to clean Yes/No markets
+    markets = filter_markets(raw_markets)
+
+    # Debug: raw vs valid counts
+    print(f"[DEBUG] offset={offset} raw_markets={raw_count} valid_yesno={len(markets)}")
+
+    if not markets:
+        # Page had markets, but none we care about.
+        # Not end-of-list; just move on.
+        print(f"[rolling_markets] No valid Yes/No markets on this page (raw_count={raw_count}).")
+        return 0.0, bank, next_offset, 0, None, 0.0, False
+
+    # 4) Process valid markets
     for market in markets:
         try:
             trades_raw = fetch_trades(market)
@@ -176,14 +193,12 @@ def rolling_markets(bank, check, limit=BATCH_LIMIT, offset=START_OFFSET,
             if not trades:
                 continue
 
-            # maker-at-cap sim start time: first trade
             t_from = trades[0]["time"]
 
-            # fixed bet from global
             if bank >= BET_SIZE:
                 bet = BET_SIZE
             elif bank >= MIN_BANK:
-                bet = float(bank)  # go all-in if between MIN_BANK and BET_SIZE
+                bet = float(bank)
             else:
                 print("Out of money / below min bank, breaking.")
                 break
@@ -195,14 +210,11 @@ def rolling_markets(bank, check, limit=BATCH_LIMIT, offset=START_OFFSET,
                     t_from, dollars=bet, max_no_price=max_price_cap
                 )
             else:
-                # We’re only using NO in this sanity script
                 continue
 
-            # skip if no fill
             if shares == 0.0 or spent_after == 0.0:
                 continue
 
-            # outcome from outcomePrices (still heuristic)
             outcome_raw = market.get("outcomePrices", ["0", "0"])
             outcome = json.loads(outcome_raw) if isinstance(outcome_raw, str) else outcome_raw
             yes_p, no_p = float(outcome[0]), float(outcome[1])
@@ -218,14 +230,16 @@ def rolling_markets(bank, check, limit=BATCH_LIMIT, offset=START_OFFSET,
             pnl_sum += pnl
             spent += spent_after
 
+            running_pl_global = global_pl_start + pnl_sum
+
             print(market["question"])
             print(
                 f"shares={shares:.2f} | spent={spent_after:.2f} | cap={max_price_cap:.3f} "
                 f"| avg={avg_:.4f} | outcome={'WON' if won else 'LOST'} "
-                f"| pnl={pnl:.2f} | running_PL={pnl_sum:.2f} | bank={bank:.2f}"
+                f"| pnl={pnl:.2f} | running_PL={running_pl_global:.2f} | bank={bank:.2f}"
             )
 
-            time.sleep(0.5)  # slow it a bit
+            time.sleep(0.5)
 
             if bank < MIN_BANK:
                 print("bank below MIN_BANK; stopping batch.")
@@ -235,7 +249,11 @@ def rolling_markets(bank, check, limit=BATCH_LIMIT, offset=START_OFFSET,
             print(f"[skip] {market.get('question','<no title>')}: {e}")
 
     last_created = markets[0].get("createdAt") if markets else None
-    return pnl_sum, bank, next_offset, len(markets), last_created, spent
+    return pnl_sum, bank, next_offset, len(markets), last_created, spent, False
+
+# ======================================================
+#  Main loop
+# ======================================================
 
 def main():
     run_simple()
@@ -244,16 +262,21 @@ def run_simple():
     bank = START_BANK
     offset = START_OFFSET
     all_pl = 0.0
-    all_bets = 0
+    all_markets = 0
     spent = 0.0
+    batch_idx = 0
 
-    for batch_idx in range(MAX_BATCHES):
+    print(f"START: bank={bank:.2f}, BET_SIZE={BET_SIZE}, CAP_NO={CAP_NO}")
+
+    while True:
+        batch_idx += 1
+
         if bank < MIN_BANK:
             print("Bank below MIN_BANK, stopping.")
             break
 
         time.sleep(1)
-        pnl_batch, bank, offset, bets, createdAt, sp = rolling_markets(
+        pnl_batch, bank, offset, num_markets, createdAt, sp, end_of_list = rolling_markets(
             bank,
             check="no",
             limit=BATCH_LIMIT,
@@ -261,35 +284,38 @@ def run_simple():
             max_price_cap=CAP_NO,
             fee_bps=FEE_BPS,
             slip_bps=SLIP_BPS,
+            global_pl_start=all_pl,
         )
         all_pl += pnl_batch
-        all_bets += bets
+        all_markets += num_markets
         spent += sp
 
         print("-" * 61)
         print(
-            f"bets_this_batch: {bets} | total_bets: {all_bets} | "
+            f"batch #{batch_idx} | markets_this_batch: {num_markets} | total_markets: {all_markets} | "
             f"batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} | "
             f"bank: {bank:.2f} | next offset: {offset}"
         )
         print("-" * 61)
         write_to_file(
             "look.txt",
-            f"bets_total:{all_bets} | total spent {spent:.2f} "
+            f"batch:{batch_idx} | markets_total:{all_markets} | total spent {spent:.2f} "
             f"| batch P/L: {pnl_batch:.2f} | total P/L: {all_pl:.2f} "
             f"| bank: {bank:.2f} | next offset: {offset} | timestamp {createdAt}"
         )
 
-        if bets == 0:
-            print("No markets processed in this batch; stopping.")
-            break
-
+        if end_of_list:
+            # Only here when Gamma returned raw_markets == 0
+            print("Reached end of Gamma market list → resetting offset to 0 and sleeping 10s.")
+            offset = 0
+            time.sleep(10)
+            continue
 
 # ======================================================
 #  HTTP helpers
 # ======================================================
 
-def safe_get(url, *, params=None, timeout=(5, 20)):  # 5s connect, 20s read
+def safe_get(url, *, params=None, timeout=(5, 20)):
     return SESSION.get(url, params=params, timeout=timeout)
 
 
@@ -352,23 +378,18 @@ def fetch_trades(market_dict):
 # ======================================================
 
 def normalize_time(value, default=None):
-    """
-    Converts various Polymarket-style date/time formats into a UTC datetime.
-    """
     if value is None or value == "":
         return default
 
-    # numeric timestamp (epoch seconds / ms)
     if isinstance(value, (int, float)) or re.match(r"^\d{10,13}$", str(value)):
         try:
             ts = float(value)
-            if ts > 1e12:  # milliseconds
+            if ts > 1e12:
                 ts /= 1000.0
             return datetime.fromtimestamp(ts, tz=timezone.utc)
         except Exception:
             return default
 
-    # string normalization
     val = str(value).strip()
     val = val.replace("Z", "+00:00")
     val = re.sub(r"\s+", "T", val)
@@ -398,7 +419,6 @@ def snap_price(p, tick=0.01):
 def take_yes(trade):
     out = trade["outcome"].lower()
     side = trade["side"].lower()
-    # same logic you had before
     return (out == "no" and side == "sell") or (out == "yes" and side == "buy")
 
 
@@ -413,13 +433,10 @@ def notion_yes(trade):
 
 
 def notion_no(trade):
-    return float(trade["size"]) * (1 - float(trade["price"]))
+    return float(trade["size"]) * (1 - float(trade["price"]))    
 
 
 def valid_trade(trade, min_spend=2, extreme_price=0.05, min_extreme_notional=20.0):
-    """
-    Same validity filter as before.
-    """
     if not trade:
         return False
 
@@ -444,17 +461,10 @@ def valid_trade(trade, min_spend=2, extreme_price=0.05, min_extreme_notional=20.
 
 
 def normalize_trades(trades):
-    """
-    SIMPLE VERSION (no aggregation):
-
-    - Sort trades by timestamp ascending
-    - Each valid trade becomes a single "block"
-    """
     if not trades:
         print("ERROR NO TRADES AVAILABLE")
         return []
 
-    # timestamp might be ms; your old code treated it as seconds-ish
     trades = sorted(trades, key=lambda t: t["timestamp"])
 
     blocks = []
@@ -496,7 +506,7 @@ def normalize_trades(trades):
             "shares": size,
             "notional_yes": round(notional_yes, 6),
             "notional_no":  round(notional_no, 6),
-            "compressed": 1,  # kept just for compatibility
+            "compressed": 1,
         })
 
     return sorted(blocks, key=lambda b: b["time"])
@@ -520,4 +530,7 @@ def write_to_file(filename, data):
 
 # ======================================================
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nStopped by user (Ctrl+C).")
