@@ -15,7 +15,7 @@ CAP_NO       = 0.40      # maker NO cap
 FEE_BPS      = 0         # 600 = 6.00%
 SLIP_BPS     = 0         # 200 = 2.00%
 START_BANK   = 5000.0
-START_OFFSET = 100000    # Gamma offset to start from
+START_OFFSET = 170000    # Gamma offset to start from
 BATCH_LIMIT  = 50        # markets per batch
 MIN_BANK     = 10.0      # stop if bank below this
 
