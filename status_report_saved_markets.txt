@@ -1006,3 +1006,87 @@ LAST BATCH:
   last batch P/L    : 220.58
   last batch markets: 13
 ===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T16:14:59.702569+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 6218.77
+  total P/L           : 1218.77
+  total spent         : 1821.23
+
+MARKET PROGRESS:
+  index               : 169
+  total done          : 169
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x749a40e9c440f1575800ece4c47ebc458cdb2f326b5022b590f944c6ee544aaf
+  last question       : Will "Wicked: For Good" score at least 80 on the Rotten Tomatoes Tomatometer?
+  last time_found     : 2025-11-03T22:38:05.454556+00:00
+
+LAST REPORT:
+  last report P/L     : 1218.77
+  last report markets : 169
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T16:15:05.880748+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 6218.77
+  total P/L           : 1218.77
+  total spent         : 1821.23
+
+MARKET PROGRESS:
+  index               : 169
+  total done          : 169
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x749a40e9c440f1575800ece4c47ebc458cdb2f326b5022b590f944c6ee544aaf
+  last question       : Will "Wicked: For Good" score at least 80 on the Rotten Tomatoes Tomatometer?
+  last time_found     : 2025-11-03T22:38:05.454556+00:00
+
+LAST REPORT:
+  last report P/L     : 1218.77
+  last report markets : 169
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T16:15:11.722709+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 0
+  total done          : 0
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : None
+  last question       : None
+  last time_found     : None
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 0
+===================================================

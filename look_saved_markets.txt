@@ -513,3 +513,9 @@ batch:157 | visited_total:7832 | bets_total:0 | total spent 127097.87 | batch P/
 [CUR] report:2 | markets_total:913 | markets_this_report:513 | total spent 18902.67 | report P/L: 5293.12 | total P/L: 7075.32 | bank: 12075.32 | folder=gather_markets
 
 [CUR] report:3 | markets_total:1320 | markets_this_report:407 | total spent 36973.82 | report P/L: 10995.41 | total P/L: 18070.73 | bank: 23070.73 | folder=gather_markets
+
+[CUR] report:4 | markets_total:1725 | markets_this_report:405 | total spent 50697.60 | report P/L: 8404.04 | total P/L: 26474.77 | bank: 31474.77 | folder=gather_markets
+
+[HIST] report:1 | markets_total:1997 | markets_this_report:1997 | total spent 100.00 | report P/L: 150.00 | total P/L: 150.00 | bank: 5150.00 | start_label=max
+
+[CUR] report:5 | markets_total:2289 | markets_this_report:564 | total spent 62455.25 | report P/L: 7446.15 | total P/L: 33920.92 | bank: 38920.92 | folder=gather_markets

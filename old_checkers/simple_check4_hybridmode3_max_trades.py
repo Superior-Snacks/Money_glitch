@@ -23,6 +23,7 @@ MIN_BANK     = 10.0      # stop if bank below this
 # How often to print a global summary (in number of markets processed)
 GLOBAL_REPORT_INTERVAL = 400
 TRADES_PAGE_LIMIT = 250
+MAX_TRADE_PAGES = 1000
 
 BASE_GAMMA   = "https://gamma-api.polymarket.com/markets"
 DATA_TRADES  = "https://data-api.polymarket.com/trades"
@@ -555,8 +556,13 @@ def fetch_trades(market_dict):
     """
     Fetch ALL trades for a market using pagination.
 
-    Returns a list of trade dicts sorted by timestamp ascending.
-    Uses DATA_TRADES with limit/offset and the global rate limiter.
+    - Uses limit/offset over DATA_TRADES
+    - Ensures uniqueness via a stable trade key (no offset)
+    - Stops if:
+        * page is empty
+        * page size < limit (end of stream)
+        * page has 0 new trades (stagnation)
+        * page_num hits MAX_TRADE_PAGES
     """
     cid = market_dict["conditionId"]
     print(f"    [TRADES] fetching ALL trades cid={cid[:10]}…")
@@ -567,7 +573,7 @@ def fetch_trades(market_dict):
     seen_ids = set()
     page_num = 0
 
-    while True:
+    while page_num < MAX_TRADE_PAGES:
         params = {
             "market": cid,
             "sort": "asc",
@@ -592,38 +598,69 @@ def fetch_trades(market_dict):
         print(f"    [TRADES] page {page_num} got {n_page} trades")
 
         if not page:
-            # no more trades
+            print(f"    [TRADES] page {page_num} empty → end of stream")
             break
 
         added = 0
         for t in page:
-            tid = t.get("id") or f"{t.get('price')}-{t.get('size')}-{t.get('timestamp')}-{offset}"
+            # Build a stable key that does NOT depend on offset
+            tid = t.get("id")
+            if not tid:
+                tid = (
+                    f"{t.get('market')}-"
+                    f"{t.get('match_time') or t.get('timestamp') or t.get('time')}-"
+                    f"{t.get('price')}-"
+                    f"{t.get('size')}-"
+                    f"{t.get('side')}-"
+                    f"{t.get('outcome')}"
+                )
+
             if tid in seen_ids:
                 continue
             seen_ids.add(tid)
             all_trades.append(t)
             added += 1
 
-        print(f"    [TRADES] page {page_num} added {added} new trades (total={len(all_trades)})")
+        print(
+            f"    [TRADES] page {page_num} added {added} new trades "
+            f"(total={len(all_trades)})"
+        )
 
-        # if page is not full, we've reached the end
+        # If we got a full page but 0 new trades, we're looping/repeating
+        if added == 0:
+            print(
+                f"    [TRADES] page {page_num} had 0 new trades "
+                f"(possible repetition) → stopping to avoid infinite loop"
+            )
+            break
+
+        # If page smaller than limit, end of stream
         if n_page < limit:
-            print(f"    [TRADES] page {page_num} size < limit ({n_page} < {limit}) → end of stream")
+            print(
+                f"    [TRADES] page {page_num} size < limit "
+                f"({n_page} < {limit}) → end of stream"
+            )
             break
 
         offset += limit
         page_num += 1
 
+    if page_num >= MAX_TRADE_PAGES:
+        print(
+            f"    [TRADES] reached MAX_TRADE_PAGES={MAX_TRADE_PAGES} for cid={cid[:10]} → "
+            "stopping pagination for safety"
+        )
+
     print(f"    [TRADES] DONE cid={cid[:10]} total_trades={len(all_trades)}")
 
-    # keep your existing expectation that trades have 'timestamp'
+    # Keep behaviour: sorted by timestamp ascending
     try:
         all_trades.sort(key=lambda t: t["timestamp"])
     except Exception:
-        # fallback if weird data
         pass
 
     return all_trades
+
 
 # ======================================================
 #  Robust market resolution

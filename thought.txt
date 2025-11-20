@@ -993,3 +993,19 @@ batch #15 | visited_this_batch: 50 | bets_this_batch: 6 | total_markets_done: 75
 
 c4_curr
 batch #15 | visited_this_batch: 50 | bets_this_batch: 21 | total_markets_done: 750 | batch P/L: 259.00 | total P/L: 5725.32 | bank: 10725.32
+
+c4h3mt
+
+c4_curr
+[CUR #2352/7833] Will the price of Bitcoin be between $106,000 and $108,000 on November 16? (cid=0x90af0e89…) time_found=2025-11-09T17:06:29.697039+00:00
+    [TRADES] fetching trades cid=0x90af0e89…
+    [TRADES] got 94 raw trades for cid=0x90af0e89
+    [TRADES] normalized: raw=94 valid_blocks=10
+    [SIM] starting maker NO sim: bet=100.00, cap=0.400
+    [SIM] maker NO fill: shares=250.00, spent_after=100.00, avg=0.4000
+    [META] fetching meta for cid=0x90af0e89…
+    [META] received=True for cid=0x90af0e89
+    [STATUS] resolved=True winner=NO source=terminal_prices
+    [SIM] result: status=NO, won=True, pnl=150.00
+Will the price of Bitcoin be between $106,000 and $108,000 on November 16?
+shares=250.00 | spent=100.00 | cap=0.400 | avg=0.4000 | status=NO (WON) | pnl=150.00 | running_PL=36321.50 | bank=41321.50
