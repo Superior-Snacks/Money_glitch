@@ -11,7 +11,7 @@ import glob
 # ======================================================
 #  CONFIG: tweak these in ONE place
 # ======================================================
-BET_SIZE     = 10.0      # dollars per market
+BET_SIZE     = 100.0      # dollars per market
 CAP_NO       = 0.40      # maker NO cap
 FEE_BPS      = 0         # 600 = 6.00%
 SLIP_BPS     = 0         # 200 = 2.00%
@@ -147,7 +147,7 @@ def make_session():
     adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "research-bot/1.0"})
+    s.headers.update({"User-Agent": "research-bot/2.0"})
     return s
 
 SESSION = make_session()

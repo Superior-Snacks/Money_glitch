@@ -1,0 +1,868 @@
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T12:49:04.153975+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5000.00
+  total P/L         : 0.00
+  total spent       : 0.00
+
+MARKET PROGRESS:
+  index             : 0
+  total done        : 0
+  total batches     : 0
+
+LAST MARKET:
+  last cid          : None
+  last question     : None
+  last time_found   : None
+
+LAST BATCH:
+  last batch P/L    : 0.00
+  last batch markets: 0
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:34.221169+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:37.191834+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:37.403977+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:37.561751+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:37.735829+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:37.892778+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.037862+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.199230+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.313328+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.444066+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.580460+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.744815+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:38.901516+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:39.054853+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:39.211306+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:39.370302+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:39.544447+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:39.702722+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:39.857572+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:40.015853+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:40.173040+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:40.342892+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:40.723678+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:40.929853+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:41.105275+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 17368.21
+  total P/L         : 12368.21
+  total spent       : 16876.82
+
+MARKET PROGRESS:
+  index             : 3573
+  total done        : 3574
+  total batches     : 72
+
+LAST MARKET:
+  last cid          : 0x72f1fe9ccaff106334a351ec55a8f78d6b47e242af3df3f6fbee09a378decc06
+  last question     : Will the price of Ethereum be above $2,900 on November 19?
+  last time_found   : 2025-11-12T16:58:16.132439+00:00
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 18
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:46.116664+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 62425.52
+  total P/L         : 57425.52
+  total spent       : 107843.81
+
+MARKET PROGRESS:
+  index             : 4083
+  total done        : 4084
+  total batches     : 82
+
+LAST MARKET:
+  last cid          : 0x2e442731411291a0e8aa0eda23344a5ee4dc49d72fb29db8d1805b41afb5e15d
+  last question     : Will Trump say "Stupid" or "Idiot" during Signing tonight?
+  last time_found   : 2025-11-13T01:22:56.844877+00:00
+
+LAST BATCH:
+  last batch P/L    : 658.96
+  last batch markets: 13
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:56:47.412449+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 62425.52
+  total P/L         : 57425.52
+  total spent       : 107843.81
+
+MARKET PROGRESS:
+  index             : 4083
+  total done        : 4084
+  total batches     : 82
+
+LAST MARKET:
+  last cid          : 0x2e442731411291a0e8aa0eda23344a5ee4dc49d72fb29db8d1805b41afb5e15d
+  last question     : Will Trump say "Stupid" or "Idiot" during Signing tonight?
+  last time_found   : 2025-11-13T01:22:56.844877+00:00
+
+LAST BATCH:
+  last batch P/L    : 658.96
+  last batch markets: 13
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T13:57:54.658749+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5000.00
+  total P/L         : 0.00
+  total spent       : 0.00
+
+MARKET PROGRESS:
+  index             : 0
+  total done        : 0
+  total batches     : 0
+
+LAST MARKET:
+  last cid          : None
+  last question     : None
+  last time_found   : None
+
+LAST BATCH:
+  last batch P/L    : 0.00
+  last batch markets: 0
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T14:00:46.987775+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5000.00
+  total P/L         : 0.00
+  total spent       : 0.00
+
+MARKET PROGRESS:
+  index             : 0
+  total done        : 0
+  total batches     : 0
+
+LAST MARKET:
+  last cid          : None
+  last question     : None
+  last time_found   : None
+
+LAST BATCH:
+  last batch P/L    : 0.00
+  last batch markets: 0
+===================================================================
+================= STATUS SNAPSHOT (saved markets) =================
+timestamp           : 2025-11-20T14:05:14.288085+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5050.00
+  total P/L         : 50.00
+  total spent       : 200.00
+
+MARKET PROGRESS:
+  index             : 3
+  total done        : 4
+  total batches     : 1
+
+LAST MARKET:
+  last cid          : 0x983fdd840c04a955ee44ce4ccee1573e90877dd35f310fe8bf009081debaa158
+  last question     : Will Bitcoin dip to $101k November 3-9?
+  last time_found   : 2025-11-03T20:35:53.270064+00:00
+
+LAST BATCH:
+  last batch P/L    : 50.00
+  last batch markets: 2
+===================================================================

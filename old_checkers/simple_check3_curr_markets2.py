@@ -11,7 +11,7 @@ import glob
 # ======================================================
 #  CONFIG: tweak these in ONE place
 # ======================================================
-BET_SIZE     = 10.0      # dollars per market
+BET_SIZE     = 100.0      # dollars per market
 CAP_NO       = 0.40      # maker NO cap
 FEE_BPS      = 0         # 600 = 6.00%
 SLIP_BPS     = 0         # 200 = 2.00%

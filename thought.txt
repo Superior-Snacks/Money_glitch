@@ -976,3 +976,14 @@ Open markets with NO liquidity at this cap:   3663
 Total cost spent (entered markets):         11530.00
 Total NO-shares bought (entered markets):   0.00
 p/l +156.00
+
+=== DONE processing saved markets ===
+Final bank: 28464.80, total P/L: 23464.80, markets_done: 7400 curr
+
+=== DONE processing saved markets ===
+Final bank: 28495.23, total P/L: 23495.23, markets_done: 7402 curr 2
+=== DONE processing saved markets ===
+Final bank: 28890.45, total P/L: 23890.45, markets_done: 7817
+
+=== DONE processing saved markets ===
+Final bank: 68066.25, total P/L: 63066.25, markets_done: 7817
