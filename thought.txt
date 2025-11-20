@@ -1009,3 +1009,64 @@ c4_curr
     [SIM] result: status=NO, won=True, pnl=150.00
 Will the price of Bitcoin be between $106,000 and $108,000 on November 16?
 shares=250.00 | spent=100.00 | cap=0.400 | avg=0.4000 | status=NO (WON) | pnl=150.00 | running_PL=36321.50 | bank=41321.50
+
+
+
+
+[CUR #484/8007] Will Google Gemini 3 score at least 30% on Humanity’s Last Exam by January 31? (cid=0x86c5528f…) time_found=2025-11-04T23:32:36.094186+00:00
+    [TRADES] fetching ALL trades cid=0x86c5528f…
+    [TRADES] page 0 offset=0 limit=250
+    [TRADES] page 0 got 250 trades
+    [TRADES] page 0 added 230 new trades (total=230)
+    [TRADES] page 1 offset=250 limit=250
+    [TRADES] page 1 got 250 trades
+    [TRADES] page 1 added 212 new trades (total=442)
+    [TRADES] page 2 offset=500 limit=250
+    [TRADES] page 2 got 250 trades
+    [TRADES] page 2 added 247 new trades (total=689)
+    [TRADES] page 3 offset=750 limit=250
+    [TRADES] page 3 got 250 trades
+    [TRADES] page 3 added 242 new trades (total=931)
+    [TRADES] page 4 offset=1000 limit=250
+    [TRADES] page 4 got 250 trades
+    [TRADES] page 4 added 235 new trades (total=1166)
+    [TRADES] page 5 offset=1250 limit=250
+    [TRADES] page 5 got 250 trades
+    [TRADES] page 5 added 0 new trades (total=1166)
+    [TRADES] page 5 had 0 new trades (possible repetition) → stopping to avoid infinite loop
+    [TRADES] DONE cid=0x86c5528f total_trades=1166
+    [TRADES] normalized: raw=1166 maker_no_blocks=12
+    [SIM] starting maker LONG NO: bet=5.00, cap=0.400
+    [SIM] maker LONG NO fill: shares=12.50, spent_after=5.00, avg=0.4000
+    [META] fetching meta for cid=0x86c5528f…
+    [META] received=True for cid=0x86c5528f
+    [STATUS] resolved=True winner=YES source=closed_hint_yes
+    [SIM] result: status=YES, won=False, pnl=-5.00
+Will Google Gemini 3 score at least 30% on Humanity’s Last Exam by January 31?
+shares=12.50 | spent=5.00 | cap=0.400 | avg=0.4000 | status=YES (LOST) | pnl=-5.00 | running_PL=-95.11 | bank=4904.89
+
+
+
+
+[HIST #141/168538] Will a Democrat win Maine US Senate Election? (cid=0x7f1f8a47…) createdAt=2024-04-04T18:38:42.891097Z
+    [TRADES] fetching ALL trades cid=0x7f1f8a47…
+    [TRADES] page 0 offset=0 limit=250
+    [TRADES] page 0 got 250 trades
+    [TRADES] page 0 added 250 new trades (total=250)
+    [TRADES] page 1 offset=250 limit=250
+    [TRADES] page 1 got 250 trades
+    [TRADES] page 1 added 250 new trades (total=500)
+    [TRADES] page 2 offset=500 limit=250
+    [TRADES] page 2 got 57 trades
+    [TRADES] page 2 added 57 new trades (total=557)
+    [TRADES] page 2 size < limit (57 < 250) → end of stream
+    [TRADES] DONE cid=0x7f1f8a47 total_trades=557
+    [TRADES] normalized: raw=557 maker_no_blocks=6
+    [SIM] starting maker LONG NO: bet=5.00, cap=0.400
+    [SIM] maker LONG NO fill: shares=12.50, spent_after=5.00, avg=0.4000
+    [META] fetching meta for cid=0x7f1f8a47…
+    [META] received=True for cid=0x7f1f8a47
+    [STATUS] resolved=True winner=YES source=terminal_prices
+    [SIM] result: status=YES, won=False, pnl=-5.00
+Will a Democrat win Maine US Senate Election?
+shares=12.50 | spent=5.00 | cap=0.400 | avg=0.4000 | status=YES (LOST) | pnl=-5.00 | running_PL=-125.11 | bank=4874.89

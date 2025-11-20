@@ -1090,3 +1090,955 @@ LAST REPORT:
   last report P/L     : 0.00
   last report markets : 0
 ===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:10:34.241892+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4900.00
+  total P/L           : -100.00
+  total spent         : 100.00
+
+MARKET PROGRESS:
+  index               : 45
+  total done          : 45
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x1708a576c5238ade28a79a241c2dd14dc61f836bfe4f5270ad53c96e857e0b15
+  last question       : Will FC Fredericia win on 2025-12-01?
+  last time_found     : 2025-11-03T21:01:21.610971+00:00
+
+LAST REPORT:
+  last report P/L     : -100.00
+  last report markets : 45
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:10:34.410155+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4900.00
+  total P/L           : -100.00
+  total spent         : 100.00
+
+MARKET PROGRESS:
+  index               : 45
+  total done          : 45
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x1708a576c5238ade28a79a241c2dd14dc61f836bfe4f5270ad53c96e857e0b15
+  last question       : Will FC Fredericia win on 2025-12-01?
+  last time_found     : 2025-11-03T21:01:21.610971+00:00
+
+LAST REPORT:
+  last report P/L     : -100.00
+  last report markets : 45
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:31.702691+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 19291.06
+  total P/L           : 14291.06
+  total spent         : 19185.10
+
+MARKET PROGRESS:
+  index               : 5771
+  total done          : 5771
+  total reports       : 6
+
+LAST MARKET:
+  last cid            : 0x7dd3dd45a840e844fb361436131495e95bc0da1f280cbc89860da8add4194cc2
+  last question       : NHL: Philadelphia Flyers vs. Detroit Red Wings 2023-03-25
+  last time_found     : 2023-03-24T17:15:09.308Z
+
+LAST REPORT:
+  last report P/L     : 1633.20
+  last report markets : 92
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:31.841436+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 19291.06
+  total P/L           : 14291.06
+  total spent         : 19185.10
+
+MARKET PROGRESS:
+  index               : 5771
+  total done          : 5771
+  total reports       : 6
+
+LAST MARKET:
+  last cid            : 0x7dd3dd45a840e844fb361436131495e95bc0da1f280cbc89860da8add4194cc2
+  last question       : NHL: Philadelphia Flyers vs. Detroit Red Wings 2023-03-25
+  last time_found     : 2023-03-24T17:15:09.308Z
+
+LAST REPORT:
+  last report P/L     : 1633.20
+  last report markets : 92
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:33.873980+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 63206.68
+  total P/L           : 58206.68
+  total spent         : 76607.36
+
+MARKET PROGRESS:
+  index               : 8213
+  total done          : 8213
+  total reports       : 11
+
+LAST MARKET:
+  last cid            : 0x46827e65233e9333d76f64e6fefc60f82d02a987d9ebb62eee22afbb379811d8
+  last question       : Patriots vs. Colts
+  last time_found     : 2023-11-08T16:36:19.583Z
+
+LAST REPORT:
+  last report P/L     : 10291.70
+  last report markets : 386
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:34.095585+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 63206.68
+  total P/L           : 58206.68
+  total spent         : 76607.36
+
+MARKET PROGRESS:
+  index               : 8213
+  total done          : 8213
+  total reports       : 11
+
+LAST MARKET:
+  last cid            : 0x46827e65233e9333d76f64e6fefc60f82d02a987d9ebb62eee22afbb379811d8
+  last question       : Patriots vs. Colts
+  last time_found     : 2023-11-08T16:36:19.583Z
+
+LAST REPORT:
+  last report P/L     : 10291.70
+  last report markets : 386
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:39.340208+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 78143.35
+  total P/L           : 73143.35
+  total spent         : 105310.91
+
+MARKET PROGRESS:
+  index               : 3090
+  total done          : 3091
+  total reports       : 7
+
+LAST MARKET:
+  last cid            : 0xda9887f39c1e6895690a2f098cdd4ff9d4deee91a6e93d3c567ad603707bac99
+  last question       : Over $40M committed to the Solomon public sale?
+  last time_found     : 2025-11-11T16:30:49.929729+00:00
+
+LAST REPORT:
+  last report P/L     : -100.00
+  last report markets : 1
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:39.479235+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 78143.35
+  total P/L           : 73143.35
+  total spent         : 105310.91
+
+MARKET PROGRESS:
+  index               : 3090
+  total done          : 3091
+  total reports       : 7
+
+LAST MARKET:
+  last cid            : 0xda9887f39c1e6895690a2f098cdd4ff9d4deee91a6e93d3c567ad603707bac99
+  last question       : Over $40M committed to the Solomon public sale?
+  last time_found     : 2025-11-11T16:30:49.929729+00:00
+
+LAST REPORT:
+  last report P/L     : -100.00
+  last report markets : 1
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:41.414489+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 67150.95
+  total P/L           : 62150.95
+  total spent         : 127013.17
+
+MARKET PROGRESS:
+  index               : 6838
+  total done          : 6838
+  total reports       : 15
+
+LAST MARKET:
+  last cid            : 0xd1a77638d8df22038c54e600c3456836133d79dea5696d2753d45a163d3af837
+  last question       : Will Apple (AAPL) finish week of November 17 above $275?
+  last time_found     : 2025-11-18T18:43:07.833144+00:00
+
+LAST REPORT:
+  last report P/L     : 245.44
+  last report markets : 112
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:11:41.588373+00:00
+
+CONFIG:
+  BET_SIZE            : 100.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 67150.95
+  total P/L           : 62150.95
+  total spent         : 127013.17
+
+MARKET PROGRESS:
+  index               : 6838
+  total done          : 6838
+  total reports       : 15
+
+LAST MARKET:
+  last cid            : 0xd1a77638d8df22038c54e600c3456836133d79dea5696d2753d45a163d3af837
+  last question       : Will Apple (AAPL) finish week of November 17 above $275?
+  last time_found     : 2025-11-18T18:43:07.833144+00:00
+
+LAST REPORT:
+  last report P/L     : 245.44
+  last report markets : 112
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:23:35.616190+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4904.89
+  total P/L           : -95.11
+  total spent         : 389.92
+
+MARKET PROGRESS:
+  index               : 483
+  total done          : 484
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0x86c5528f8210677f63b91a5935e91b04ec8c286fa61bde3ad99fa2ac407dabfb
+  last question       : Will Google Gemini 3 score at least 30% on Humanity’s Last Exam by January 31?
+  last time_found     : 2025-11-04T23:32:36.094186+00:00
+
+LAST REPORT:
+  last report P/L     : -10.00
+  last report markets : 77
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:23:56.628861+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4899.89
+  total P/L           : -100.11
+  total spent         : 394.92
+
+MARKET PROGRESS:
+  index               : 488
+  total done          : 489
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0x216d270cf9a0cb03eefe333f3e398d177933277620fac9a77b9b3ef95487bd35
+  last question       : Will MrBeast's next video get between 100 and 110 million views on week 1?
+  last time_found     : 2025-11-05T12:30:46.904579+00:00
+
+LAST REPORT:
+  last report P/L     : -15.00
+  last report markets : 82
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:25:30.182392+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4869.89
+  total P/L           : -130.11
+  total spent         : 192.61
+
+MARKET PROGRESS:
+  index               : 145
+  total done          : 145
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x6df98eb438c1f05a25777081147758e081205896f293b6a3711c9b72b9fc4312
+  last question       : Will a Republican win Hawaii US Senate Election?
+  last time_found     : 2024-04-04T18:47:07.972083Z
+
+LAST REPORT:
+  last report P/L     : -130.11
+  last report markets : 145
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:25:32.452645+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4869.89
+  total P/L           : -130.11
+  total spent         : 192.61
+
+MARKET PROGRESS:
+  index               : 145
+  total done          : 145
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x6df98eb438c1f05a25777081147758e081205896f293b6a3711c9b72b9fc4312
+  last question       : Will a Republican win Hawaii US Senate Election?
+  last time_found     : 2024-04-04T18:47:07.972083Z
+
+LAST REPORT:
+  last report P/L     : -130.11
+  last report markets : 145
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:55:29.767006+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 867
+  total done          : 867
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x136e99098f7d4087b4c5775d9f9a512de67e50bda37e88fa86b05a226c390182
+  last question       : Will a Republican win the popular vote and a Democrat win the Presidency?
+  last time_found     : 2024-05-14T16:05:06.417442Z
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 867
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:55:32.835738+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 867
+  total done          : 867
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x136e99098f7d4087b4c5775d9f9a512de67e50bda37e88fa86b05a226c390182
+  last question       : Will a Republican win the popular vote and a Democrat win the Presidency?
+  last time_found     : 2024-05-14T16:05:06.417442Z
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 867
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:55:50.052604+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 1263
+  total done          : 1263
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xa4bb4dc1076af4eda15bc8e09105c559e82de256c0d7804a421916cac2d97489
+  last question       : Will Jeannette Jara come in third in the 1st round of the 2025 Chilean presidential election?
+  last time_found     : 2025-11-06T20:30:29.269841+00:00
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 1263
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T18:55:50.269119+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 1263
+  total done          : 1263
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xa4bb4dc1076af4eda15bc8e09105c559e82de256c0d7804a421916cac2d97489
+  last question       : Will Jeannette Jara come in third in the 1st round of the 2025 Chilean presidential election?
+  last time_found     : 2025-11-06T20:30:29.269841+00:00
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 1263
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T19:19:28.788212+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO (conceptual) : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4984.29
+  total P/L           : -15.71
+  total worst-risk    : 30.00
+
+MARKET PROGRESS:
+  index               : 54
+  total done          : 54
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xf8032ded99d16dba552d6c78a4da3b1df297e642583cd82a0616cadd5ac5642c
+  last question       : Will FC Midtjylland vs. FC Nordsjælland end in a draw?
+  last time_found     : 2025-11-03T21:01:21.610971+00:00
+
+LAST REPORT:
+  last report P/L     : -15.71
+  last report markets : 54
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T19:19:31.443659+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO (conceptual) : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4984.29
+  total P/L           : -15.71
+  total worst-risk    : 30.00
+
+MARKET PROGRESS:
+  index               : 57
+  total done          : 58
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xbc461546e26e47862aef8f7558e7ea6c963cc1a60fcb6c410adbfa115a4068be
+  last question       : Will FC Nordsjælland win on 2025-11-30?
+  last time_found     : 2025-11-03T21:01:21.610971+00:00
+
+LAST REPORT:
+  last report P/L     : -15.71
+  last report markets : 58
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T19:55:22.829392+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5002.50
+  total P/L           : 2.50
+  total spent         : 10.00
+
+MARKET PROGRESS:
+  index               : 10
+  total done          : 10
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xe794bca5cb6f6a0fe1b562c6cc9e0483308e347a4b81758387bc9849dd7b74cf
+  last question       : Will Bitcoin reach $116k November 3-9?
+  last time_found     : 2025-11-03T20:35:53.270064+00:00
+
+LAST REPORT:
+  last report P/L     : 2.50
+  last report markets : 10
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T19:55:23.499592+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5002.50
+  total P/L           : 2.50
+  total spent         : 10.00
+
+MARKET PROGRESS:
+  index               : 10
+  total done          : 10
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xe794bca5cb6f6a0fe1b562c6cc9e0483308e347a4b81758387bc9849dd7b74cf
+  last question       : Will Bitcoin reach $116k November 3-9?
+  last time_found     : 2025-11-03T20:35:53.270064+00:00
+
+LAST REPORT:
+  last report P/L     : 2.50
+  last report markets : 10
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:09:06.108266+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5006.50
+  total P/L           : 6.50
+  total spent         : 1446.00
+
+MARKET PROGRESS:
+  index               : 1279
+  total done          : 1279
+  total reports       : 2
+
+LAST MARKET:
+  last cid            : 0x7aed2fb58e173740f68ba2b75c1a948a657c279eabd6fce7bfe1a3330a5455d3
+  last question       : Will the California redistricting referendum pass by <26%?
+  last time_found     : 2025-11-06T20:37:00.154323+00:00
+
+LAST REPORT:
+  last report P/L     : 105.18
+  last report markets : 362
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:09:07.290794+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5006.50
+  total P/L           : 6.50
+  total spent         : 1446.00
+
+MARKET PROGRESS:
+  index               : 1281
+  total done          : 1282
+  total reports       : 2
+
+LAST MARKET:
+  last cid            : 0xf6cf2744cab27c2088a863b6488da644bd8fce4b573d86891c95ba4d6d4b8307
+  last question       : Will the California redistricting referendum pass by 27–28%?
+  last time_found     : 2025-11-06T20:37:00.154323+00:00
+
+LAST REPORT:
+  last report P/L     : 105.18
+  last report markets : 365
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:10:18.217221+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4820.90
+  total P/L           : -179.10
+  total spent         : 740.29
+
+MARKET PROGRESS:
+  index               : 579
+  total done          : 580
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0xbd318de4edfab01e375c6edddca46dee540e018c5dec7d44f3cd0daa60cd6925
+  last question       : Will Bitcoin reach $70,000 in May?
+  last time_found     : 2024-04-30T18:13:31.618329Z
+
+LAST REPORT:
+  last report P/L     : -39.99
+  last report markets : 179
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:10:19.981282+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4828.40
+  total P/L           : -171.60
+  total spent         : 745.29
+
+MARKET PROGRESS:
+  index               : 582
+  total done          : 583
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0x8091f094895255e1f29a567c12ae54b4cf2495bde41940b81538f3dec7100670
+  last question       : Will Bitcoin reach $80,000 in May?
+  last time_found     : 2024-04-30T18:13:31.953508Z
+
+LAST REPORT:
+  last report P/L     : -32.49
+  last report markets : 182
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:15:19.169671+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.5
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4820.39
+  total P/L           : -179.61
+  total spent         : 750.39
+
+MARKET PROGRESS:
+  index               : 613
+  total done          : 613
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0xae6dafd815bd39b86afbee0fdab24f001ee939b56019d06d4d5e995145faf4ef
+  last question       : Will the price of Ethereum be above $3,700 on November 12?
+  last time_found     : 2025-11-05T16:59:59.923424+00:00
+
+LAST REPORT:
+  last report P/L     : -63.55
+  last report markets : 206
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:15:20.658869+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.5
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4820.39
+  total P/L           : -179.61
+  total spent         : 750.39
+
+MARKET PROGRESS:
+  index               : 613
+  total done          : 613
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0xae6dafd815bd39b86afbee0fdab24f001ee939b56019d06d4d5e995145faf4ef
+  last question       : Will the price of Ethereum be above $3,700 on November 12?
+  last time_found     : 2025-11-05T16:59:59.923424+00:00
+
+LAST REPORT:
+  last report P/L     : -63.55
+  last report markets : 206
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:16:37.803604+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.3
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4954.44
+  total P/L           : -45.56
+  total spent         : 73.33
+
+MARKET PROGRESS:
+  index               : 162
+  total done          : 163
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x048a8ac8404f93e58c1809ba3286c20692e2cdfcad425653fb454ca782de2b23
+  last question       : Will "Sarah's Oil" score at least 50 on the Rotten Tomatoes Tomatometer?
+  last time_found     : 2025-11-03T22:33:26.837542+00:00
+
+LAST REPORT:
+  last report P/L     : -45.56
+  last report markets : 163
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:16:38.809082+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.3
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4966.11
+  total P/L           : -33.89
+  total spent         : 78.33
+
+MARKET PROGRESS:
+  index               : 163
+  total done          : 165
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x34c4e0e5997900a010e91009183248ff9d94296f7f69a1f524ba610635433983
+  last question       : Will "The Running Man" score at least 75 on the Rotten Tomatoes Tomatometer?
+  last time_found     : 2025-11-03T22:34:44.845187+00:00
+
+LAST REPORT:
+  last report P/L     : -33.89
+  last report markets : 165
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:20:05.983985+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.5
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4824.63
+  total P/L           : -175.37
+  total spent         : 496.67
+
+MARKET PROGRESS:
+  index               : 335
+  total done          : 335
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xeeb5658ea7b4a6d30c420fe61541aca9184f2eac50748ae879c0c8e5d97a121b
+  last question       : Will 'Deadpool & Wolverine' gross less than $110m opening weekend?
+  last time_found     : 2024-04-15T19:51:50.040398Z
+
+LAST REPORT:
+  last report P/L     : -175.37
+  last report markets : 335
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:20:08.352892+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.5
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4829.63
+  total P/L           : -170.37
+  total spent         : 501.67
+
+MARKET PROGRESS:
+  index               : 337
+  total done          : 339
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0x5af8be49548657d82c6d8493290b83034e6092962d7e4a8e44e3f438d1210c9d
+  last question       : Will 'Deadpool & Wolverine' gross between $150m and $170m opening weekend?
+  last time_found     : 2024-04-15T19:56:43.045216Z
+
+LAST REPORT:
+  last report P/L     : -170.37
+  last report markets : 339
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:21:21.728976+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 3305
+  total done          : 3305
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xb708582c77b5c00b9f8bfab5150d96970b1f8b1a7c9ac6786e5042a3db1510e0
+  last question       : Will NVIDIA say "Self Driving" during earnings call?
+  last time_found     : 2025-11-11T18:56:00.603629+00:00
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 3305
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-20T20:21:22.074321+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5000.00
+  total P/L           : 0.00
+  total spent         : 0.00
+
+MARKET PROGRESS:
+  index               : 3305
+  total done          : 3305
+  total reports       : 0
+
+LAST MARKET:
+  last cid            : 0xb708582c77b5c00b9f8bfab5150d96970b1f8b1a7c9ac6786e5042a3db1510e0
+  last question       : Will NVIDIA say "Self Driving" during earnings call?
+  last time_found     : 2025-11-11T18:56:00.603629+00:00
+
+LAST REPORT:
+  last report P/L     : 0.00
+  last report markets : 3305
+===================================================
