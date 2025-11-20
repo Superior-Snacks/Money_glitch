@@ -143,3 +143,167 @@ batch:53 | visited_total:2650 | bets_total:28 | total spent 74073.25 | batch P/L
 batch:54 | visited_total:2700 | bets_total:16 | total spent 75648.05 | batch P/L: 1175.20 | total P/L: 42979.41 | bank: 47979.41 | last_time_found: 2025-11-10T17:07:39.510782+00:00
 
 batch:55 | visited_total:2750 | bets_total:24 | total spent 77896.13 | batch P/L: 2122.12 | total P/L: 45101.53 | bank: 50101.53 | last_time_found: 2025-11-10T17:27:55.332887+00:00
+
+batch:1 | visited_total:50 | bets_total:4 | total spent 400.00 | batch P/L: -150.00 | total P/L: -150.00 | bank: 4850.00 | last_time_found: 2025-11-03T21:01:21.610971+00:00
+
+batch:2 | visited_total:100 | bets_total:2 | total spent 400.00 | batch P/L: 0.00 | total P/L: -150.00 | bank: 4850.00 | last_time_found: 2025-11-03T22:01:15.556039+00:00
+
+batch:3 | visited_total:150 | bets_total:0 | total spent 400.00 | batch P/L: 0.00 | total P/L: -150.00 | bank: 4850.00 | last_time_found: 2025-11-03T22:18:56.084853+00:00
+
+batch:4 | visited_total:200 | bets_total:37 | total spent 2680.56 | batch P/L: 151.85 | total P/L: 1.85 | bank: 5001.85 | last_time_found: 2025-11-03T23:19:34.433690+00:00
+
+batch:5 | visited_total:250 | bets_total:9 | total spent 3263.52 | batch P/L: -582.96 | total P/L: -581.11 | bank: 4418.89 | last_time_found: 2025-11-03T23:41:53.209575+00:00
+
+batch:6 | visited_total:300 | bets_total:34 | total spent 5826.77 | batch P/L: -563.24 | total P/L: -1144.36 | bank: 3855.64 | last_time_found: 2025-11-04T02:19:37.924082+00:00
+
+batch:1 | visited_total:50 | bets_total:4 | total spent 400.00 | batch P/L: -150.00 | total P/L: -150.00 | bank: 4850.00 | last_time_found: 2025-11-03T21:01:21.610971+00:00
+
+batch:2 | visited_total:100 | bets_total:0 | total spent 400.00 | batch P/L: 0.00 | total P/L: -150.00 | bank: 4850.00 | last_time_found: 2025-11-03T22:01:15.556039+00:00
+
+batch:3 | visited_total:150 | bets_total:0 | total spent 400.00 | batch P/L: 0.00 | total P/L: -150.00 | bank: 4850.00 | last_time_found: 2025-11-03T22:18:56.084853+00:00
+
+batch:4 | visited_total:200 | bets_total:27 | total spent 2680.56 | batch P/L: 151.85 | total P/L: 1.85 | bank: 5001.85 | last_time_found: 2025-11-03T23:19:34.433690+00:00
+
+batch:5 | visited_total:250 | bets_total:6 | total spent 3263.52 | batch P/L: -582.96 | total P/L: -581.11 | bank: 4418.89 | last_time_found: 2025-11-03T23:41:53.209575+00:00
+
+batch:6 | visited_total:300 | bets_total:26 | total spent 5826.77 | batch P/L: -563.24 | total P/L: -1144.36 | bank: 3855.64 | last_time_found: 2025-11-04T02:19:37.924082+00:00
+
+batch:7 | visited_total:350 | bets_total:22 | total spent 7626.74 | batch P/L: 1809.65 | total P/L: 665.30 | bank: 5665.30 | last_time_found: 2025-11-04T16:11:29.697730+00:00
+
+batch:8 | visited_total:400 | bets_total:38 | total spent 11172.80 | batch P/L: 1116.90 | total P/L: 1782.20 | bank: 6782.20 | last_time_found: 2025-11-04T17:03:55.343262+00:00
+
+batch:9 | visited_total:450 | bets_total:7 | total spent 11786.80 | batch P/L: 386.00 | total P/L: 2168.20 | bank: 7168.20 | last_time_found: 2025-11-04T23:20:09.067134+00:00
+
+batch:7 | visited_total:350 | bets_total:38 | total spent 7626.74 | batch P/L: 1809.65 | total P/L: 665.30 | bank: 5665.30 | last_time_found: 2025-11-04T16:11:29.697730+00:00
+
+batch:10 | visited_total:500 | bets_total:15 | total spent 13029.74 | batch P/L: 652.07 | total P/L: 2820.27 | bank: 7820.27 | last_time_found: 2025-11-05T14:00:12.221531+00:00
+
+batch:11 | visited_total:550 | bets_total:20 | total spent 14774.93 | batch P/L: 1867.79 | total P/L: 4688.06 | bank: 9688.06 | last_time_found: 2025-11-05T16:19:30.010125+00:00
+
+batch:12 | visited_total:600 | bets_total:0 | total spent 14774.93 | batch P/L: 0.00 | total P/L: 4688.06 | bank: 9688.06 | last_time_found: 2025-11-05T16:50:27.567743+00:00
+
+batch:13 | visited_total:650 | bets_total:17 | total spent 16396.67 | batch P/L: 628.26 | total P/L: 5316.32 | bank: 10316.32 | last_time_found: 2025-11-05T17:44:03.524262+00:00
+
+batch:14 | visited_total:700 | bets_total:1 | total spent 16496.67 | batch P/L: 150.00 | total P/L: 5466.32 | bank: 10466.32 | last_time_found: 2025-11-05T18:33:20.696922+00:00
+
+batch:15 | visited_total:750 | bets_total:6 | total spent 17002.67 | batch P/L: 259.00 | total P/L: 5725.32 | bank: 10725.32 | last_time_found: 2025-11-05T19:30:25.784807+00:00
+
+batch:16 | visited_total:800 | bets_total:18 | total spent 18802.67 | batch P/L: 1200.00 | total P/L: 6925.32 | bank: 11925.32 | last_time_found: 2025-11-05T20:13:31.976530+00:00
+
+batch:17 | visited_total:850 | bets_total:0 | total spent 18802.67 | batch P/L: 0.00 | total P/L: 6925.32 | bank: 11925.32 | last_time_found: 2025-11-05T20:13:43.228142+00:00
+
+batch:18 | visited_total:900 | bets_total:0 | total spent 18802.67 | batch P/L: 0.00 | total P/L: 6925.32 | bank: 11925.32 | last_time_found: 2025-11-05T22:00:26.275216+00:00
+
+[HIST] batch:1 | visited_total:50 | bets_total:25 | total spent 2280.80 | batch P/L: 2215.99 | total P/L: 2215.99 | bank: 7215.99 | last_createdAt: 2023-06-13T18:18:26.818Z
+
+batch:19 | visited_total:950 | bets_total:19 | total spent 20613.98 | batch P/L: 1098.69 | total P/L: 8024.01 | bank: 13024.01 | last_time_found: 2025-11-05T22:32:36.290472+00:00
+
+batch:20 | visited_total:1000 | bets_total:13 | total spent 21801.76 | batch P/L: 1281.66 | total P/L: 9305.67 | bank: 14305.67 | last_time_found: 2025-11-06T00:07:54.159168+00:00
+
+batch:8 | visited_total:400 | bets_total:38 | total spent 11172.80 | batch P/L: 1116.90 | total P/L: 1782.20 | bank: 6782.20 | last_time_found: 2025-11-04T17:03:55.343262+00:00
+
+batch:21 | visited_total:1050 | bets_total:32 | total spent 24914.43 | batch P/L: 2428.33 | total P/L: 11734.00 | bank: 16734.00 | last_time_found: 2025-11-06T15:12:28.598630+00:00
+
+batch:22 | visited_total:1100 | bets_total:17 | total spent 26522.40 | batch P/L: 1911.96 | total P/L: 13645.96 | bank: 18645.96 | last_time_found: 2025-11-06T16:43:49.026984+00:00
+
+batch:23 | visited_total:1150 | bets_total:41 | total spent 30537.34 | batch P/L: 1272.41 | total P/L: 14918.37 | bank: 19918.37 | last_time_found: 2025-11-06T17:07:17.960824+00:00
+
+batch:24 | visited_total:1200 | bets_total:28 | total spent 33167.74 | batch P/L: 2945.60 | total P/L: 17863.97 | bank: 22863.97 | last_time_found: 2025-11-06T17:07:40.436469+00:00
+
+batch:25 | visited_total:1250 | bets_total:15 | total spent 34504.89 | batch P/L: 386.69 | total P/L: 18250.66 | bank: 23250.66 | last_time_found: 2025-11-06T18:37:08.384588+00:00
+
+[HIST] batch:2 | visited_total:100 | bets_total:38 | total spent 5785.44 | batch P/L: 2611.95 | total P/L: 4827.94 | bank: 9827.94 | last_createdAt: 2023-07-06T16:37:25.811Z
+
+batch:26 | visited_total:1300 | bets_total:23 | total spent 36573.82 | batch P/L: -279.93 | total P/L: 17970.73 | bank: 22970.73 | last_time_found: 2025-11-06T22:03:12.126134+00:00
+
+batch:9 | visited_total:450 | bets_total:31 | total spent 11786.80 | batch P/L: 386.00 | total P/L: 2168.20 | bank: 7168.20 | last_time_found: 2025-11-04T23:20:09.067134+00:00
+
+batch:27 | visited_total:1350 | bets_total:18 | total spent 37765.54 | batch P/L: -586.72 | total P/L: 17384.01 | bank: 22384.01 | last_time_found: 2025-11-07T03:22:39.550354+00:00
+
+batch:28 | visited_total:1400 | bets_total:10 | total spent 38530.48 | batch P/L: 284.07 | total P/L: 17668.08 | bank: 22668.08 | last_time_found: 2025-11-07T10:58:19.545490+00:00
+
+batch:29 | visited_total:1450 | bets_total:20 | total spent 40460.48 | batch P/L: 1645.00 | total P/L: 19313.08 | bank: 24313.08 | last_time_found: 2025-11-07T16:50:28.181559+00:00
+
+batch:30 | visited_total:1500 | bets_total:10 | total spent 41310.42 | batch P/L: 274.92 | total P/L: 19587.99 | bank: 24587.99 | last_time_found: 2025-11-07T17:03:42.572671+00:00
+
+batch:31 | visited_total:1550 | bets_total:25 | total spent 43507.91 | batch P/L: 825.24 | total P/L: 20413.23 | bank: 25413.23 | last_time_found: 2025-11-07T17:19:33.702841+00:00
+
+batch:32 | visited_total:1600 | bets_total:35 | total spent 46804.80 | batch P/L: 1722.34 | total P/L: 22135.57 | bank: 27135.57 | last_time_found: 2025-11-07T17:19:56.333742+00:00
+
+batch:10 | visited_total:500 | bets_total:16 | total spent 13029.74 | batch P/L: 652.07 | total P/L: 2820.27 | bank: 7820.27 | last_time_found: 2025-11-05T14:00:12.221531+00:00
+
+batch:33 | visited_total:1650 | bets_total:28 | total spent 49397.60 | batch P/L: 2639.20 | total P/L: 24774.77 | bank: 29774.77 | last_time_found: 2025-11-07T17:24:28.613538+00:00
+
+batch:34 | visited_total:1700 | bets_total:12 | total spent 50597.60 | batch P/L: 1550.00 | total P/L: 26324.77 | bank: 31324.77 | last_time_found: 2025-11-07T18:25:01.555193+00:00
+
+[HIST] batch:3 | visited_total:150 | bets_total:39 | total spent 9292.11 | batch P/L: 3784.36 | total P/L: 8612.30 | bank: 13612.30 | last_createdAt: 2023-07-19T13:25:02.444Z
+
+batch:35 | visited_total:1750 | bets_total:1 | total spent 50697.60 | batch P/L: 150.00 | total P/L: 26474.77 | bank: 31474.77 | last_time_found: 2025-11-07T18:34:10.491010+00:00
+
+batch:36 | visited_total:1800 | bets_total:27 | total spent 53015.70 | batch P/L: 2133.10 | total P/L: 28607.87 | bank: 33607.87 | last_time_found: 2025-11-07T21:15:12.046086+00:00
+
+batch:37 | visited_total:1850 | bets_total:11 | total spent 54115.70 | batch P/L: 1150.00 | total P/L: 29757.87 | bank: 34757.87 | last_time_found: 2025-11-07T23:42:19.310082+00:00
+
+batch:38 | visited_total:1900 | bets_total:20 | total spent 56097.30 | batch P/L: 1472.40 | total P/L: 31230.27 | bank: 36230.27 | last_time_found: 2025-11-08T16:58:11.554546+00:00
+
+batch:39 | visited_total:1950 | bets_total:25 | total spent 58314.58 | batch P/L: 1702.33 | total P/L: 32932.60 | bank: 37932.60 | last_time_found: 2025-11-08T17:06:11.702504+00:00
+
+batch:40 | visited_total:2000 | bets_total:24 | total spent 60471.03 | batch P/L: 722.55 | total P/L: 33655.15 | bank: 38655.15 | last_time_found: 2025-11-08T17:49:30.630241+00:00
+
+batch:11 | visited_total:550 | bets_total:31 | total spent 14774.93 | batch P/L: 1867.79 | total P/L: 4688.06 | bank: 9688.06 | last_time_found: 2025-11-05T16:19:30.010125+00:00
+
+batch:41 | visited_total:2050 | bets_total:20 | total spent 62355.25 | batch P/L: 115.77 | total P/L: 33770.92 | bank: 38770.92 | last_time_found: 2025-11-08T17:52:52.283928+00:00
+
+batch:42 | visited_total:2100 | bets_total:0 | total spent 62355.25 | batch P/L: 0.00 | total P/L: 33770.92 | bank: 38770.92 | last_time_found: 2025-11-08T19:05:34.564928+00:00
+
+batch:43 | visited_total:2150 | bets_total:0 | total spent 62355.25 | batch P/L: 0.00 | total P/L: 33770.92 | bank: 38770.92 | last_time_found: 2025-11-09T05:14:12.098040+00:00
+
+batch:44 | visited_total:2200 | bets_total:0 | total spent 62355.25 | batch P/L: 0.00 | total P/L: 33770.92 | bank: 38770.92 | last_time_found: 2025-11-09T05:14:34.536616+00:00
+
+[HIST] batch:4 | visited_total:200 | bets_total:44 | total spent 13221.09 | batch P/L: 2765.25 | total P/L: 11377.55 | bank: 16377.55 | last_createdAt: 2023-07-31T19:38:05.748Z
+
+batch:45 | visited_total:2250 | bets_total:0 | total spent 62355.25 | batch P/L: 0.00 | total P/L: 33770.92 | bank: 38770.92 | last_time_found: 2025-11-09T05:58:25.048451+00:00
+
+batch:46 | visited_total:2300 | bets_total:9 | total spent 63255.25 | batch P/L: 850.00 | total P/L: 34620.92 | bank: 39620.92 | last_time_found: 2025-11-09T16:58:27.914762+00:00
+
+batch:47 | visited_total:2350 | bets_total:23 | total spent 65209.02 | batch P/L: 1479.17 | total P/L: 36100.10 | bank: 41100.10 | last_time_found: 2025-11-09T17:06:29.697039+00:00
+
+batch:48 | visited_total:2400 | bets_total:14 | total spent 66536.62 | batch P/L: 1491.40 | total P/L: 37591.50 | bank: 42591.50 | last_time_found: 2025-11-09T18:47:13.455854+00:00
+
+batch:49 | visited_total:2450 | bets_total:5 | total spent 67036.62 | batch P/L: 500.00 | total P/L: 38091.50 | bank: 43091.50 | last_time_found: 2025-11-10T01:35:20.845860+00:00
+
+batch:12 | visited_total:600 | bets_total:23 | total spent 14774.93 | batch P/L: 0.00 | total P/L: 4688.06 | bank: 9688.06 | last_time_found: 2025-11-05T16:50:27.567743+00:00
+
+batch:50 | visited_total:2500 | bets_total:32 | total spent 70163.49 | batch P/L: 940.31 | total P/L: 39031.81 | bank: 44031.81 | last_time_found: 2025-11-10T05:05:06.477966+00:00
+
+batch:51 | visited_total:2550 | bets_total:11 | total spent 71207.49 | batch P/L: 816.00 | total P/L: 39847.81 | bank: 44847.81 | last_time_found: 2025-11-10T05:05:29.140205+00:00
+
+batch:52 | visited_total:2600 | bets_total:3 | total spent 71411.49 | batch P/L: -194.00 | total P/L: 39653.81 | bank: 44653.81 | last_time_found: 2025-11-10T11:58:31.029768+00:00
+
+batch:53 | visited_total:2650 | bets_total:28 | total spent 74073.25 | batch P/L: 2150.40 | total P/L: 41804.21 | bank: 46804.21 | last_time_found: 2025-11-10T17:00:10.638949+00:00
+
+batch:54 | visited_total:2700 | bets_total:16 | total spent 75648.05 | batch P/L: 1175.20 | total P/L: 42979.41 | bank: 47979.41 | last_time_found: 2025-11-10T17:07:39.510782+00:00
+
+[HIST] batch:5 | visited_total:250 | bets_total:39 | total spent 16768.29 | batch P/L: 3217.81 | total P/L: 14595.36 | bank: 19595.36 | last_createdAt: 2023-08-15T20:34:40.645Z
+
+batch:55 | visited_total:2750 | bets_total:24 | total spent 77896.13 | batch P/L: 2122.12 | total P/L: 45101.53 | bank: 50101.53 | last_time_found: 2025-11-10T17:27:55.332887+00:00
+
+batch:56 | visited_total:2800 | bets_total:29 | total spent 80020.54 | batch P/L: 1374.08 | total P/L: 46475.61 | bank: 51475.61 | last_time_found: 2025-11-10T17:29:52.384792+00:00
+
+batch:57 | visited_total:2850 | bets_total:3 | total spent 80262.08 | batch P/L: 118.96 | total P/L: 46594.57 | bank: 51594.57 | last_time_found: 2025-11-10T18:41:40.750611+00:00
+
+batch:58 | visited_total:2900 | bets_total:8 | total spent 81007.89 | batch P/L: -245.80 | total P/L: 46348.77 | bank: 51348.77 | last_time_found: 2025-11-10T20:55:51.723991+00:00
+
+batch:13 | visited_total:650 | bets_total:29 | total spent 16396.67 | batch P/L: 628.26 | total P/L: 5316.32 | bank: 10316.32 | last_time_found: 2025-11-05T17:44:03.524262+00:00
+
+batch:59 | visited_total:2950 | bets_total:20 | total spent 83007.89 | batch P/L: -750.00 | total P/L: 45598.77 | bank: 50598.77 | last_time_found: 2025-11-10T23:54:40.429109+00:00
+
+batch:60 | visited_total:3000 | bets_total:16 | total spent 84607.89 | batch P/L: -600.00 | total P/L: 44998.77 | bank: 49998.77 | last_time_found: 2025-11-11T03:12:39.722643+00:00
+
+batch:61 | visited_total:3050 | bets_total:6 | total spent 85207.89 | batch P/L: 650.00 | total P/L: 45648.77 | bank: 50648.77 | last_time_found: 2025-11-11T05:58:08.274080+00:00
+
+batch:62 | visited_total:3100 | bets_total:16 | total spent 86780.29 | batch P/L: 427.59 | total P/L: 46076.36 | bank: 51076.36 | last_time_found: 2025-11-11T16:32:42.176392+00:00
+
+[HIST] batch:6 | visited_total:300 | bets_total:27 | total spent 19314.29 | batch P/L: 1919.00 | total P/L: 16514.36 | bank: 21514.36 | last_createdAt: 2023-08-21T18:24:31.081Z
+
+batch:63 | visited_total:3150 | bets_total:10 | total spent 87716.52 | batch P/L: 404.34 | total P/L: 46480.70 | bank: 51480.70 | last_time_found: 2025-11-11T16:55:53.020279+00:00

@@ -866,3 +866,31 @@ LAST BATCH:
   last batch P/L    : 50.00
   last batch markets: 2
 ===================================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T15:11:45.292082+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5000.00
+  total P/L         : 0.00
+  total spent       : 0.00
+
+MARKET PROGRESS:
+  index             : 0
+  total done        : 0
+  total batches     : 0
+
+LAST MARKET:
+  last cid          : None
+  last question     : None
+  last time_found   : None
+
+LAST BATCH:
+  last batch P/L    : 0.00
+  last batch markets: 0
+===================================================
