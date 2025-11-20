@@ -1,0 +1,5 @@
+batch:1 | markets_total:33 | total spent 40.00 | batch P/L: 10.00 | total P/L: 10.00 | bank: 5010.00 | next offset: 100050 | timestamp 2025-09-19T14:00:00.60631Z
+
+batch:2 | markets_total:82 | total spent 100.00 | batch P/L: 90.00 | total P/L: 100.00 | bank: 5100.00 | next offset: 100100 | timestamp 2025-09-19T14:00:02.04331Z
+
+batch:13 | markets_total:108 | total spent 280.00 | batch P/L: 245.00 | total P/L: 345.00 | bank: 5345.00 | next offset: 100150 | timestamp 2025-09-19T14:00:03.109891Z

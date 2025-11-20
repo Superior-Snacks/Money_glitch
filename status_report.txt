@@ -1323,3 +1323,278 @@ LAST BATCH:
   last batch offset : 101400
   last createdAt    : 2025-09-20T16:00:00.683218Z
 ===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:03.304020+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:05.275005+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:13.393267+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:13.561810+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:13.749164+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:13.920747+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:14.078878+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:14.243913+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:14.404988+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:14.652642+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5100.00
+  total P/L         : 100.00
+  total spent       : 100.00
+
+MARKET PROGRESS:
+  total markets     : 82
+  total batches     : 2
+  current offset    : 100100
+
+LAST BATCH:
+  last batch P/L    : 90.00
+  last batch markets: 49
+  last batch offset : 100100
+  last createdAt    : 2025-09-19T14:00:02.04331Z
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T14:50:29.866394+00:00
+
+CONFIG:
+  BET_SIZE          : 10.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 5345.00
+  total P/L         : 345.00
+  total spent       : 280.00
+
+MARKET PROGRESS:
+  total markets     : 108
+  total batches     : 13
+  current offset    : 100150
+
+LAST BATCH:
+  last batch P/L    : 245.00
+  last batch markets: 26
+  last batch offset : 100150
+  last createdAt    : 2025-09-19T14:00:03.109891Z
+===================================================
