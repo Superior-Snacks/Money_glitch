@@ -987,3 +987,9 @@ Final bank: 28890.45, total P/L: 23890.45, markets_done: 7817
 
 === DONE processing saved markets ===
 Final bank: 68066.25, total P/L: 63066.25, markets_done: 7817
+
+c3m2
+batch #15 | visited_this_batch: 50 | bets_this_batch: 6 | total_markets_done: 750 | batch P/L: 259.00 | total P/L: 5725.32 | bank: 10725.32
+
+c4_curr
+batch #15 | visited_this_batch: 50 | bets_this_batch: 21 | total_markets_done: 750 | batch P/L: 259.00 | total P/L: 5725.32 | bank: 10725.32

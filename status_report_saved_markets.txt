@@ -894,3 +894,115 @@ LAST BATCH:
   last batch P/L    : 0.00
   last batch markets: 0
 ===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T15:30:59.195971+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 11925.32
+  total P/L         : 6925.32
+  total spent       : 18802.67
+
+MARKET PROGRESS:
+  index             : 819
+  total done        : 820
+  total batches     : 17
+
+LAST MARKET:
+  last cid          : 0x79e8bc5cba378d3d913d6f2469f6a7396b7a71663159bbbb328216b2989139c5
+  last question     : Will SC Recife vs. EC Vitória end in a draw?
+  last time_found   : 2025-11-05T20:13:31.976530+00:00
+
+LAST BATCH:
+  last batch P/L    : 0.00
+  last batch markets: 15
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T15:30:59.370678+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 11925.32
+  total P/L         : 6925.32
+  total spent       : 18802.67
+
+MARKET PROGRESS:
+  index             : 819
+  total done        : 820
+  total batches     : 17
+
+LAST MARKET:
+  last cid          : 0x79e8bc5cba378d3d913d6f2469f6a7396b7a71663159bbbb328216b2989139c5
+  last question     : Will SC Recife vs. EC Vitória end in a draw?
+  last time_found   : 2025-11-05T20:13:31.976530+00:00
+
+LAST BATCH:
+  last batch P/L    : 0.00
+  last batch markets: 15
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T15:31:07.159199+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 26183.80
+  total P/L         : 21183.80
+  total spent       : 25402.63
+
+MARKET PROGRESS:
+  index             : 470
+  total done        : 471
+  total batches     : 10
+
+LAST MARKET:
+  last cid          : 0x857c49ee6ad6737916bfef8c169de98cd938b61bed6d496682a3b5583ae01a93
+  last question     : Will the missing F-35 be found by September 20?
+  last time_found   : 2023-09-18T16:27:38.136Z
+
+LAST BATCH:
+  last batch P/L    : 220.58
+  last batch markets: 13
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp           : 2025-11-20T15:31:07.467969+00:00
+
+CONFIG:
+  BET_SIZE          : 100.0
+  CAP_NO            : 0.4
+  FEE_BPS           : 0
+  SLIP_BPS          : 0
+
+ACCOUNT / P&L:
+  bank              : 26183.80
+  total P/L         : 21183.80
+  total spent       : 25402.63
+
+MARKET PROGRESS:
+  index             : 470
+  total done        : 471
+  total batches     : 10
+
+LAST MARKET:
+  last cid          : 0x857c49ee6ad6737916bfef8c169de98cd938b61bed6d496682a3b5583ae01a93
+  last question     : Will the missing F-35 be found by September 20?
+  last time_found   : 2023-09-18T16:27:38.136Z
+
+LAST BATCH:
+  last batch P/L    : 220.58
+  last batch markets: 13
+===================================================
