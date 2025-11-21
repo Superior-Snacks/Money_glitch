@@ -128,47 +128,103 @@ def resolve_status(m: dict):
     return False, None, "unresolved"
 
 def extract_categories(m: dict) -> list[str]:
-    out = []
+    """
+    Try very hard to pull any human-meaningful category/tag-ish labels
+    from the market payload.
+    """
+    out: list[str] = []
 
-    # 1) top-level category (string)
-    cat = m.get("category")
-    if isinstance(cat, str) and cat.strip():
-        out.append(cat)
+    def add_label(val):
+        if isinstance(val, str):
+            s = val.strip()
+            if s:
+                out.append(s)
 
-    # 2) top-level categories (list of strings or objects)
-    cats = m.get("categories") or []
-    if isinstance(cats, (list, tuple)):
-        for c in cats:
-            if isinstance(c, str):
-                out.append(c)
-            elif isinstance(c, dict):
-                label = c.get("label") or c.get("slug") or c.get("id")
-                if label:
-                    out.append(label)
+    def add_from_list(lst, label_keys=("label", "slug", "title", "name", "category", "id")):
+        if not isinstance(lst, (list, tuple)):
+            return
+        for item in lst:
+            if isinstance(item, str):
+                add_label(item)
+            elif isinstance(item, dict):
+                for k in label_keys:
+                    v = item.get(k)
+                    if isinstance(v, str) and v.strip():
+                        add_label(v)
+                        break
 
-    # 3) event-level categories (optional but useful)
+    # -----------------
+    # Top-level fields
+    # -----------------
+    add_label(m.get("category"))
+    add_from_list(m.get("categories"))
+    add_from_list(m.get("tags"), label_keys=("label", "slug", "name", "id"))
+
+    # -----------------
+    # Top-level collections
+    # -----------------
+    collections = m.get("collections") or []
+    if isinstance(collections, (list, tuple)):
+        for col in collections:
+            if not isinstance(col, dict):
+                continue
+            # title/slug/label on the collection
+            add_label(col.get("title"))
+            add_label(col.get("subtitle"))
+            add_label(col.get("slug"))
+            add_label(col.get("collectionType"))
+            add_label(col.get("description"))
+            add_from_list(col.get("tags"), label_keys=("label", "slug", "name", "id"))
+
+    # -----------------
+    # Events level
+    # -----------------
     events = m.get("events") or []
     if isinstance(events, (list, tuple)):
         for ev in events:
             if not isinstance(ev, dict):
                 continue
-            # event.category (string)
-            ev_cat = ev.get("category")
-            if isinstance(ev_cat, str) and ev_cat.strip():
-                out.append(ev_cat)
+            add_label(ev.get("category"))
+            add_from_list(ev.get("categories"))
+            add_from_list(ev.get("tags"), label_keys=("label", "slug", "name", "id"))
 
-            # event.categories (list of strings or objects)
-            ev_cats = ev.get("categories") or []
-            if isinstance(ev_cats, (list, tuple)):
-                for c in ev_cats:
-                    if isinstance(c, str):
-                        out.append(c)
-                    elif isinstance(c, dict):
-                        label = c.get("label") or c.get("slug") or c.get("id")
-                        if label:
-                            out.append(label)
+            # Event collections
+            ev_cols = ev.get("collections") or []
+            if isinstance(ev_cols, (list, tuple)):
+                for col in ev_cols:
+                    if not isinstance(col, dict):
+                        continue
+                    add_label(col.get("title"))
+                    add_label(col.get("subtitle"))
+                    add_label(col.get("slug"))
+                    add_label(col.get("collectionType"))
+                    add_from_list(col.get("tags"), label_keys=("label", "slug", "name", "id"))
+
+            # Series inside events
+            series_list = ev.get("series") or []
+            if isinstance(series_list, (list, tuple)):
+                for s in series_list:
+                    if not isinstance(s, dict):
+                        continue
+                    add_label(s.get("seriesType"))
+                    add_label(s.get("title"))
+                    add_label(s.get("slug"))
+                    add_from_list(s.get("categories"))
+                    add_from_list(s.get("tags"), label_keys=("label", "slug", "name", "id"))
+
+                    s_cols = s.get("collections") or []
+                    if isinstance(s_cols, (list, tuple)):
+                        for col in s_cols:
+                            if not isinstance(col, dict):
+                                continue
+                            add_label(col.get("title"))
+                            add_label(col.get("subtitle"))
+                            add_label(col.get("slug"))
+                            add_label(col.get("collectionType"))
+                            add_from_list(col.get("tags"), label_keys=("label", "slug", "name", "id"))
 
     return out
+
 
 
 # ------------------------
@@ -244,10 +300,8 @@ def aggregate_by_month(markets):
     for m in markets:
         resolved, winner, src = resolve_status(m)
         if not resolved or winner not in ("YES", "NO"):
-            # skip unresolved/TBD markets for win-rate stats
             continue
 
-        # month bucket by createdAt/startDate
         created_raw = m.get("createdAt") or m.get("startDate") or m.get("updatedAt")
         dt = _parse_dt_any(created_raw)
         if dt is None:
@@ -269,6 +323,19 @@ def aggregate_by_month(markets):
 
         cats = extract_categories(m)
 
+        # If absolutely nothing, shove into "uncategorized"
+        if not cats:
+            slug = "uncategorized"
+            all_cat_slugs.add(slug)
+            cat_slug_to_orig.setdefault(slug, "uncategorized")
+
+            cat_bucket = stat["categories"].setdefault(slug, {"yes": 0, "no": 0})
+            if winner == "YES":
+                cat_bucket["yes"] += 1
+            else:
+                cat_bucket["no"] += 1
+            continue
+
         for c in cats:
             orig = str(c)
             slug = slugify_category(orig)
@@ -281,8 +348,7 @@ def aggregate_by_month(markets):
             else:
                 cat_bucket["no"] += 1
 
-            return month_stats, sorted(all_cat_slugs), cat_slug_to_orig
-
+    return month_stats, sorted(all_cat_slugs), cat_slug_to_orig
 
 # ------------------------
 # CSV writer

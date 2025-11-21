@@ -945,3 +945,11 @@ batch:157 | visited_total:7832 | bets_total:0 | total spent 127097.87 | batch P/
 [HIST] report:157 | markets_total:66434 | markets_this_report:400 | total spent 66545.80 | report P/L: -203.79 | total P/L: -4714.95 | bank: 285.05 | start_label=daysback_600
 
 [HIST] report:158 | markets_total:66953 | markets_this_report:519 | total spent 66770.81 | report P/L: -117.48 | total P/L: -4832.43 | bank: 167.57 | start_label=daysback_600
+
+[HIST] report:1 | markets_total:400 | markets_this_report:400 | total spent 293.67 | report P/L: 3.00 | total P/L: 3.00 | bank: 5003.00 | start_label=daysback_100
+
+[HIST] report:2 | markets_total:1022 | markets_this_report:622 | total spent 862.80 | report P/L: 3.70 | total P/L: 6.71 | bank: 5006.71 | start_label=daysback_100
+
+[HIST] report:3 | markets_total:1500 | markets_this_report:478 | total spent 1305.36 | report P/L: -86.16 | total P/L: -79.46 | bank: 4920.54 | start_label=daysback_100
+
+[HIST] report:4 | markets_total:1900 | markets_this_report:400 | total spent 1861.23 | report P/L: -141.20 | total P/L: -220.66 | bank: 4779.34 | start_label=daysback_100

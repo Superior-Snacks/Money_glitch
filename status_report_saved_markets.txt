@@ -2098,3 +2098,59 @@ LAST REPORT:
   last report P/L     : -82.50
   last report markets : 2228
 ===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-21T14:57:02.982847+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 5011.71
+  total P/L           : 11.71
+  total spent         : 857.80
+
+MARKET PROGRESS:
+  index               : 886
+  total done          : 886
+  total reports       : 1
+
+LAST MARKET:
+  last cid            : 0x47badf894129c777b1218a9920296fd4c564ad73a9a059bb0342773e9e48a812
+  last question       : Solana Up or Down - August 17, 10AM ET
+  last time_found     : 2025-08-15T10:09:01.570064Z
+
+LAST REPORT:
+  last report P/L     : 8.70
+  last report markets : 486
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-21T15:11:35.722722+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 4696.97
+  total P/L           : -303.03
+  total spent         : 2255.76
+
+MARKET PROGRESS:
+  index               : 2268
+  total done          : 2270
+  total reports       : 4
+
+LAST MARKET:
+  last cid            : 0x2ab1662ab784001fcb38fdd9930bf7f0dba30b332b2a1952d9e4be34d3211743
+  last question       : Will Cagliari vs. Fiorentina end in a draw?
+  last time_found     : 2025-08-19T04:04:21.842395Z
+
+LAST REPORT:
+  last report P/L     : -82.38
+  last report markets : 370
+===================================================
