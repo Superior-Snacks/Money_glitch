@@ -597,3 +597,351 @@ batch:157 | visited_total:7832 | bets_total:0 | total spent 127097.87 | batch P/
 [CUR] report:1 | markets_total:407 | markets_this_report:407 | total spent 603.94 | report P/L: -116.06 | total P/L: -116.06 | bank: 4883.94 | folder=gather_markets
 
 [CUR] report:1 | markets_total:407 | markets_this_report:407 | total spent 563.44 | report P/L: -54.84 | total P/L: -54.84 | bank: 4945.16 | folder=gather_markets
+
+[CUR] report:2 | markets_total:917 | markets_this_report:510 | total spent 884.22 | report P/L: -68.83 | total P/L: -123.67 | bank: 4876.33 | folder=gather_markets
+
+[HIST] report:1 | markets_total:401 | markets_this_report:401 | total spent 525.29 | report P/L: -139.11 | total P/L: -139.11 | bank: 4860.89 | start_label=daysback_600
+
+[CUR] report:3 | markets_total:1320 | markets_this_report:403 | total spent 1549.70 | report P/L: 48.22 | total P/L: -75.46 | bank: 4924.54 | folder=gather_markets
+
+[HIST] report:2 | markets_total:810 | markets_this_report:409 | total spent 997.64 | report P/L: -92.49 | total P/L: -231.60 | bank: 4768.40 | start_label=daysback_600
+
+[CUR] report:4 | markets_total:1757 | markets_this_report:437 | total spent 2053.63 | report P/L: -231.60 | total P/L: -307.06 | bank: 4692.94 | folder=gather_markets
+
+[HIST] report:3 | markets_total:1220 | markets_this_report:410 | total spent 1584.85 | report P/L: 5.81 | total P/L: -225.79 | bank: 4774.21 | start_label=daysback_600
+
+[CUR] report:5 | markets_total:2289 | markets_this_report:532 | total spent 2540.67 | report P/L: -69.44 | total P/L: -376.50 | bank: 4623.50 | folder=gather_markets
+
+[HIST] report:4 | markets_total:1622 | markets_this_report:402 | total spent 2248.69 | report P/L: -17.98 | total P/L: -243.77 | bank: 4756.23 | start_label=daysback_600
+
+[CUR] report:6 | markets_total:2704 | markets_this_report:415 | total spent 2974.82 | report P/L: -11.27 | total P/L: -387.77 | bank: 4612.23 | folder=gather_markets
+
+[CUR] report:7 | markets_total:3105 | markets_this_report:401 | total spent 3439.54 | report P/L: -165.41 | total P/L: -553.18 | bank: 4446.82 | folder=gather_markets
+
+[HIST] report:5 | markets_total:2023 | markets_this_report:401 | total spent 3090.07 | report P/L: 144.56 | total P/L: -99.21 | bank: 4900.79 | start_label=daysback_600
+
+[CUR] report:8 | markets_total:3524 | markets_this_report:419 | total spent 3782.07 | report P/L: -86.22 | total P/L: -639.40 | bank: 4360.60 | folder=gather_markets
+
+[CUR] report:9 | markets_total:4019 | markets_this_report:495 | total spent 4284.25 | report P/L: 53.28 | total P/L: -586.12 | bank: 4413.88 | folder=gather_markets
+
+[HIST] report:6 | markets_total:2424 | markets_this_report:401 | total spent 3633.99 | report P/L: 25.88 | total P/L: -73.33 | bank: 4926.67 | start_label=daysback_600
+
+[CUR] report:10 | markets_total:4455 | markets_this_report:436 | total spent 4571.55 | report P/L: 30.94 | total P/L: -555.18 | bank: 4444.82 | folder=gather_markets
+
+[CUR] report:11 | markets_total:4891 | markets_this_report:436 | total spent 4761.60 | report P/L: 47.58 | total P/L: -507.60 | bank: 4492.40 | folder=gather_markets
+
+[HIST] report:7 | markets_total:2829 | markets_this_report:405 | total spent 4291.30 | report P/L: 210.97 | total P/L: 137.64 | bank: 5137.64 | start_label=daysback_600
+
+[CUR] report:12 | markets_total:5300 | markets_this_report:409 | total spent 4963.30 | report P/L: -72.45 | total P/L: -580.05 | bank: 4419.95 | folder=gather_markets
+
+[HIST] report:8 | markets_total:3229 | markets_this_report:400 | total spent 5016.27 | report P/L: 87.45 | total P/L: 225.09 | bank: 5225.09 | start_label=daysback_600
+
+[CUR] report:13 | markets_total:5706 | markets_this_report:406 | total spent 5098.74 | report P/L: -71.84 | total P/L: -651.89 | bank: 4348.11 | folder=gather_markets
+
+[CUR] report:14 | markets_total:6154 | markets_this_report:448 | total spent 5251.39 | report P/L: -71.03 | total P/L: -722.92 | bank: 4277.08 | folder=gather_markets
+
+[HIST] report:9 | markets_total:3632 | markets_this_report:403 | total spent 5535.42 | report P/L: -8.78 | total P/L: 216.31 | bank: 5216.31 | start_label=daysback_600
+
+[CUR] report:15 | markets_total:6726 | markets_this_report:572 | total spent 5401.39 | report P/L: -112.50 | total P/L: -835.42 | bank: 4164.58 | folder=gather_markets
+
+[CUR] report:16 | markets_total:7136 | markets_this_report:410 | total spent 5456.06 | report P/L: -5.49 | total P/L: -840.91 | bank: 4159.09 | folder=gather_markets
+
+[HIST] report:10 | markets_total:4032 | markets_this_report:400 | total spent 6115.77 | report P/L: -79.47 | total P/L: 136.84 | bank: 5136.84 | start_label=daysback_600
+
+[CUR] report:17 | markets_total:7613 | markets_this_report:477 | total spent 5466.06 | report P/L: -10.00 | total P/L: -850.91 | bank: 4149.09 | folder=gather_markets
+
+[HIST] report:11 | markets_total:4433 | markets_this_report:401 | total spent 6983.23 | report P/L: 38.70 | total P/L: 175.54 | bank: 5175.54 | start_label=daysback_600
+
+[HIST] report:12 | markets_total:4833 | markets_this_report:400 | total spent 7771.23 | report P/L: 44.50 | total P/L: 220.03 | bank: 5220.03 | start_label=daysback_600
+
+[HIST] report:13 | markets_total:5234 | markets_this_report:401 | total spent 8487.78 | report P/L: -0.17 | total P/L: 219.86 | bank: 5219.86 | start_label=daysback_600
+
+[HIST] report:14 | markets_total:5635 | markets_this_report:401 | total spent 9204.91 | report P/L: 38.19 | total P/L: 258.05 | bank: 5258.05 | start_label=daysback_600
+
+[HIST] report:15 | markets_total:6036 | markets_this_report:401 | total spent 9944.74 | report P/L: -87.86 | total P/L: 170.20 | bank: 5170.20 | start_label=daysback_600
+
+[HIST] report:16 | markets_total:6437 | markets_this_report:401 | total spent 10600.50 | report P/L: -53.86 | total P/L: 116.34 | bank: 5116.34 | start_label=daysback_600
+
+[HIST] report:17 | markets_total:6837 | markets_this_report:400 | total spent 11374.43 | report P/L: -14.11 | total P/L: 102.23 | bank: 5102.23 | start_label=daysback_600
+
+[HIST] report:18 | markets_total:7254 | markets_this_report:417 | total spent 12199.45 | report P/L: -101.56 | total P/L: 0.67 | bank: 5000.67 | start_label=daysback_600
+
+[HIST] report:19 | markets_total:7664 | markets_this_report:410 | total spent 12782.15 | report P/L: 24.05 | total P/L: 24.72 | bank: 5024.72 | start_label=daysback_600
+
+[HIST] report:20 | markets_total:8064 | markets_this_report:400 | total spent 13445.80 | report P/L: 120.47 | total P/L: 145.20 | bank: 5145.20 | start_label=daysback_600
+
+[HIST] report:21 | markets_total:8464 | markets_this_report:400 | total spent 14022.35 | report P/L: -11.42 | total P/L: 133.77 | bank: 5133.77 | start_label=daysback_600
+
+[HIST] report:22 | markets_total:8875 | markets_this_report:411 | total spent 14656.74 | report P/L: -200.08 | total P/L: -66.31 | bank: 4933.69 | start_label=daysback_600
+
+[HIST] report:23 | markets_total:9286 | markets_this_report:411 | total spent 15627.63 | report P/L: -81.17 | total P/L: -147.48 | bank: 4852.52 | start_label=daysback_600
+
+[HIST] report:24 | markets_total:9686 | markets_this_report:400 | total spent 16379.29 | report P/L: 70.00 | total P/L: -77.48 | bank: 4922.52 | start_label=daysback_600
+
+[HIST] report:25 | markets_total:10086 | markets_this_report:400 | total spent 17117.73 | report P/L: -31.19 | total P/L: -108.67 | bank: 4891.33 | start_label=daysback_600
+
+[HIST] report:26 | markets_total:10490 | markets_this_report:404 | total spent 18018.40 | report P/L: 27.27 | total P/L: -81.39 | bank: 4918.61 | start_label=daysback_600
+
+[HIST] report:27 | markets_total:10890 | markets_this_report:400 | total spent 18516.61 | report P/L: 22.32 | total P/L: -59.07 | bank: 4940.93 | start_label=daysback_600
+
+[HIST] report:28 | markets_total:11291 | markets_this_report:401 | total spent 19308.32 | report P/L: -90.86 | total P/L: -149.93 | bank: 4850.07 | start_label=daysback_600
+
+[HIST] report:29 | markets_total:11691 | markets_this_report:400 | total spent 19853.40 | report P/L: 37.85 | total P/L: -112.07 | bank: 4887.93 | start_label=daysback_600
+
+[HIST] report:30 | markets_total:12097 | markets_this_report:406 | total spent 20322.23 | report P/L: -112.52 | total P/L: -224.59 | bank: 4775.41 | start_label=daysback_600
+
+[HIST] report:31 | markets_total:12497 | markets_this_report:400 | total spent 20929.99 | report P/L: -25.86 | total P/L: -250.45 | bank: 4749.55 | start_label=daysback_600
+
+[HIST] report:32 | markets_total:12899 | markets_this_report:402 | total spent 21397.11 | report P/L: 13.19 | total P/L: -237.26 | bank: 4762.74 | start_label=daysback_600
+
+[HIST] report:33 | markets_total:13316 | markets_this_report:417 | total spent 22095.85 | report P/L: -76.89 | total P/L: -314.15 | bank: 4685.85 | start_label=daysback_600
+
+[HIST] report:34 | markets_total:13725 | markets_this_report:409 | total spent 22631.12 | report P/L: -34.59 | total P/L: -348.75 | bank: 4651.25 | start_label=daysback_600
+
+[HIST] report:35 | markets_total:14125 | markets_this_report:400 | total spent 23078.54 | report P/L: -53.87 | total P/L: -402.62 | bank: 4597.38 | start_label=daysback_600
+
+[HIST] report:36 | markets_total:14533 | markets_this_report:408 | total spent 23377.81 | report P/L: -76.10 | total P/L: -478.72 | bank: 4521.28 | start_label=daysback_600
+
+[HIST] report:37 | markets_total:14948 | markets_this_report:415 | total spent 23755.20 | report P/L: -21.42 | total P/L: -500.14 | bank: 4499.86 | start_label=daysback_600
+
+[HIST] report:38 | markets_total:15355 | markets_this_report:407 | total spent 24371.17 | report P/L: 11.45 | total P/L: -488.68 | bank: 4511.32 | start_label=daysback_600
+
+[HIST] report:39 | markets_total:15757 | markets_this_report:402 | total spent 24696.27 | report P/L: -110.15 | total P/L: -598.84 | bank: 4401.16 | start_label=daysback_600
+
+[HIST] report:40 | markets_total:16157 | markets_this_report:400 | total spent 25435.45 | report P/L: 31.97 | total P/L: -566.87 | bank: 4433.13 | start_label=daysback_600
+
+[HIST] report:41 | markets_total:16560 | markets_this_report:403 | total spent 25997.51 | report P/L: -67.92 | total P/L: -634.79 | bank: 4365.21 | start_label=daysback_600
+
+[HIST] report:42 | markets_total:16994 | markets_this_report:434 | total spent 26578.71 | report P/L: -122.71 | total P/L: -757.50 | bank: 4242.50 | start_label=daysback_600
+
+[HIST] report:43 | markets_total:17399 | markets_this_report:405 | total spent 27005.42 | report P/L: 90.07 | total P/L: -667.43 | bank: 4332.57 | start_label=daysback_600
+
+[HIST] report:44 | markets_total:17799 | markets_this_report:400 | total spent 27677.04 | report P/L: -30.08 | total P/L: -697.51 | bank: 4302.49 | start_label=daysback_600
+
+[HIST] report:45 | markets_total:18223 | markets_this_report:424 | total spent 28301.52 | report P/L: -175.78 | total P/L: -873.29 | bank: 4126.71 | start_label=daysback_600
+
+[HIST] report:46 | markets_total:18624 | markets_this_report:401 | total spent 28942.78 | report P/L: 49.40 | total P/L: -823.89 | bank: 4176.11 | start_label=daysback_600
+
+[HIST] report:47 | markets_total:19102 | markets_this_report:478 | total spent 29389.06 | report P/L: 69.42 | total P/L: -754.47 | bank: 4245.53 | start_label=daysback_600
+
+[HIST] report:48 | markets_total:19503 | markets_this_report:401 | total spent 29704.51 | report P/L: -26.83 | total P/L: -781.30 | bank: 4218.70 | start_label=daysback_600
+
+[HIST] report:49 | markets_total:19903 | markets_this_report:400 | total spent 30284.44 | report P/L: 57.39 | total P/L: -723.90 | bank: 4276.10 | start_label=daysback_600
+
+[HIST] report:50 | markets_total:20404 | markets_this_report:501 | total spent 30494.01 | report P/L: 26.86 | total P/L: -697.04 | bank: 4302.96 | start_label=daysback_600
+
+[HIST] report:51 | markets_total:20805 | markets_this_report:401 | total spent 31131.02 | report P/L: -79.48 | total P/L: -776.53 | bank: 4223.47 | start_label=daysback_600
+
+[HIST] report:52 | markets_total:21299 | markets_this_report:494 | total spent 31422.11 | report P/L: 49.13 | total P/L: -727.40 | bank: 4272.60 | start_label=daysback_600
+
+[HIST] report:53 | markets_total:21702 | markets_this_report:403 | total spent 31840.62 | report P/L: 52.76 | total P/L: -674.64 | bank: 4325.36 | start_label=daysback_600
+
+[HIST] report:54 | markets_total:22132 | markets_this_report:430 | total spent 32197.28 | report P/L: -65.00 | total P/L: -739.65 | bank: 4260.35 | start_label=daysback_600
+
+[HIST] report:55 | markets_total:22535 | markets_this_report:403 | total spent 32771.07 | report P/L: -26.81 | total P/L: -766.45 | bank: 4233.55 | start_label=daysback_600
+
+[HIST] report:56 | markets_total:22935 | markets_this_report:400 | total spent 33146.68 | report P/L: 0.90 | total P/L: -765.55 | bank: 4234.45 | start_label=daysback_600
+
+[HIST] report:57 | markets_total:23351 | markets_this_report:416 | total spent 33461.42 | report P/L: -52.88 | total P/L: -818.43 | bank: 4181.57 | start_label=daysback_600
+
+[HIST] report:58 | markets_total:23758 | markets_this_report:407 | total spent 33714.66 | report P/L: -7.64 | total P/L: -826.08 | bank: 4173.92 | start_label=daysback_600
+
+[HIST] report:59 | markets_total:24159 | markets_this_report:401 | total spent 34440.67 | report P/L: -23.48 | total P/L: -849.56 | bank: 4150.44 | start_label=daysback_600
+
+[HIST] report:60 | markets_total:24612 | markets_this_report:453 | total spent 34698.17 | report P/L: -1.24 | total P/L: -850.80 | bank: 4149.20 | start_label=daysback_600
+
+[HIST] report:61 | markets_total:25013 | markets_this_report:401 | total spent 35083.96 | report P/L: -108.82 | total P/L: -959.62 | bank: 4040.38 | start_label=daysback_600
+
+[HIST] report:62 | markets_total:25575 | markets_this_report:562 | total spent 35437.22 | report P/L: -82.61 | total P/L: -1042.23 | bank: 3957.77 | start_label=daysback_600
+
+[HIST] report:63 | markets_total:26023 | markets_this_report:448 | total spent 35665.41 | report P/L: 42.29 | total P/L: -999.94 | bank: 4000.06 | start_label=daysback_600
+
+[HIST] report:64 | markets_total:26425 | markets_this_report:402 | total spent 35842.05 | report P/L: -20.05 | total P/L: -1019.99 | bank: 3980.01 | start_label=daysback_600
+
+[HIST] report:65 | markets_total:26826 | markets_this_report:401 | total spent 36099.24 | report P/L: 13.28 | total P/L: -1006.71 | bank: 3993.29 | start_label=daysback_600
+
+[HIST] report:66 | markets_total:27259 | markets_this_report:433 | total spent 36372.25 | report P/L: 37.28 | total P/L: -969.43 | bank: 4030.57 | start_label=daysback_600
+
+[HIST] report:67 | markets_total:27660 | markets_this_report:401 | total spent 36649.28 | report P/L: 3.04 | total P/L: -966.38 | bank: 4033.62 | start_label=daysback_600
+
+[HIST] report:68 | markets_total:28088 | markets_this_report:428 | total spent 36791.52 | report P/L: 0.86 | total P/L: -965.52 | bank: 4034.48 | start_label=daysback_600
+
+[HIST] report:69 | markets_total:28490 | markets_this_report:402 | total spent 36997.36 | report P/L: -28.74 | total P/L: -994.26 | bank: 4005.74 | start_label=daysback_600
+
+[HIST] report:70 | markets_total:28893 | markets_this_report:403 | total spent 37288.69 | report P/L: -79.82 | total P/L: -1074.08 | bank: 3925.92 | start_label=daysback_600
+
+[HIST] report:71 | markets_total:29374 | markets_this_report:481 | total spent 37368.97 | report P/L: 32.92 | total P/L: -1041.16 | bank: 3958.84 | start_label=daysback_600
+
+[HIST] report:72 | markets_total:29780 | markets_this_report:406 | total spent 37575.11 | report P/L: -113.29 | total P/L: -1154.45 | bank: 3845.55 | start_label=daysback_600
+
+[HIST] report:73 | markets_total:30217 | markets_this_report:437 | total spent 37660.63 | report P/L: 3.27 | total P/L: -1151.18 | bank: 3848.82 | start_label=daysback_600
+
+[HIST] report:74 | markets_total:30832 | markets_this_report:615 | total spent 38104.40 | report P/L: -34.35 | total P/L: -1185.53 | bank: 3814.47 | start_label=daysback_600
+
+[HIST] report:75 | markets_total:31234 | markets_this_report:402 | total spent 38398.38 | report P/L: -65.02 | total P/L: -1250.55 | bank: 3749.45 | start_label=daysback_600
+
+[HIST] report:76 | markets_total:31839 | markets_this_report:605 | total spent 38809.91 | report P/L: -7.71 | total P/L: -1258.26 | bank: 3741.74 | start_label=daysback_600
+
+[HIST] report:77 | markets_total:32419 | markets_this_report:580 | total spent 39106.86 | report P/L: -28.06 | total P/L: -1286.32 | bank: 3713.68 | start_label=daysback_600
+
+[HIST] report:78 | markets_total:32834 | markets_this_report:415 | total spent 39642.51 | report P/L: 128.89 | total P/L: -1157.43 | bank: 3842.57 | start_label=daysback_600
+
+[HIST] report:79 | markets_total:33234 | markets_this_report:400 | total spent 39981.43 | report P/L: -63.67 | total P/L: -1221.10 | bank: 3778.90 | start_label=daysback_600
+
+[HIST] report:80 | markets_total:33692 | markets_this_report:458 | total spent 40381.88 | report P/L: -77.45 | total P/L: -1298.55 | bank: 3701.45 | start_label=daysback_600
+
+[HIST] report:81 | markets_total:34164 | markets_this_report:472 | total spent 40755.78 | report P/L: -39.15 | total P/L: -1337.70 | bank: 3662.30 | start_label=daysback_600
+
+[HIST] report:82 | markets_total:34566 | markets_this_report:402 | total spent 41103.32 | report P/L: -0.06 | total P/L: -1337.77 | bank: 3662.23 | start_label=daysback_600
+
+[HIST] report:83 | markets_total:34966 | markets_this_report:400 | total spent 41587.51 | report P/L: -48.71 | total P/L: -1386.48 | bank: 3613.52 | start_label=daysback_600
+
+[HIST] report:84 | markets_total:35369 | markets_this_report:403 | total spent 42034.77 | report P/L: 8.39 | total P/L: -1378.09 | bank: 3621.91 | start_label=daysback_600
+
+[HIST] report:85 | markets_total:35769 | markets_this_report:400 | total spent 42571.10 | report P/L: -170.50 | total P/L: -1548.59 | bank: 3451.41 | start_label=daysback_600
+
+[HIST] report:86 | markets_total:36171 | markets_this_report:402 | total spent 42898.75 | report P/L: 16.47 | total P/L: -1532.12 | bank: 3467.88 | start_label=daysback_600
+
+[HIST] report:87 | markets_total:36578 | markets_this_report:407 | total spent 43252.61 | report P/L: -44.20 | total P/L: -1576.32 | bank: 3423.68 | start_label=daysback_600
+
+[HIST] report:88 | markets_total:37062 | markets_this_report:484 | total spent 43526.36 | report P/L: -26.88 | total P/L: -1603.20 | bank: 3396.80 | start_label=daysback_600
+
+[HIST] report:89 | markets_total:37502 | markets_this_report:440 | total spent 43973.59 | report P/L: -122.12 | total P/L: -1725.32 | bank: 3274.68 | start_label=daysback_600
+
+[HIST] report:90 | markets_total:37903 | markets_this_report:401 | total spent 44431.91 | report P/L: 21.53 | total P/L: -1703.80 | bank: 3296.20 | start_label=daysback_600
+
+[HIST] report:91 | markets_total:38306 | markets_this_report:403 | total spent 44727.36 | report P/L: -56.83 | total P/L: -1760.63 | bank: 3239.37 | start_label=daysback_600
+
+[HIST] report:92 | markets_total:38710 | markets_this_report:404 | total spent 45148.55 | report P/L: -62.13 | total P/L: -1822.76 | bank: 3177.24 | start_label=daysback_600
+
+[HIST] report:93 | markets_total:39111 | markets_this_report:401 | total spent 45573.39 | report P/L: 14.09 | total P/L: -1808.67 | bank: 3191.33 | start_label=daysback_600
+
+[HIST] report:94 | markets_total:39520 | markets_this_report:409 | total spent 45833.16 | report P/L: -40.36 | total P/L: -1849.03 | bank: 3150.97 | start_label=daysback_600
+
+[HIST] report:95 | markets_total:39922 | markets_this_report:402 | total spent 46215.55 | report P/L: 7.81 | total P/L: -1841.22 | bank: 3158.78 | start_label=daysback_600
+
+[HIST] report:96 | markets_total:40326 | markets_this_report:404 | total spent 46607.80 | report P/L: 63.38 | total P/L: -1777.85 | bank: 3222.15 | start_label=daysback_600
+
+[HIST] report:97 | markets_total:40727 | markets_this_report:401 | total spent 47036.95 | report P/L: 96.22 | total P/L: -1681.62 | bank: 3318.38 | start_label=daysback_600
+
+[HIST] report:98 | markets_total:41127 | markets_this_report:400 | total spent 47533.09 | report P/L: -98.29 | total P/L: -1779.91 | bank: 3220.09 | start_label=daysback_600
+
+[HIST] report:99 | markets_total:41528 | markets_this_report:401 | total spent 47950.82 | report P/L: -35.91 | total P/L: -1815.82 | bank: 3184.18 | start_label=daysback_600
+
+[HIST] report:100 | markets_total:41929 | markets_this_report:401 | total spent 48221.22 | report P/L: -19.39 | total P/L: -1835.21 | bank: 3164.79 | start_label=daysback_600
+
+[HIST] report:101 | markets_total:42329 | markets_this_report:400 | total spent 48604.77 | report P/L: -62.17 | total P/L: -1897.38 | bank: 3102.62 | start_label=daysback_600
+
+[HIST] report:102 | markets_total:42745 | markets_this_report:416 | total spent 48941.25 | report P/L: -19.98 | total P/L: -1917.36 | bank: 3082.64 | start_label=daysback_600
+
+[HIST] report:103 | markets_total:43182 | markets_this_report:437 | total spent 49172.28 | report P/L: -130.02 | total P/L: -2047.38 | bank: 2952.62 | start_label=daysback_600
+
+[HIST] report:104 | markets_total:43582 | markets_this_report:400 | total spent 49602.25 | report P/L: -92.55 | total P/L: -2139.92 | bank: 2860.08 | start_label=daysback_600
+
+[HIST] report:105 | markets_total:43991 | markets_this_report:409 | total spent 50064.61 | report P/L: -33.28 | total P/L: -2173.21 | bank: 2826.79 | start_label=daysback_600
+
+[HIST] report:106 | markets_total:44392 | markets_this_report:401 | total spent 50405.41 | report P/L: -78.30 | total P/L: -2251.51 | bank: 2748.49 | start_label=daysback_600
+
+[HIST] report:107 | markets_total:44794 | markets_this_report:402 | total spent 50762.46 | report P/L: 10.58 | total P/L: -2240.93 | bank: 2759.07 | start_label=daysback_600
+
+[HIST] report:108 | markets_total:45195 | markets_this_report:401 | total spent 51137.68 | report P/L: 12.83 | total P/L: -2228.09 | bank: 2771.91 | start_label=daysback_600
+
+[HIST] report:109 | markets_total:45672 | markets_this_report:477 | total spent 51620.38 | report P/L: -50.96 | total P/L: -2279.05 | bank: 2720.95 | start_label=daysback_600
+
+[HIST] report:110 | markets_total:46088 | markets_this_report:416 | total spent 51889.03 | report P/L: 40.47 | total P/L: -2238.58 | bank: 2761.42 | start_label=daysback_600
+
+[HIST] report:111 | markets_total:46490 | markets_this_report:402 | total spent 52226.25 | report P/L: -6.66 | total P/L: -2245.24 | bank: 2754.76 | start_label=daysback_600
+
+[HIST] report:112 | markets_total:46905 | markets_this_report:415 | total spent 52588.79 | report P/L: -143.70 | total P/L: -2388.93 | bank: 2611.07 | start_label=daysback_600
+
+[HIST] report:113 | markets_total:47306 | markets_this_report:401 | total spent 52842.33 | report P/L: -32.19 | total P/L: -2421.12 | bank: 2578.88 | start_label=daysback_600
+
+[HIST] report:114 | markets_total:47707 | markets_this_report:401 | total spent 53144.40 | report P/L: 15.60 | total P/L: -2405.52 | bank: 2594.48 | start_label=daysback_600
+
+[HIST] report:115 | markets_total:48134 | markets_this_report:427 | total spent 53254.26 | report P/L: 27.29 | total P/L: -2378.23 | bank: 2621.77 | start_label=daysback_600
+
+[HIST] report:116 | markets_total:48944 | markets_this_report:810 | total spent 53410.40 | report P/L: -65.79 | total P/L: -2444.01 | bank: 2555.99 | start_label=daysback_600
+
+[HIST] report:117 | markets_total:49346 | markets_this_report:402 | total spent 53555.40 | report P/L: -45.00 | total P/L: -2489.01 | bank: 2510.99 | start_label=daysback_600
+
+[HIST] report:118 | markets_total:49755 | markets_this_report:409 | total spent 53966.61 | report P/L: -134.31 | total P/L: -2623.32 | bank: 2376.68 | start_label=daysback_600
+
+[HIST] report:119 | markets_total:50158 | markets_this_report:403 | total spent 54308.89 | report P/L: 50.92 | total P/L: -2572.40 | bank: 2427.60 | start_label=daysback_600
+
+[HIST] report:120 | markets_total:50563 | markets_this_report:405 | total spent 54488.44 | report P/L: -18.18 | total P/L: -2590.58 | bank: 2409.42 | start_label=daysback_600
+
+[HIST] report:121 | markets_total:50968 | markets_this_report:405 | total spent 54565.91 | report P/L: -8.80 | total P/L: -2599.38 | bank: 2400.62 | start_label=daysback_600
+
+[HIST] report:122 | markets_total:51378 | markets_this_report:410 | total spent 54810.83 | report P/L: -107.61 | total P/L: -2707.00 | bank: 2293.00 | start_label=daysback_600
+
+[HIST] report:123 | markets_total:51789 | markets_this_report:411 | total spent 55000.24 | report P/L: -15.89 | total P/L: -2722.88 | bank: 2277.12 | start_label=daysback_600
+
+[HIST] report:124 | markets_total:52208 | markets_this_report:419 | total spent 55372.03 | report P/L: -204.81 | total P/L: -2927.69 | bank: 2072.31 | start_label=daysback_600
+
+[HIST] report:125 | markets_total:52643 | markets_this_report:435 | total spent 55697.03 | report P/L: -75.00 | total P/L: -3002.69 | bank: 1997.31 | start_label=daysback_600
+
+[HIST] report:126 | markets_total:53055 | markets_this_report:412 | total spent 55905.01 | report P/L: -38.04 | total P/L: -3040.73 | bank: 1959.27 | start_label=daysback_600
+
+[HIST] report:127 | markets_total:53473 | markets_this_report:418 | total spent 56206.18 | report P/L: -48.24 | total P/L: -3088.97 | bank: 1911.03 | start_label=daysback_600
+
+[HIST] report:128 | markets_total:53873 | markets_this_report:400 | total spent 56537.24 | report P/L: -128.41 | total P/L: -3217.37 | bank: 1782.63 | start_label=daysback_600
+
+[HIST] report:129 | markets_total:54273 | markets_this_report:400 | total spent 56761.24 | report P/L: -86.50 | total P/L: -3303.87 | bank: 1696.13 | start_label=daysback_600
+
+[HIST] report:130 | markets_total:54673 | markets_this_report:400 | total spent 57378.41 | report P/L: -234.25 | total P/L: -3538.12 | bank: 1461.88 | start_label=daysback_600
+
+[HIST] report:131 | markets_total:55081 | markets_this_report:408 | total spent 57663.41 | report P/L: -35.00 | total P/L: -3573.12 | bank: 1426.88 | start_label=daysback_600
+
+[HIST] report:132 | markets_total:55527 | markets_this_report:446 | total spent 57808.22 | report P/L: -45.29 | total P/L: -3618.41 | bank: 1381.59 | start_label=daysback_600
+
+[HIST] report:133 | markets_total:56023 | markets_this_report:496 | total spent 58348.92 | report P/L: -60.37 | total P/L: -3678.78 | bank: 1321.22 | start_label=daysback_600
+
+[HIST] report:134 | markets_total:56427 | markets_this_report:404 | total spent 58558.84 | report P/L: 14.88 | total P/L: -3663.91 | bank: 1336.09 | start_label=daysback_600
+
+[HIST] report:135 | markets_total:56831 | markets_this_report:404 | total spent 58801.31 | report P/L: -35.79 | total P/L: -3699.70 | bank: 1300.30 | start_label=daysback_600
+
+[HIST] report:136 | markets_total:57241 | markets_this_report:410 | total spent 59025.19 | report P/L: 48.31 | total P/L: -3651.38 | bank: 1348.62 | start_label=daysback_600
+
+[HIST] report:137 | markets_total:57642 | markets_this_report:401 | total spent 59311.04 | report P/L: 3.78 | total P/L: -3647.61 | bank: 1352.39 | start_label=daysback_600
+
+[HIST] report:138 | markets_total:58051 | markets_this_report:409 | total spent 59331.04 | report P/L: 5.00 | total P/L: -3642.61 | bank: 1357.39 | start_label=daysback_600
+
+[HIST] report:139 | markets_total:58461 | markets_this_report:410 | total spent 59647.24 | report P/L: -63.20 | total P/L: -3705.81 | bank: 1294.19 | start_label=daysback_600
+
+[HIST] report:140 | markets_total:58865 | markets_this_report:404 | total spent 60019.70 | report P/L: 41.91 | total P/L: -3663.90 | bank: 1336.10 | start_label=daysback_600
+
+[HIST] report:141 | markets_total:59463 | markets_this_report:598 | total spent 60246.34 | report P/L: -35.04 | total P/L: -3698.94 | bank: 1301.06 | start_label=daysback_600
+
+[HIST] report:142 | markets_total:59913 | markets_this_report:450 | total spent 60697.60 | report P/L: -123.12 | total P/L: -3822.06 | bank: 1177.94 | start_label=daysback_600
+
+[HIST] report:143 | markets_total:60314 | markets_this_report:401 | total spent 61218.94 | report P/L: -80.49 | total P/L: -3902.55 | bank: 1097.45 | start_label=daysback_600
+
+[HIST] report:144 | markets_total:60738 | markets_this_report:424 | total spent 61442.45 | report P/L: -16.76 | total P/L: -3919.31 | bank: 1080.69 | start_label=daysback_600
+
+[HIST] report:145 | markets_total:61138 | markets_this_report:400 | total spent 61644.19 | report P/L: -59.89 | total P/L: -3979.20 | bank: 1020.80 | start_label=daysback_600
+
+[HIST] report:146 | markets_total:61552 | markets_this_report:414 | total spent 61963.24 | report P/L: 41.08 | total P/L: -3938.12 | bank: 1061.88 | start_label=daysback_600
+
+[HIST] report:147 | markets_total:61953 | markets_this_report:401 | total spent 62109.64 | report P/L: -42.90 | total P/L: -3981.02 | bank: 1018.98 | start_label=daysback_600
+
+[HIST] report:148 | markets_total:62364 | markets_this_report:411 | total spent 62341.27 | report P/L: -77.55 | total P/L: -4058.57 | bank: 941.43 | start_label=daysback_600
+
+[HIST] report:149 | markets_total:62769 | markets_this_report:405 | total spent 62883.24 | report P/L: -46.04 | total P/L: -4104.61 | bank: 895.39 | start_label=daysback_600
+
+[HIST] report:150 | markets_total:63170 | markets_this_report:401 | total spent 63249.55 | report P/L: -25.54 | total P/L: -4130.15 | bank: 869.85 | start_label=daysback_600
+
+[HIST] report:151 | markets_total:63570 | markets_this_report:400 | total spent 63553.22 | report P/L: 43.00 | total P/L: -4087.15 | bank: 912.85 | start_label=daysback_600
+
+[HIST] report:152 | markets_total:64186 | markets_this_report:616 | total spent 64097.36 | report P/L: -33.80 | total P/L: -4120.94 | bank: 879.06 | start_label=daysback_600
+
+[HIST] report:153 | markets_total:64664 | markets_this_report:478 | total spent 64539.91 | report P/L: -86.16 | total P/L: -4207.10 | bank: 792.90 | start_label=daysback_600
+
+[HIST] report:154 | markets_total:65064 | markets_this_report:400 | total spent 65095.78 | report P/L: -141.20 | total P/L: -4348.30 | bank: 651.70 | start_label=daysback_600
+
+[HIST] report:155 | markets_total:65568 | markets_this_report:504 | total spent 65545.31 | report P/L: -62.38 | total P/L: -4410.68 | bank: 589.32 | start_label=daysback_600
+
+[HIST] report:156 | markets_total:66034 | markets_this_report:466 | total spent 66039.99 | report P/L: -100.47 | total P/L: -4511.15 | bank: 488.85 | start_label=daysback_600
+
+[HIST] report:157 | markets_total:66434 | markets_this_report:400 | total spent 66545.80 | report P/L: -203.79 | total P/L: -4714.95 | bank: 285.05 | start_label=daysback_600
+
+[HIST] report:158 | markets_total:66953 | markets_this_report:519 | total spent 66770.81 | report P/L: -117.48 | total P/L: -4832.43 | bank: 167.57 | start_label=daysback_600

@@ -2042,3 +2042,59 @@ LAST REPORT:
   last report P/L     : 0.00
   last report markets : 3305
 ===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-21T11:05:04.696562+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 85.07
+  total P/L           : -4914.93
+  total spent         : 66890.81
+
+MARKET PROGRESS:
+  index               : 69179
+  total done          : 69179
+  total reports       : 158
+
+LAST MARKET:
+  last cid            : 0x4f0cd4e5273cf6083f0084f6b04de0ce2defa7c57382a48a13cef3e338770bf8
+  last question       : Euro Basket: Finland vs Lithuania
+  last time_found     : 2025-08-28T04:28:12.195444Z
+
+LAST REPORT:
+  last report P/L     : -82.50
+  last report markets : 2226
+===================================================
+================= STATUS SNAPSHOT =================
+timestamp             : 2025-11-21T11:05:05.275455+00:00
+
+CONFIG:
+  BET_SIZE            : 5.0
+  CAP_NO              : 0.4
+  FEE_BPS             : 0
+  SLIP_BPS            : 0
+
+ACCOUNT / P&L:
+  bank                : 85.07
+  total P/L           : -4914.93
+  total spent         : 66890.81
+
+MARKET PROGRESS:
+  index               : 69180
+  total done          : 69181
+  total reports       : 158
+
+LAST MARKET:
+  last cid            : 0xaa64ba6aa0583b8035438322878974f55d225c3cbbe29e196cebd7ad2b57bb67
+  last question       : Euro Basket: Serbia vs Czech Republic
+  last time_found     : 2025-08-28T04:28:14.712048Z
+
+LAST REPORT:
+  last report P/L     : -82.50
+  last report markets : 2228
+===================================================
