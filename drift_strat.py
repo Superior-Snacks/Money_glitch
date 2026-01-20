@@ -1332,4 +1332,4 @@ if __name__ == "__main__":
         print("\n[HARD INTERRUPT] Ctrl+C at top-level → writing final status and exiting.")
         write_status_report()
 
-#remove all logic except getting and filtering
+#remove all logic except getting and filtering quick test
