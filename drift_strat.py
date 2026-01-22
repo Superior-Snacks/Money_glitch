@@ -1333,3 +1333,4 @@ if __name__ == "__main__":
         write_status_report()
 
 #remove all logic except getting and filtering quick test
+#kanski geri þetta í C#?
